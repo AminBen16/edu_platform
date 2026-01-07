@@ -16,7 +16,11 @@
     "target": "es2020",
     "module": "commonjs",
     "lib": ["es2020", "dom"],
-    "outDir": "dist"
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "db": ["../db"]
+    }
   },
   "include": ["nextauth.ts", "types/**/*.ts"],
   "exclude": ["node_modules"]

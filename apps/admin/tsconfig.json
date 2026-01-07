@@ -18,7 +18,8 @@
     "jsx": "preserve",
     "baseUrl": ".",
     "paths": {
-      "@auth/core": ["../../packages/auth"]
+      "@auth/core": ["../../packages/auth"],
+      "db": ["../../packages/db"]
     }
   },
   "include": [

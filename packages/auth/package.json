@@ -2,5 +2,13 @@
   "name": "@auth/core",
   "version": "0.34.3",
   "main": "nextauth.ts",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "db": "file:../db",
+    "next-auth": "^4.24.7",
+    "bcryptjs": "^2.4.3"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6"
+  }
 }
