@@ -1,6 +1,6 @@
 // apps/api/src/routes/chat.ts
 import { Router } from 'express';
-import prisma from '../lib/prisma';
+import prisma from 'db';
 import { protect } from '../middleware/auth';
 
 const router = Router();
@@ -8,7 +8,7 @@ const router = Router();
 // GET /chat/threads - List chat threads for the user's school
 router.get('/threads', protect, async (req, res) => {
   try {
-    const threads = await prisma.chatThread.findMany({
+    const threads = await prisma.chat.findMany({
       where: { schoolId: req.user!.schoolId },
       orderBy: { updatedAt: 'desc' },
     });
@@ -20,16 +20,16 @@ router.get('/threads', protect, async (req, res) => {
 
 // POST /chat/message - Send a message in a thread
 router.post('/message', protect, async (req, res) => {
-  const { threadId, content } = req.body;
-  if (!threadId || !content) {
+  const { chatId, content } = req.body;
+  if (!chatId || !content) {
     return res.status(400).json({ error: 'Thread ID and content are required.' });
   }
   try {
     const message = await prisma.chatMessage.create({
       data: {
-        threadId,
+        chatId,
         content,
-        senderId: req.user!.id,
+        authorId: req.user!.id,
         schoolId: req.user!.schoolId,
       },
     });

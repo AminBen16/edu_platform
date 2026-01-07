@@ -1,6 +1,6 @@
 // apps/api/src/routes/exams.ts
 import { Router } from 'express';
-import prisma from '../lib/prisma';
+import prisma from 'db';
 import { protect, authorize } from '../middleware/auth';
 import { Role } from 'db';
 
@@ -9,7 +9,7 @@ const router = Router();
 // GET /exams - List exams for the user's school
 router.get('/', protect, async (req, res) => {
     try {
-        const exams = await prisma.exam.findMany({
+        const exams = await prisma.quiz.findMany({
             where: { schoolId: req.user!.schoolId },
             orderBy: { createdAt: 'desc' },
         });
@@ -21,17 +21,18 @@ router.get('/', protect, async (req, res) => {
 
 // POST /exams - Create an exam (teacher or admin)
 router.post('/', protect, authorize(Role.TEACHER, Role.SCHOOL_ADMIN, Role.SUPER_ADMIN), async (req, res) => {
-    const { title, questions } = req.body;
-    if (!title || !questions) {
-        return res.status(400).json({ error: 'Title and questions are required.' });
+    const { title, questions, lessonId } = req.body;
+    if (!title || !questions || !lessonId) {
+        return res.status(400).json({ error: 'Title, questions, and lessonId are required.' });
     }
     try {
-        const exam = await prisma.exam.create({
+        const exam = await prisma.quiz.create({
             data: {
                 title,
                 questions,
+                lessonId,
                 schoolId: req.user!.schoolId,
-                createdBy: req.user!.id,
+                authorId: req.user!.id,
             },
         });
         res.status(201).json(exam);
