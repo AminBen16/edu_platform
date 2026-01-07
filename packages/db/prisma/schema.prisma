@@ -1,17 +1,20 @@
-// datasource db defines the database connection.
-// It is configured via the DATABASE_URL environment variable.
+// =======================
+// DATABASE & GENERATOR
+// =======================
+
 datasource db {
   provider     = "postgresql"
   url          = env("DATABASE_URL")
-  relationMode = "prisma" // Enables referential integrity on the database level.
+  relationMode = "prisma"
 }
 
-// generator client specifies that Prisma Client should be generated.
 generator client {
   provider = "prisma-client-js"
 }
 
-// ENUMs for defining roles and media types.
+// =======================
+// ENUMS
+// =======================
 
 enum Role {
   SUPER_ADMIN
@@ -28,9 +31,10 @@ enum MediaType {
   SCREEN_RECORDING
 }
 
+// =======================
 // MODELS
+// =======================
 
-// School model represents a single school/tenant.
 model School {
   id        String   @id @default(cuid())
   name      String   @unique
@@ -38,55 +42,52 @@ model School {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users     User[]
-  subjects  Subject[]
-  levels    Level[]
-  topics    Topic[]
-  lessons   Lesson[]
-  media     Media[]
-  quizzes   Quiz[]
-  attempts  QuizAttempt[]
-  comments  Comment[]
+  users         User[]
+  subjects      Subject[]
+  levels        Level[]
+  topics        Topic[]
+  lessons       Lesson[]
+  media         Media[]
+  quizzes       Quiz[]
+  questions     Question[]
+  attempts      QuizAttempt[]
+  comments      Comment[]
   announcements Announcement[]
-  chats     Chat[]
-  messages  ChatMessage[]
+  chats         Chat[]
+  messages      ChatMessage[]
 }
 
-// User model for all users across all schools.
-// The combination of email and schoolId should be unique, but Prisma doesn't support non-primary key unique constraints on composite fields easily.
-// Application logic must enforce this.
 model User {
   id            String    @id @default(cuid())
   schoolId      String
   role          Role
   name          String
   email         String
-  passwordHash  String? // For credentials-based login
+  passwordHash  String?
   avatarUrl     String?
   emailVerified DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  school        School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  
-  createdSubjects Subject[]
-  createdLevels   Level[]
-  createdTopics   Topic[]
-  createdLessons  Lesson[]
-  createdMedia    Media[]
-  createdQuizzes  Quiz[]
-  createdQuestions Question[]
-  quizAttempts  QuizAttempt[]
-  comments      Comment[]
-  sentMessages  ChatMessage[]
-  chats         Chat[]      @relation("ChatUsers")
-  announcements Announcement[]
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
-  @@unique([email, schoolId]) // Each user's email is unique per school
+  createdSubjects  Subject[]
+  createdLevels    Level[]
+  createdTopics    Topic[]
+  createdLessons   Lesson[]
+  createdMedia     Media[]
+  createdQuizzes   Quiz[]
+  createdQuestions Question[]
+  quizAttempts     QuizAttempt[]
+  comments         Comment[]
+  sentMessages     ChatMessage[]
+  chats            Chat[]         @relation("ChatUsers")
+  announcements    Announcement[]
+
+  @@unique([email, schoolId])
   @@index([schoolId])
 }
 
-// Subject model, e.g., "Mathematics", "Physics". Belongs to a school.
 model Subject {
   id        String   @id @default(cuid())
   name      String
@@ -95,15 +96,14 @@ model Subject {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Restrict)
-  levels    Level[]
+  school School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  author User    @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  levels Level[]
 
   @@unique([name, schoolId])
   @@index([schoolId])
 }
 
-// Level model, e.g., "Senior 1", "Senior 2". Belongs to a subject.
 model Level {
   id        String   @id @default(cuid())
   name      String
@@ -113,17 +113,16 @@ model Level {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Restrict)
-  topics    Topic[]
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  author  User    @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  topics  Topic[]
 
   @@unique([name, subjectId])
   @@index([schoolId])
   @@index([subjectId])
 }
 
-// Topic model, e.g., "Algebra", "Optics". Belongs to a level.
 model Topic {
   id        String   @id @default(cuid())
   name      String
@@ -133,62 +132,59 @@ model Topic {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  level     Level    @relation(fields: [levelId], references: [id], onDelete: Cascade)
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Restrict)
-  lessons   Lesson[]
+  school  School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  level   Level    @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  author  User     @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  lessons Lesson[]
 
   @@unique([name, levelId])
   @@index([schoolId])
   @@index([levelId])
 }
 
-// Lesson model. This is the core content unit.
 model Lesson {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   title       String
   description String?
-  order       Int       @default(0) // For ordering lessons within a topic
+  order       Int      @default(0)
   schoolId    String
   topicId     String
   authorId    String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  school      School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  topic       Topic     @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  author      User      @relation(fields: [authorId], references: [id], onDelete: Restrict)
-  
-  media       Media[]
-  comments    Comment[]
-  quizzes     Quiz[]
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  topic  Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  author User   @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  media    Media[]
+  comments Comment[]
+  quizzes  Quiz[]
 
   @@index([schoolId])
   @@index([topicId])
 }
 
-// Media model for different types of content.
 model Media {
   id        String    @id @default(cuid())
   url       String
   type      MediaType
   name      String
-  size      Float // Size in MB
+  size      Float
   schoolId  String
-  lessonId  String? // Can be null if media is uploaded but not yet attached to a lesson
+  lessonId  String?
   authorId  String
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  school    School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  lesson    Lesson?   @relation(fields: [lessonId], references: [id], onDelete: SetNull)
-  author    User      @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  school School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  lesson Lesson? @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  author User    @relation(fields: [authorId], references: [id], onDelete: Restrict)
 
   @@index([schoolId])
   @@index([lessonId])
 }
 
-// Comment model for lessons.
 model Comment {
   id        String   @id @default(cuid())
   content   String
@@ -198,15 +194,14 @@ model Comment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  author User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([schoolId])
   @@index([lessonId])
 }
 
-// Quiz model. A quiz is a collection of questions.
 model Quiz {
   id        String   @id @default(cuid())
   title     String
@@ -216,9 +211,9 @@ model Quiz {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  school    School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  lesson    Lesson        @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Restrict)
   questions Question[]
   attempts  QuizAttempt[]
 
@@ -226,45 +221,42 @@ model Quiz {
   @@index([lessonId])
 }
 
-// Question model for quizzes.
 model Question {
   id        String   @id @default(cuid())
   text      String
-  options   Json // Storing options as a JSON array: [{ "text": "Option 1", "isCorrect": true }, ...]
+  options   Json
   schoolId  String
   quizId    String
   authorId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  quiz      Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  author User   @relation(fields: [authorId], references: [id], onDelete: Restrict)
 
   @@index([quizId])
 }
 
-// QuizAttempt model to store a user's attempt at a quiz.
 model QuizAttempt {
   id        String   @id @default(cuid())
-  score     Float // Percentage score
-  answers   Json // Storing the user's answers: [{ "questionId": "...", "answer": "..." }]
+  score     Float
+  answers   Json
   schoolId  String
   quizId    String
   userId    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  quiz      Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([schoolId])
   @@index([quizId])
   @@index([userId])
 }
 
-// Announcement model for teachers to post announcements.
 model Announcement {
   id        String   @id @default(cuid())
   content   String
@@ -273,27 +265,25 @@ model Announcement {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  author User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([schoolId])
 }
 
-// Chat model to represent a conversation between users.
 model Chat {
   id        String   @id @default(cuid())
   schoolId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  school    School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  users     User[]        @relation("ChatUsers")
-  messages  ChatMessage[]
+  school   School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  users    User[]        @relation("ChatUsers")
+  messages ChatMessage[]
 
   @@index([schoolId])
 }
 
-// ChatMessage model for messages within a chat.
 model ChatMessage {
   id        String   @id @default(cuid())
   content   String
@@ -303,9 +293,9 @@ model ChatMessage {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  chat   Chat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  author User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([schoolId])
   @@index([chatId])

@@ -1,0 +1,6 @@
+{
+  "name": "@auth/core",
+  "version": "0.34.3",
+  "main": "nextauth.ts",
+  "license": "ISC"
+}
