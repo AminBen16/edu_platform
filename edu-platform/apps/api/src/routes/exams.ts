@@ -1,9 +1,43 @@
 // apps/api/src/routes/exams.ts
 import { Router } from 'express';
+import prisma from '../lib/prisma';
+import { protect, authorize } from '../middleware/auth';
+import { Role } from 'db';
+
 const router = Router();
 
-router.get('/', (req, res) => {
-    res.json({ message: 'Exams endpoint' });
+// GET /exams - List exams for the user's school
+router.get('/', protect, async (req, res) => {
+    try {
+        const exams = await prisma.exam.findMany({
+            where: { schoolId: req.user!.schoolId },
+            orderBy: { createdAt: 'desc' },
+        });
+        res.json(exams);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch exams.' });
+    }
+});
+
+// POST /exams - Create an exam (teacher or admin)
+router.post('/', protect, authorize(Role.TEACHER, Role.SCHOOL_ADMIN, Role.SUPER_ADMIN), async (req, res) => {
+    const { title, questions } = req.body;
+    if (!title || !questions) {
+        return res.status(400).json({ error: 'Title and questions are required.' });
+    }
+    try {
+        const exam = await prisma.exam.create({
+            data: {
+                title,
+                questions,
+                schoolId: req.user!.schoolId,
+                createdBy: req.user!.id,
+            },
+        });
+        res.status(201).json(exam);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to create exam.' });
+    }
 });
 
 export default router;

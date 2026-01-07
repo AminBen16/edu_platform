@@ -26,6 +26,37 @@ dependencies:
   # JSON Serialization
   json_annotation: ^4.8.1
 
+  # WebRTC for live classes
+  flutter_webrtc: ^0.9.48
+
+  # URL Launcher for payments
+  url_launcher: ^6.2.0
+
+  # Image Picker for uploads
+  image_picker: ^1.0.4
+
+  # Screen Recording
+  flutter_screen_recording: ^2.0.0
+
+  # Video/Recording audio
+  record: ^5.0.0
+
+  # Video Player
+  video_player: ^2.8.1
+
+  # Enhanced video UI
+  chewie: ^1.7.4
+
+  # Share functionality
+  share_plus: ^7.0.0
+
+  # Local notifications
+  flutter_local_notifications: ^16.3.0
+
+  # Socket.IO for chat
+  socket_io_client: ^2.0.1
+  dio: ^5.9.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

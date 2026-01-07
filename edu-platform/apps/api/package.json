@@ -16,8 +16,7 @@
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
-    "socket.io": "^4.7.5",
-    "db": "workspace:*"
+    "socket.io": "^4.7.5"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

@@ -18,12 +18,47 @@ class _TeacherUploadState extends State<TeacherUploadScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Upload Lesson")),
-      body: Column(
-        children: [
-          ElevatedButton(onPressed: pickFile, child: Text("Record Video")),
-          if (file != null) Text("Ready to upload"),
-        ],
+      appBar: AppBar(
+        title: Text("Upload Lesson",
+            style: Theme.of(context)
+                .textTheme
+                .titleLarge
+                ?.copyWith(color: Colors.white)),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        centerTitle: true,
+        elevation: 0,
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ElevatedButton(
+                onPressed: pickFile,
+                child: Text("Record Video"),
+              ),
+              const SizedBox(height: 24),
+              if (file != null)
+                Card(
+                  color:
+                      Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      "Ready to upload",
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.secondary),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

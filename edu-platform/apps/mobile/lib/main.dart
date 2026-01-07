@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'theme.dart';
 import 'screens/login.dart';
 
 void main() {
@@ -10,6 +11,11 @@ class EduApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(title: 'Education Platform', home: LoginScreen());
+    return MaterialApp(
+      title: 'Education Platform',
+      theme: appTheme,
+      debugShowCheckedModeBanner: false,
+      home: LoginScreen(),
+    );
   }
 }

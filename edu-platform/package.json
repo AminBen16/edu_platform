@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@sentry/node": "^10.32.1",
+    "@supabase/storage-js": "^2.89.0",
+    "axios": "^1.13.2",
+    "multer": "^2.0.2"
+  }
+}

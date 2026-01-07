@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-// TODO: Replace with your actual deployed API URL
-const String _baseUrl = "http://localhost:3001/api"; // For local testing with Vercel CLI
+// Use your actual deployed API URL here
+const String _baseUrl = "https://your-production-api-url.com/api";
 
 class ApiService {
   // Singleton instance
@@ -15,7 +15,8 @@ class ApiService {
 
   // --- Authentication ---
 
-  Future<Map<String, dynamic>> login(String email, String password, String schoolId) async {
+  Future<Map<String, dynamic>> login(
+      String email, String password, String schoolId) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/auth/login'),
       headers: <String, String>{
@@ -37,7 +38,7 @@ class ApiService {
       throw Exception(jsonDecode(response.body)['error'] ?? 'Failed to login.');
     }
   }
-  
+
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('authToken');
@@ -56,12 +57,12 @@ class ApiService {
   // --- Data Fetching ---
 
   Future<List<dynamic>> fetchSchools() async {
-      final response = await http.get(Uri.parse('$_baseUrl/schools'));
-      if (response.statusCode == 200) {
-          return jsonDecode(response.body);
-      } else {
-          throw Exception('Failed to load schools');
-      }
+    final response = await http.get(Uri.parse('$_baseUrl/schools'));
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load schools');
+    }
   }
 
   Future<List<dynamic>> fetchLessons() async {

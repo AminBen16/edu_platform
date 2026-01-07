@@ -1,3 +1,6 @@
+name: edu-platform
+version: 1.0.0
+
 dependencies:
   flutter_screen_recording: ^2.0.0
   path_provider: ^2.1.2

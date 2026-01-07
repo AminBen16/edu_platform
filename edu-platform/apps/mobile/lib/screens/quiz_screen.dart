@@ -14,25 +14,58 @@ class _QuizState extends State<QuizScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Quiz")),
-      body: Column(
-        children: [
-          Text(widget.quiz["question"]),
-          ...List.generate(widget.quiz["options"].length, (i) {
-            return RadioListTile(
-              title: Text(widget.quiz["options"][i]),
-              value: i,
-              groupValue: selected,
-              onChanged: (v) => setState(() => selected = v as int),
-            );
-          }),
-          ElevatedButton(
-            onPressed: () {
-              // submit answer
-            },
-            child: Text("Submit"),
+      appBar: AppBar(
+        title: Text("Quiz",
+            style: Theme.of(context)
+                .textTheme
+                .titleLarge
+                ?.copyWith(color: Colors.white)),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        centerTitle: true,
+        elevation: 0,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+        child: Card(
+          elevation: 2,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  widget.quiz["question"],
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 20),
+                ...List.generate(widget.quiz["options"].length, (i) {
+                  return RadioListTile(
+                    title: Text(
+                      widget.quiz["options"][i],
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                    value: i,
+                    groupValue: selected,
+                    activeColor: Theme.of(context).colorScheme.primary,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                    onChanged: (v) => setState(() => selected = v as int),
+                  );
+                }),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () {
+                    // submit answer
+                  },
+                  child: Text("Submit"),
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
