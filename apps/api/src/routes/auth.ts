@@ -1,9 +1,8 @@
 // apps/api/src/routes/auth.ts
 import { Router } from 'express';
-import prisma from 'db';
+import prisma, { Role } from '../../../packages/db';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { Role } from 'db';
 
 const router = Router();
 

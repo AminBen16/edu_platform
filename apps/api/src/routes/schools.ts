@@ -1,8 +1,7 @@
 // apps/api/src/routes/schools.ts
 import { Router } from 'express';
-import prisma from 'db';
+import prisma, { Role } from '../../../packages/db';
 import { authorize, protect } from '../middleware/auth';
-import { Role } from 'db';
 
 const router = Router();
 

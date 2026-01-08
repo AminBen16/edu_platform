@@ -1,8 +1,7 @@
 // apps/api/src/routes/quizzes.ts
 import { Router } from 'express';
-import prisma from 'db';
+import prisma, { Role } from '../../../packages/db';
 import { protect, authorize } from '../middleware/auth';
-import { Role } from 'db';
 
 const router = Router();
 
