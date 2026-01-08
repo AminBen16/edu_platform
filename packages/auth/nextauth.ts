@@ -1,7 +1,7 @@
 // packages/auth/nextauth.ts
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import prisma from 'db';
+import prisma from '../../packages/db';
 import { Role } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
