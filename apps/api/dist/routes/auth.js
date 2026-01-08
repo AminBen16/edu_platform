@@ -10,7 +10,10 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const db_2 = require("db");
 const router = (0, express_1.Router)();
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'a-default-secret-for-development';
+const JWT_SECRET = process.env.NEXTAUTH_SECRET;
+if (!JWT_SECRET) {
+    throw new Error('NEXTAUTH_SECRET environment variable is required');
+}
 // POST /auth/login - User login
 router.post('/login', async (req, res) => {
     const { email, password, schoolId } = req.body;

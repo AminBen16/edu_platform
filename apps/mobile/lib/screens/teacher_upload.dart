@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 class TeacherUploadScreen extends StatefulWidget {
+  const TeacherUploadScreen({super.key});
+
   @override
   State<TeacherUploadScreen> createState() => _TeacherUploadState();
 }
@@ -37,13 +39,13 @@ class _TeacherUploadState extends State<TeacherUploadScreen> {
             children: [
               ElevatedButton(
                 onPressed: pickFile,
-                child: Text("Record Video"),
+                child: const Text("Record Video"),
               ),
               const SizedBox(height: 24),
               if (file != null)
                 Card(
                   color:
-                      Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                      Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                   child: Padding(

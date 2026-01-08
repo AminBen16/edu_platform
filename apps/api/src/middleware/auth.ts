@@ -4,7 +4,11 @@ import jwt from 'jsonwebtoken';
 import prisma from 'db';
 import { Role } from 'db';
 
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'a-default-secret-for-development';
+const JWT_SECRET = process.env.NEXTAUTH_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error('NEXTAUTH_SECRET environment variable is required');
+}
 
 // Define a custom property on the Express Request object
 declare global {

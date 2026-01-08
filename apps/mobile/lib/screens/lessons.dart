@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/api.dart';
 
 class LessonsScreen extends StatefulWidget {
-  final String token;
-  const LessonsScreen(this.token, {super.key});
+  const LessonsScreen({super.key});
 
   @override
   State<LessonsScreen> createState() => _LessonsState();
@@ -15,7 +14,7 @@ class _LessonsState extends State<LessonsScreen> {
   @override
   void initState() {
     super.initState();
-    ApiService.fetchLessons(widget.token).then((data) {
+    ApiService.fetchLessons().then((data) {
       setState(() => lessons = data);
     });
   }

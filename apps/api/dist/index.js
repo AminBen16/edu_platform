@@ -39,12 +39,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // apps/api/src/index.ts
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
+const http_1 = require("http");
+const socket_io_1 = require("socket.io");
 const Sentry = __importStar(require("@sentry/node"));
 const schools_1 = __importDefault(require("./routes/schools"));
 const lessons_1 = __importDefault(require("./routes/lessons"));
 const payments_1 = __importDefault(require("./routes/payments"));
 const upload_1 = __importDefault(require("./routes/upload"));
-const webrtc_1 = __importDefault(require("./routes/webrtc"));
+const webrtc_1 = __importStar(require("./routes/webrtc"));
 const exams_1 = __importDefault(require("./routes/exams"));
 const auth_1 = __importDefault(require("./routes/auth"));
 const quizzes_1 = __importDefault(require("./routes/quizzes"));
@@ -56,6 +58,15 @@ Sentry.init({
     tracesSampleRate: 1.0,
 });
 const app = (0, express_1.default)();
+const server = (0, http_1.createServer)(app);
+const io = new socket_io_1.Server(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+});
+// Initialize WebRTC signaling
+(0, webrtc_1.handleWebRTCSignaling)(io);
 // Sentry request handler
 app.use(Sentry.Handlers.requestHandler());
 app.use((0, cors_1.default)());
@@ -79,5 +90,13 @@ app.use('/notifications', notifications_1.default);
 app.use('/analytics', analytics_1.default);
 // Sentry error handler
 app.use(Sentry.Handlers.errorHandler());
+// Start server for development
+if (process.env.NODE_ENV !== 'production') {
+    const PORT = process.env.PORT || 3000;
+    server.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+        console.log(`WebRTC signaling available on /webrtc`);
+    });
+}
 // This is the entrypoint for Vercel Serverless Functions
 exports.default = app;

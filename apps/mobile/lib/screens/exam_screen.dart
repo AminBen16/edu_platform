@@ -44,7 +44,7 @@ class _ExamState extends State<ExamScreen> {
                 ),
                 const SizedBox(height: 20),
                 ...List.generate(question["options"].length, (i) {
-                  return RadioListTile(
+                  return RadioListTile<int>(
                     title: Text(
                       question["options"][i],
                       style: Theme.of(context).textTheme.bodyLarge,
@@ -55,12 +55,15 @@ class _ExamState extends State<ExamScreen> {
                     activeColor: Theme.of(context).colorScheme.primary,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8)),
-                    onChanged: (v) => setState(() {
-                      if (answers.length > currentQ)
-                        answers[currentQ] = v as int;
-                      else
-                        answers.add(v as int);
-                    }),
+                    onChanged: (v) {
+                      setState(() {
+                        if (answers.length > currentQ) {
+                          answers[currentQ] = v!;
+                        } else {
+                          answers.add(v!);
+                        }
+                      });
+                    },
                   );
                 }),
                 const SizedBox(height: 24),

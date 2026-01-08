@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class QuizScreen extends StatefulWidget {
   final Map quiz;
-  QuizScreen(this.quiz);
+  const QuizScreen(this.quiz, {super.key});
 
   @override
   State<QuizScreen> createState() => _QuizState();
@@ -42,7 +42,7 @@ class _QuizState extends State<QuizScreen> {
                 ),
                 const SizedBox(height: 20),
                 ...List.generate(widget.quiz["options"].length, (i) {
-                  return RadioListTile(
+                  return RadioListTile<int>(
                     title: Text(
                       widget.quiz["options"][i],
                       style: Theme.of(context).textTheme.bodyLarge,
@@ -52,7 +52,7 @@ class _QuizState extends State<QuizScreen> {
                     activeColor: Theme.of(context).colorScheme.primary,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8)),
-                    onChanged: (v) => setState(() => selected = v as int),
+                    onChanged: (v) => setState(() => selected = v),
                   );
                 }),
                 const SizedBox(height: 24),
@@ -60,7 +60,7 @@ class _QuizState extends State<QuizScreen> {
                   onPressed: () {
                     // submit answer
                   },
-                  child: Text("Submit"),
+                  child: const Text("Submit"),
                 ),
               ],
             ),

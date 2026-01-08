@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'theme.dart';
 import 'screens/login.dart';
 
 void main() {
-  runApp(const EduApp());
+  runApp(const ProviderScope(child: EduApp()));
 }
 
 class EduApp extends StatelessWidget {
@@ -15,7 +16,7 @@ class EduApp extends StatelessWidget {
       title: 'Education Platform',
       theme: appTheme,
       debugShowCheckedModeBanner: false,
-      home: LoginScreen(),
+      home: const LoginScreen(),
     );
   }
 }

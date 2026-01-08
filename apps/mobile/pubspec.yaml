@@ -22,11 +22,12 @@ dependencies:
 
   # Local Storage
   shared_preferences: ^2.2.2
+  path_provider: ^2.1.1
 
   # JSON Serialization
   json_annotation: ^4.8.1
 
-  # WebRTC for live classes
+  # WebRTC for live classes (Free P2P)
   flutter_webrtc: ^0.9.48
 
   # URL Launcher for payments

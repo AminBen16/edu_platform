@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Use your actual deployed API URL here
-const String _baseUrl = "https://your-production-api-url.com/api";
+// Use local development API URL - change to deployed URL when ready
+const String _baseUrl = "http://localhost:3000/api";
 
 class ApiService {
   // Singleton instance

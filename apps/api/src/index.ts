@@ -1,13 +1,15 @@
 // apps/api/src/index.ts
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
+import { createServer } from 'http';
+import { Server as SocketIOServer } from 'socket.io';
 import * as Sentry from '@sentry/node';
 
 import schoolsRouter from './routes/schools';
 import lessonsRouter from './routes/lessons';
 import paymentsRouter from './routes/payments';
 import uploadRouter from './routes/upload';
-import webrtcRouter from './routes/webrtc';
+import webrtcRouter, { handleWebRTCSignaling } from './routes/webrtc';
 import examsRouter from './routes/exams';
 import authRouter from './routes/auth';
 import quizzesRouter from './routes/quizzes';
@@ -22,6 +24,16 @@ Sentry.init({
 });
 
 const app: Express = express();
+const server = createServer(app);
+const io = new SocketIOServer(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
+
+// Initialize WebRTC signaling
+handleWebRTCSignaling(io);
 
 
 // Sentry request handler
@@ -52,6 +64,15 @@ app.use('/analytics', analyticsRouter);
 
 // Sentry error handler
 app.use(Sentry.Handlers.errorHandler());
+
+// Start server for development
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 3000;
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`WebRTC signaling available on /webrtc`);
+  });
+}
 
 // This is the entrypoint for Vercel Serverless Functions
 export default app;
