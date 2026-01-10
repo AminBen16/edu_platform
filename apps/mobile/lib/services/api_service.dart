@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Use production API URL with CORS fixes
-const String _baseUrl = "https://api-gpsbq5t3k-ainamanipro.vercel.app/api/v1";
+// Use admin API URL
+const String _baseUrl = "https://admin-1jwvo6k14-ainamanipro.vercel.app/api/v1";
 
 class ApiService {
   // Singleton instance
