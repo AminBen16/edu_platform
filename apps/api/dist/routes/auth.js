@@ -10,6 +10,7 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const crypto_1 = __importDefault(require("crypto"));
 const database_1 = require("../config/database");
 const auth_1 = require("../middleware/auth");
+const emailService_1 = __importDefault(require("../services/emailService"));
 const router = (0, express_1.Router)();
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'fallback-secret';
 if (!JWT_SECRET) {
@@ -87,8 +88,17 @@ router.post('/invite', auth_1.protect, (0, auth_1.authorize)('ADMIN', 'SCHOOL_AD
                 userAgent: req.get('User-Agent')
             }
         });
-        // TODO: Send invitation email
-        // await sendInvitationEmail(email, invitationCode, schoolId);
+        // Send invitation email
+        const school = await database_1.prisma.school.findUnique({
+            where: { id: schoolId },
+            select: { name: true }
+        });
+        if (school) {
+            const emailSent = await emailService_1.default.sendInvitationEmail(email, name, invitationCode, school.name);
+            if (!emailSent) {
+                console.warn('Failed to send invitation email, but invitation was created');
+            }
+        }
         res.json({
             success: true,
             message: 'Invitation sent successfully',

@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 // apps/api/src/routes/lessons.ts
 const express_1 = require("express");
-const database_1 = require("../lib/database");
+const database_1 = require("../config/database");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
 // Mock lessons data for fallback
@@ -40,8 +40,9 @@ router.get('/', auth_1.protect, async (req, res) => {
     try {
         // Use real database if available, fallback to mock data
         if (process.env.DATABASE_URL && database_1.prisma) {
-            const lessons = await database_1.prisma.findLessons({
+            const lessons = await database_1.prisma.lesson.findMany({
                 where: { schoolId: req.user.schoolId },
+                orderBy: { createdAt: 'desc' }
             });
             res.json(lessons);
         }
@@ -56,20 +57,22 @@ router.get('/', auth_1.protect, async (req, res) => {
 });
 // POST /lessons - Create a lesson
 router.post('/', auth_1.protect, async (req, res) => {
-    const { title, content, topicId } = req.body;
-    if (!title || !content || !topicId) {
-        return res.status(400).json({ error: 'Title, content, and topicId are required.' });
+    const { title, content, subjectId } = req.body;
+    if (!title || !content || !subjectId) {
+        return res.status(400).json({ error: 'Title, content, and subjectId are required.' });
     }
     try {
         let lesson;
         // Use real database if available
         if (process.env.DATABASE_URL && database_1.prisma) {
-            lesson = await database_1.prisma.createLesson({
-                title,
-                description: content,
-                topicId,
-                schoolId: req.user.schoolId,
-                authorId: req.user.id,
+            lesson = await database_1.prisma.lesson.create({
+                data: {
+                    title,
+                    description: content,
+                    subjectId,
+                    schoolId: req.user.schoolId,
+                    teacherId: req.user.id,
+                },
             });
         }
         else {
@@ -78,7 +81,7 @@ router.post('/', auth_1.protect, async (req, res) => {
                 id: `lesson-${Date.now()}`,
                 title,
                 description: content,
-                topicId,
+                subjectId,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
             };

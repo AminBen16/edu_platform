@@ -1,13 +1,17 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 // Assignment management system
 const express_1 = require("express");
 const auth_1 = require("../middleware/auth");
 const database_1 = require("../config/database");
+const notificationService_1 = __importDefault(require("../services/notificationService"));
 const router = (0, express_1.Router)();
 // GET /assignments - Get assignments for user
 router.get('/', auth_1.protect, async (req, res) => {
-    const { role, userId, schoolId } = req.user;
+    const { role, id: userId, schoolId } = req.user;
     try {
         let assignments = [];
         switch (role) {
@@ -38,30 +42,46 @@ router.get('/', auth_1.protect, async (req, res) => {
 // POST /assignments - Create new assignment
 router.post('/', auth_1.protect, (0, auth_1.authorize)('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), (0, auth_1.requirePermission)('assignments.write'), async (req, res) => {
     try {
-        const { title, description, courseId, dueDate, points, type } = req.body;
+        const { title, description, lessonId, dueDate, maxScore } = req.body;
         const assignment = await database_1.prisma.assignment.create({
             data: {
                 title,
                 description,
-                courseId,
-                dueDate: new Date(dueDate),
-                points: points || 100,
-                type: type || 'homework',
-                createdBy: req.user.id
+                lessonId,
+                dueDate: dueDate ? new Date(dueDate) : null,
+                maxScore: maxScore || 100,
+                teacherId: req.user.id
             }
         });
-        // Notify enrolled students
+        // Get students enrolled in the lesson
         const enrollments = await database_1.prisma.enrollment.findMany({
-            where: { courseId, isActive: true },
+            where: { lessonId, status: 'ACTIVE' },
             include: {
                 student: {
-                    select: { id: true, name: true, email: true }
+                    include: {
+                        user: {
+                            select: { id: true, name: true, email: true }
+                        }
+                    }
                 }
             }
         });
-        // TODO: Send real notifications
-        for (const enrollment of enrollments) {
-            console.log(`Assignment created for student: ${enrollment.student.name}`);
+        // Send real notifications to enrolled students
+        const studentIds = enrollments.map(e => e.studentId);
+        if (studentIds.length > 0) {
+            const notificationsSent = await notificationService_1.default.sendBulkNotifications(studentIds, {
+                type: 'ASSIGNMENT',
+                title: `New Assignment: ${title}`,
+                message: `A new assignment "${title}" has been created for your class. Due date: ${dueDate ? new Date(dueDate).toLocaleDateString() : 'No due date'}`,
+                data: {
+                    assignmentId: assignment.id,
+                    title: assignment.title,
+                    description: assignment.description,
+                    dueDate: assignment.dueDate,
+                    maxScore: assignment.maxScore
+                }
+            });
+            console.log(`Notifications sent to ${notificationsSent} students`);
         }
         res.status(201).json(assignment);
     }
@@ -71,17 +91,18 @@ router.post('/', auth_1.protect, (0, auth_1.authorize)('TEACHER', 'ADMIN', 'SCHO
     }
 });
 // PUT /assignments/:id - Update assignment
-router.put('/:id', auth_1.protect, (0, auth_1.authorize)('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), (0, auth_1.requirePermission)('assignments.write'), async (req, res) => {
+router.put('/:id', auth_1.protect, (0, auth_1.authorize)('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), async (req, res) => {
+    const { id } = req.params;
+    const { title, description, dueDate, maxScore } = req.body;
     try {
-        const { id } = req.params;
-        const { title, description, dueDate, points } = req.body;
         const assignment = await database_1.prisma.assignment.update({
             where: { id },
             data: {
                 title,
                 description,
-                dueDate: dueDate ? new Date(dueDate) : undefined,
-                points
+                dueDate: dueDate ? new Date(dueDate) : null,
+                maxScore,
+                updatedAt: new Date()
             }
         });
         res.json(assignment);
@@ -92,9 +113,9 @@ router.put('/:id', auth_1.protect, (0, auth_1.authorize)('TEACHER', 'ADMIN', 'SC
     }
 });
 // DELETE /assignments/:id - Delete assignment
-router.delete('/:id', auth_1.protect, (0, auth_1.authorize)('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), (0, auth_1.requirePermission)('assignments.write'), async (req, res) => {
+router.delete('/:id', auth_1.protect, (0, auth_1.authorize)('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), async (req, res) => {
+    const { id } = req.params;
     try {
-        const { id } = req.params;
         await database_1.prisma.assignment.delete({
             where: { id }
         });
@@ -107,33 +128,30 @@ router.delete('/:id', auth_1.protect, (0, auth_1.authorize)('TEACHER', 'ADMIN', 
 });
 // GET /assignments/:id - Get single assignment
 router.get('/:id', auth_1.protect, async (req, res) => {
+    const { id } = req.params;
     try {
-        const { id } = req.params;
-        const { role, userId } = req.user;
         const assignment = await database_1.prisma.assignment.findUnique({
             where: { id },
             include: {
-                course: {
-                    select: { title: true },
-                    instructor: { select: { name: true } }
+                lesson: {
+                    select: { id: true, title: true }
+                },
+                teacher: {
+                    select: { id: true, user: { select: { name: true, email: true } } }
                 },
                 submissions: {
-                    where: { userId },
                     include: {
-                        student: { select: { name: true, email: true } }
+                        student: {
+                            include: {
+                                user: { select: { name: true, email: true } }
+                            }
+                        }
                     }
                 }
             }
         });
         if (!assignment) {
             return res.status(404).json({ error: 'Assignment not found' });
-        }
-        // Check access permissions
-        const hasAccess = role === 'TEACHER' && assignment.course.instructorId === userId ||
-            role === 'ADMIN' || role === 'SCHOOL_ADMIN' ||
-            (role === 'STUDENT' && assignment.submissions?.some(sub => sub.studentId === userId));
-        if (!hasAccess) {
-            return res.status(403).json({ error: 'Access denied to this assignment' });
         }
         res.json(assignment);
     }
@@ -145,45 +163,49 @@ router.get('/:id', auth_1.protect, async (req, res) => {
 // Helper functions
 async function getStudentAssignments(studentId) {
     const enrollments = await database_1.prisma.enrollment.findMany({
-        where: { studentId, isActive: true },
+        where: { studentId, status: 'ACTIVE' },
         include: {
-            course: {
+            Lesson: {
                 include: {
-                    assignments: {
-                        where: { dueDate: { gte: new Date() } },
-                        orderBy: { dueDate: 'asc' }
-                    }
+                    assignments: true
                 }
             }
         }
     });
-    const assignments = enrollments.flatMap(enrollment => enrollment.course.assignments || []);
-    return assignments;
+    return enrollments.flatMap(enrollment => enrollment.Lesson?.assignments || []);
 }
 async function getTeacherAssignments(teacherId) {
-    const courses = await database_1.prisma.course.findMany({
-        where: { instructorId: teacherId },
+    const assignments = await database_1.prisma.assignment.findMany({
+        where: { teacherId },
         include: {
-            assignments: {
-                orderBy: { createdAt: 'desc' }
+            lesson: {
+                select: { id: true, title: true }
+            },
+            submissions: {
+                select: { id: true, studentId: true, score: true, submittedAt: true }
             }
         }
     });
-    return courses.flatMap(course => course.assignments || []);
+    return assignments;
 }
 async function getAdminAssignments(schoolId) {
     return await database_1.prisma.assignment.findMany({
         where: {
-            course: { schoolId }
+            lesson: {
+                schoolId
+            }
         },
         include: {
-            course: {
-                select: { title: true },
-                instructor: { select: { name: true } }
+            lesson: {
+                select: { id: true, title: true }
             },
-            submissions: true
-        },
-        orderBy: { createdAt: 'desc' }
+            teacher: {
+                select: { id: true, user: { select: { name: true, email: true } } }
+            },
+            submissions: {
+                select: { id: true, studentId: true, score: true, submittedAt: true }
+            }
+        }
     });
 }
 exports.default = router;

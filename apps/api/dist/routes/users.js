@@ -9,6 +9,9 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const crypto_1 = __importDefault(require("crypto"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const database_1 = require("../config/database");
+const auth_1 = require("../middleware/auth");
+const auditLog_1 = require("../middleware/auditLog");
+const emailService_1 = __importDefault(require("../services/emailService"));
 const router = (0, express_1.Router)();
 // Middleware to verify JWT token
 const authenticateToken = (req, res, next) => {
@@ -71,10 +74,10 @@ router.post('/request-deletion', authenticateToken, async (req, res) => {
         return res.status(400).json({ error: 'Password is required' });
     }
     try {
-        // Get user with password
+        // Get user with password and school info
         const user = await database_1.prisma.user.findUnique({
             where: { id: req.user.id },
-            select: { id: true, email: true, password: true }
+            select: { id: true, email: true, password: true, name: true, schoolId: true }
         });
         if (!user || !user.password) {
             return res.status(400).json({ error: 'User not found or invalid account' });
@@ -121,8 +124,17 @@ router.post('/request-deletion', authenticateToken, async (req, res) => {
                 userAgent: req.get('User-Agent')
             }
         });
-        // TODO: Send deletion confirmation email
-        // await sendDeletionEmail(user.email, deletionToken);
+        // Send deletion confirmation email
+        const school = await database_1.prisma.school.findUnique({
+            where: { id: user.schoolId },
+            select: { name: true }
+        });
+        if (school) {
+            const emailSent = await emailService_1.default.sendDeletionConfirmationEmail(user.email, user.name, deletionToken, school.name);
+            if (!emailSent) {
+                console.warn('Failed to send deletion confirmation email, but deletion request was created');
+            }
+        }
         res.json({
             message: 'Deletion confirmation sent to your email',
             requestId: deletionRequest.id
@@ -240,6 +252,47 @@ router.post('/restore-account', authenticateToken, async (req, res) => {
     catch (error) {
         console.error('Account restoration error:', error);
         res.status(500).json({ error: 'Failed to restore account' });
+    }
+});
+// PUT /users/password - Change user password
+router.put('/password', auth_1.protect, async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: 'Current password and new password are required' });
+    }
+    if (newPassword.length < 8) {
+        return res.status(400).json({ error: 'New password must be at least 8 characters long' });
+    }
+    try {
+        // Get user with password
+        const user = await database_1.prisma.user.findUnique({
+            where: { id: req.user.id }
+        });
+        if (!user || !user.password) {
+            return res.status(400).json({ error: 'User not found or no password set' });
+        }
+        // Verify current password
+        const isCurrentPasswordValid = await bcryptjs_1.default.compare(currentPassword, user.password);
+        if (!isCurrentPasswordValid) {
+            return res.status(400).json({ error: 'Current password is incorrect' });
+        }
+        // Hash new password
+        const hashedNewPassword = await bcryptjs_1.default.hash(newPassword, 12);
+        // Update password
+        await database_1.prisma.user.update({
+            where: { id: req.user.id },
+            data: { password: hashedNewPassword }
+        });
+        // Log password change
+        await (0, auditLog_1.logAudit)(req.user.id, 'PASSWORD_CHANGED', 'user', {
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent')
+        });
+        res.json({ message: 'Password changed successfully' });
+    }
+    catch (error) {
+        console.error('Password change error:', error);
+        res.status(500).json({ error: 'Failed to change password' });
     }
 });
 // GET /users/deletion-status - Check deletion status
