@@ -42,11 +42,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
 
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => const LessonsScreen(),
-          ),
-        );
+        Navigator.of(context).pushReplacementNamed('/dashboard');
       }
     } catch (e) {
       if (mounted) {

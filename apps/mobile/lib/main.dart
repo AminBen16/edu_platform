@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'theme.dart';
 import 'screens/login.dart';
+import 'screens/dashboard.dart';
 
 void main() {
   runApp(const ProviderScope(child: EduApp()));
@@ -17,6 +18,9 @@ class EduApp extends StatelessWidget {
       theme: appTheme,
       debugShowCheckedModeBanner: false,
       home: const LoginScreen(),
+      routes: {
+        '/dashboard': (context) => const DashboardScreen(),
+      },
     );
   }
 }
