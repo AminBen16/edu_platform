@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'media_player.dart';
+import '../screens/media_player.dart';
 import '../services/api_service.dart';
 
 class MediaContentViewer extends ConsumerStatefulWidget {
@@ -23,13 +23,13 @@ class _MediaContentViewerState extends ConsumerState<MediaContentViewer> {
   List<dynamic> get _filteredResources {
     switch (_selectedFilter) {
       case 'video':
-        return resources.where((r) => _isVideo(r['type'])).toList();
+        return widget.resources.where((r) => _isVideo(r['type'])).toList();
       case 'audio':
-        return resources.where((r) => _isAudio(r['type'])).toList();
+        return widget.resources.where((r) => _isAudio(r['type'])).toList();
       case 'document':
-        return resources.where((r) => _isDocument(r['type'])).toList();
+        return widget.resources.where((r) => _isDocument(r['type'])).toList();
       default:
-        return resources;
+        return widget.resources;
     }
   }
 

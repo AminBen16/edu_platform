@@ -47,7 +47,6 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
       final apiService = ApiService();
       final profile = await apiService.getUserProfile();
       setState(() {
-        _userProfile = profile;
         _nameController.text = profile['name'] ?? '';
       });
     } catch (e) {

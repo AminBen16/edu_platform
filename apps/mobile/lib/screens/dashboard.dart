@@ -25,9 +25,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Future<void> _loadUserData() async {
     try {
       final apiService = ApiService();
-      final token = await apiService.getToken();
+      final token = await apiService._getToken();
       
       if (token != null) {
+        final response = await http.get(
+          Uri.parse('${apiService._baseUrl}/dashboard'),
+          headers: <String, String>{
+            'Content-Type': 'application/json; charset=UTF-8',
+            'Authorization': 'Bearer $token',
+          },
+        );
         // Load user data and courses
         setState(() {
           _isLoading = false;
