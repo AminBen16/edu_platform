@@ -49,6 +49,14 @@ async function getStudentDashboard(studentId: string, schoolId: string) {
       where: { 
         studentId, 
         status: 'ACTIVE'
+      },
+      include: {
+        Lesson: {
+          select: { id: true, title: true, description: true }
+        },
+        Class: {
+          select: { id: true, name: true }
+        }
       }
     }),
     getStudentProgress(studentId),
@@ -65,11 +73,11 @@ async function getStudentDashboard(studentId: string, schoolId: string) {
       averageGrade: 85 // TODO: Calculate from real data
     },
     courses: enrollments.map((enrollment: any) => ({
-      id: enrollment.courseId,
-      title: `Course ${enrollment.courseId}`,
-      description: 'Course description',
+      id: enrollment.lessonId,
+      title: enrollment.Lesson?.title || `Course ${enrollment.lessonId}`,
+      description: enrollment.Lesson?.description || 'Course description',
       thumbnail: 'https://via.placeholder.com/150x100?text=Course',
-      progress: progress.find((p: any) => p.courseId === enrollment.courseId)?.percentage || 0,
+      progress: progress.find((p: any) => p.lessonId === enrollment.lessonId)?.percentage || 0,
       instructor: 'Teacher Name',
       duration: '8 weeks',
       enrolled: true
