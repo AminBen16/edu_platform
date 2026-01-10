@@ -2,17 +2,69 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 // apps/api/src/routes/analytics.ts
 const express_1 = require("express");
-const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
-// POST /analytics/event - Track a custom event (placeholder for Vercel Analytics)
-router.post('/event', auth_1.protect, async (req, res) => {
-    const { eventType, metadata } = req.body;
-    if (!eventType) {
-        return res.status(400).json({ error: 'eventType is required.' });
+// GET /analytics/overview - Get analytics overview
+router.get('/overview', async (req, res) => {
+    try {
+        // Mock analytics data
+        const overview = {
+            totalUsers: 1250,
+            activeUsers: 342,
+            totalLessons: 45,
+            totalQuizzes: 23,
+            totalLiveSessions: 12,
+            averageEngagement: 78.5,
+            topSubjects: [
+                { name: 'Mathematics', engagement: 92 },
+                { name: 'Physics', engagement: 78 },
+                { name: 'Chemistry', engagement: 65 },
+            ],
+            weeklyActivity: [
+                { day: 'Monday', users: 289, lessons: 12 },
+                { day: 'Tuesday', users: 312, lessons: 15 },
+                { day: 'Wednesday', users: 298, lessons: 8 },
+                { day: 'Thursday', users: 334, lessons: 18 },
+                { day: 'Friday', users: 301, lessons: 11 },
+            ],
+        };
+        res.json(overview);
     }
-    // Here you would send the event to Vercel Analytics or your own tracking system
-    // For now, just log and return success
-    console.log('Analytics event:', { eventType, metadata, user: req.user });
-    res.status(200).json({ status: 'Event tracked' });
+    catch (error) {
+        res.status(500).json({ error: 'Failed to fetch analytics' });
+    }
+});
+// GET /analytics/users - Get user analytics
+router.get('/users', async (req, res) => {
+    try {
+        // Mock user analytics
+        const userAnalytics = [
+            {
+                id: 'student-1',
+                name: 'John Doe',
+                email: 'john@school.com',
+                role: 'STUDENT',
+                lessonsCompleted: 23,
+                quizzesTaken: 18,
+                averageScore: 85.4,
+                lastActive: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+                totalTimeSpent: 4560,
+            },
+            {
+                id: 'student-2',
+                name: 'Jane Smith',
+                email: 'jane@school.com',
+                role: 'STUDENT',
+                lessonsCompleted: 31,
+                quizzesTaken: 24,
+                averageScore: 91.2,
+                lastActive: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+                totalTimeSpent: 5230,
+            },
+        ];
+        res.json(userAnalytics);
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Failed to fetch user analytics' });
+    }
 });
 exports.default = router;

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'theme.dart';
 import 'screens/login.dart';
 import 'screens/dashboard.dart';
+import 'screens/register.dart';
 
 void main() {
   runApp(const ProviderScope(child: EduApp()));
@@ -20,6 +21,10 @@ class EduApp extends StatelessWidget {
       home: const LoginScreen(),
       routes: {
         '/dashboard': (context) => const DashboardScreen(),
+        '/register': (context, arguments) {
+          final invitationCode = arguments as String;
+          return RegisterScreen(invitationCode: invitationCode);
+        },
       },
     );
   }

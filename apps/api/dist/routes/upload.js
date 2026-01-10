@@ -15,11 +15,14 @@ const upload = (0, multer_1.default)({ storage });
 // Supabase Storage client setup
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY || '';
-const supabase = (0, supabase_js_1.createClient)(supabaseUrl, supabaseKey);
+const supabase = supabaseUrl && supabaseKey ? (0, supabase_js_1.createClient)(supabaseUrl, supabaseKey) : null;
 // POST /upload/file - Upload a file to Supabase Storage
 router.post('/file', auth_1.protect, upload.single('file'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded.' });
+    }
+    if (!supabase) {
+        return res.status(500).json({ error: 'Supabase storage not configured.' });
     }
     const user = req.user;
     const bucket = 'edu-files';
