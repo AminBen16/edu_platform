@@ -4,6 +4,12 @@
     "apps/*",
     "packages/*"
   ],
+  "scripts": {
+    "build:api": "cd apps/api && npm run build",
+    "build:admin": "cd apps/admin && npm run build",
+    "build:mobile": "cd apps/mobile && flutter build web",
+    "build:all": "npm run build:api && npm run build:admin && npm run build:mobile"
+  },
   "dependencies": {
     "@sentry/node": "^10.32.1",
     "@supabase/storage-js": "^2.89.0",

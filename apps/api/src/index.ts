@@ -6,12 +6,12 @@ import { Server as SocketIOServer } from 'socket.io';
 import * as Sentry from '@sentry/node';
 
 import schoolsRouter from './routes/schools';
-import lessonsRouter from './routes/lessons_mock';
+import lessonsRouter from './routes/lessons_prod';
 import paymentsRouter from './routes/payments';
 import uploadRouter from './routes/upload';
 import webrtcRouter, { handleWebRTCSignaling } from './routes/webrtc';
 import examsRouter from './routes/exams';
-import authRouter from './routes/auth_mock';
+import authRouter from './routes/auth_prod';
 import quizzesRouter from './routes/quizzes';
 import chatRouter from './routes/chat';
 import notificationsRouter from './routes/notifications';

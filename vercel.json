@@ -1,11 +1,14 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "apps/api/src/index.ts",
-      "use": "@vercel/node"
+  "buildCommand": "npm run build:api",
+  "outputDirectory": "apps/api/dist",
+  "installCommand": "npm install",
+  "framework": null,
+  "functions": {
+    "apps/api/src/index.ts": {
+      "runtime": "nodejs18.x"
     }
-  ],
+  },
   "routes": [
     {
       "src": "/api/(.*)",
