@@ -5,7 +5,7 @@ import { prisma } from '../lib/database';
 
 const router = Router();
 
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'fallback-production-secret';
+const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'fallback-secret';
 
 if (!JWT_SECRET) {
   throw new Error('NEXTAUTH_SECRET environment variable is required');

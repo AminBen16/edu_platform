@@ -25,11 +25,15 @@ declare global {
 export const protect = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
 
+  console.log('Auth header:', authHeader);
+  console.log('JWT_SECRET:', JWT_SECRET);
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Not authorized, no token' });
   }
 
   const token = authHeader.split(' ')[1];
+  console.log('Token:', token);
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as {
@@ -41,6 +45,8 @@ export const protect = (req: Request, res: Response, next: NextFunction) => {
       exp: number;
     };
     
+    console.log('Decoded token:', decoded);
+    
     // Attach user to the request object
     req.user = {
       id: decoded.userId,
@@ -49,8 +55,10 @@ export const protect = (req: Request, res: Response, next: NextFunction) => {
       schoolId: decoded.schoolId
     };
 
+    console.log('User attached to request:', req.user);
     next();
   } catch (error) {
+    console.log('JWT verification error:', error);
     return res.status(401).json({ error: 'Not authorized, token failed' });
   }
 };

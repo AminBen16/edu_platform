@@ -2,10 +2,19 @@
 // Local database configuration for API
 // This avoids TypeScript rootDir issues
 
+export enum Role {
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  ADMIN = 'ADMIN',
+  TEACHER = 'TEACHER',
+  STUDENT = 'STUDENT',
+  PARENT = 'PARENT',
+  SCHOOL_ADMIN = 'SCHOOL_ADMIN',
+}
+
 export interface DatabaseUser {
   id: string;
   email: string;
-  role: string;
+  role: Role;
   schoolId: string;
   name?: string;
   avatarUrl?: string;
@@ -32,6 +41,14 @@ export interface DatabaseExam {
   lessonId?: string;
   schoolId?: string;
   authorId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DatabaseSchool {
+  id: string;
+  name: string;
+  logoUrl?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -102,7 +119,69 @@ export class DatabaseService {
       },
     ];
   }
+
+  // Mock school methods
+  static school = {
+    findMany: async (options?: any) => {
+      return [
+        {
+          id: 'default-school',
+          name: 'Default Education Platform',
+          logoUrl: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+      ];
+    },
+    create: async (data: any) => {
+      return {
+        id: `school-${Date.now()}`,
+        name: data.name,
+        logoUrl: data.logoUrl,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    }
+  };
+
+  // Mock quiz methods
+  static quiz = {
+    findMany: async (options?: any) => {
+      return [
+        {
+          id: '1',
+          title: 'Mathematics Final Exam',
+          description: 'Comprehensive assessment covering all topics from the semester',
+          questions: [
+            {
+              id: 'q1',
+              question: 'What is 2 + 2?',
+              options: ['3', '4', '5', '2'],
+              correctAnswer: 1,
+            }
+          ],
+          duration: 60,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+      ];
+    },
+    create: async (data: any) => {
+      return {
+        id: `quiz-${Date.now()}`,
+        title: data.title,
+        questions: data.questions,
+        duration: data.duration || 60,
+        lessonId: data.lessonId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    }
+  };
 }
 
 // Export a prisma-like interface for compatibility
 export const prisma = DatabaseService;
+
+// Default export for compatibility
+export default DatabaseService;
