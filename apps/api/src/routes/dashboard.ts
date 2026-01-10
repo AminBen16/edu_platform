@@ -9,7 +9,7 @@ const router = Router();
 
 // GET /dashboard - Role-based dashboard data
 router.get('/', protect, async (req: RequestWithUser, res: Response) => {
-  const { role, userId, schoolId } = req.user!;
+  const { role, id: userId, schoolId } = req.user!;
 
   try {
     let dashboardData = {};
@@ -54,7 +54,7 @@ async function getStudentDashboard(studentId: string, schoolId: string) {
         Lesson: {
           select: { id: true, title: true, description: true }
         },
-        Class: {
+        class: {
           select: { id: true, name: true }
         }
       }
@@ -88,10 +88,10 @@ async function getStudentDashboard(studentId: string, schoolId: string) {
 
 // Teacher dashboard data
 async function getTeacherDashboard(teacherId: string, schoolId: string) {
-  const [courses, students, analytics] = await Promise.all([
-    prisma.course.findMany({
+  const [lessons, students, analytics] = await Promise.all([
+    prisma.lesson.findMany({
       where: { 
-        instructorId: teacherId, 
+        teacherId, 
         schoolId 
       }
     }),
@@ -107,15 +107,15 @@ async function getTeacherDashboard(teacherId: string, schoolId: string) {
   return {
     userRole: 'TEACHER',
     stats: {
-      totalCourses: courses.length,
+      totalCourses: lessons.length,
       totalStudents: students.length,
-      averageClassSize: Math.floor(courses.reduce((sum: number, course: any) => sum + 20, 0) / courses.length), // Mock data
-      activeClasses: courses.filter((c: any) => true).length
+      averageClassSize: Math.floor(lessons.reduce((sum: number, lesson: any) => sum + 20, 0) / lessons.length), // Mock data
+      activeClasses: lessons.filter((l: any) => true).length
     },
-    courses: courses.map((course: any) => ({
-      id: course.id,
-      title: course.title,
-      description: course.description,
+    courses: lessons.map((lesson: any) => ({
+      id: lesson.id,
+      title: lesson.title,
+      description: lesson.description,
       enrolledStudents: 25, // Mock data
       averageProgress: 75, // TODO: Calculate from real data
       status: 'active'
@@ -133,9 +133,9 @@ async function getTeacherDashboard(teacherId: string, schoolId: string) {
 
 // Admin dashboard data
 async function getAdminDashboard(userId: string, schoolId: string) {
-  const [users, courses, schools, analytics] = await Promise.all([
+  const [users, lessons, schools, analytics] = await Promise.all([
     prisma.user.count({ where: { schoolId } }),
-    prisma.course.count({ where: { schoolId } }),
+    prisma.lesson.count({ where: { schoolId } }),
     prisma.school.findUnique({ where: { id: schoolId } }),
     getSchoolAnalytics(schoolId)
   ]);
@@ -144,7 +144,7 @@ async function getAdminDashboard(userId: string, schoolId: string) {
     userRole: 'ADMIN',
     stats: {
       totalUsers: users,
-      totalCourses: courses,
+      totalCourses: lessons,
       totalSchools: schools ? 1 : 0,
       activeUsers: Math.floor(users * 0.7), // TODO: Calculate from real data
       systemHealth: 'operational'
@@ -158,10 +158,10 @@ async function getAdminDashboard(userId: string, schoolId: string) {
 
 // Super Admin dashboard data
 async function getSuperAdminDashboard(userId: string, schoolId: string) {
-  const [globalStats, recentActivity] = await Promise.all([
+  const [totalUsers, totalLessons, totalSchools, recentActivity] = await Promise.all([
     // Global statistics
     prisma.user.count(),
-    prisma.course.count(),
+    prisma.lesson.count(),
     prisma.school.count(),
     // Recent activity (last 24 hours)
     prisma.user.findMany({
@@ -178,13 +178,13 @@ async function getSuperAdminDashboard(userId: string, schoolId: string) {
   return {
     userRole: 'SUPER_ADMIN',
     stats: {
-      totalUsers: globalStats[0],
-      totalCourses: globalStats[1],
-      totalSchools: globalStats[2],
-      activeUsers: Math.floor(globalStats[0] * 0.8),
+      totalUsers,
+      totalCourses: totalLessons,
+      totalSchools,
+      activeUsers: Math.floor(totalUsers * 0.8),
       systemUptime: process.env.UPTIME || 'Unknown'
     },
-    recentActivity: recentActivity,
+    recentActivity,
     globalAnalytics: {
       userGrowth: 12.5, // TODO: Calculate from real data
       courseGrowth: 8.3, // TODO: Calculate from real data
@@ -200,10 +200,15 @@ async function getSuperAdminDashboard(userId: string, schoolId: string) {
 // Parent dashboard data
 async function getParentDashboard(parentId: string, schoolId: string) {
   const [children, enrollments] = await Promise.all([
-    prisma.user.findMany({
+    prisma.student.findMany({
       where: { 
-        parentId: parentId,
-        schoolId
+        schoolId,
+        parentEmail: parentId // Use parentEmail to find children
+      },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true }
+        }
       }
     }),
     getParentNotifications(parentId)
@@ -219,8 +224,8 @@ async function getParentDashboard(parentId: string, schoolId: string) {
     },
     children: children.map((child: any) => ({
       id: child.id,
-      name: child.name,
-      email: child.email,
+      name: child.user?.name || 'Unknown',
+      email: child.user?.email || 'Unknown',
       enrolledCourses: 5, // Mock data
       averageGrade: 78, // TODO: Calculate from real data
       courses: [
