@@ -1,9 +1,5 @@
 {
   "version": 2,
-  "buildCommand": "npm run build:api",
-  "outputDirectory": "apps/api/dist",
-  "installCommand": "npm install",
-  "framework": null,
   "functions": {
     "apps/api/src/index.ts": {
       "runtime": "nodejs18.x"
@@ -13,6 +9,10 @@
     {
       "src": "/api/(.*)",
       "dest": "apps/api/src/index.ts"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "apps/admin/public/$1"
     }
   ]
 }
