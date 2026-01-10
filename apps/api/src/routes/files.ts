@@ -6,6 +6,7 @@ import { prisma } from '../config/database';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import StorageService from '../services/storageService';
 
 const router = Router();
 
@@ -124,31 +125,39 @@ router.post('/', protect, authorize('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), require
     const file = req.file;
     const user = req.user! as any;
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = path.join(process.cwd(), 'uploads');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-
-    // Save file to disk
-    const fileName = `${Date.now()}-${file.originalname}`;
-    const filePath = path.join(uploadsDir, fileName);
-    fs.writeFileSync(filePath, file.buffer);
-
     // Create lesson resource record in database
     const resource = await prisma.lessonResource.create({
       data: {
         title: title || file.originalname,
         type: (type as any) || 'DOCUMENT',
-        url: `/uploads/${fileName}`,
+        url: '', // Will be updated by StorageService
         size: file.size,
         lessonId: lessonId || null
       }
     });
 
+    // Store file using StorageService (local + cloud)
+    const storageResult = await StorageService.storeFile({
+      file: file.buffer,
+      fileName: file.originalname,
+      contentType: file.mimetype,
+      bucket: 'education-platform'
+    });
+
+    // Update resource with storage URL
+    await prisma.lessonResource.update({
+      where: { id: resource.id },
+      data: {
+        url: storageResult.url
+      }
+    });
+
     res.status(201).json({
       message: 'File uploaded successfully',
-      resource
+      resource: {
+        ...resource,
+        url: storageResult.url
+      }
     });
   } catch (error) {
     console.error('File upload error:', error);
@@ -195,10 +204,13 @@ router.delete('/:id', protect, authorize('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), re
       return res.status(404).json({ error: 'File not found' });
     }
 
-    // Delete file from filesystem
-    const filePath = path.join(process.cwd(), resource.url);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    // Delete file using StorageService (local + cloud)
+    const deleted = await StorageService.deleteFile(resource.url);
+    
+    if (deleted) {
+      console.log('File deleted from storage:', resource.url);
+    } else {
+      console.log('File deletion failed, but continuing with database cleanup');
     }
 
     // Delete from database

@@ -13,7 +13,7 @@
   "license": "ISC",
   "dependencies": {
     "@sentry/node": "^7.109.0",
-    "@supabase/supabase-js": "^2.89.0",
+    "@supabase/supabase-js": "^2.90.1",
     "@types/nodemailer": "^7.0.5",
     "axios": "^1.6.8",
     "bcryptjs": "^2.4.3",
