@@ -1,8 +1,7 @@
 // apps/api/src/middleware/auth.ts
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import prisma from 'db';
-import { Role } from 'db';
+import prisma, { Role } from '../../../../packages/db';
 
 const JWT_SECRET = process.env.NEXTAUTH_SECRET;
 

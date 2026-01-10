@@ -6,12 +6,12 @@ import { Server as SocketIOServer } from 'socket.io';
 import * as Sentry from '@sentry/node';
 
 import schoolsRouter from './routes/schools';
-import lessonsRouter from './routes/lessons';
+import lessonsRouter from './routes/lessons_mock';
 import paymentsRouter from './routes/payments';
 import uploadRouter from './routes/upload';
 import webrtcRouter, { handleWebRTCSignaling } from './routes/webrtc';
 import examsRouter from './routes/exams';
-import authRouter from './routes/auth';
+import authRouter from './routes/auth_mock';
 import quizzesRouter from './routes/quizzes';
 import chatRouter from './routes/chat';
 import notificationsRouter from './routes/notifications';
@@ -49,17 +49,17 @@ app.get('/', (req: Request, res: Response) => {
 
 // API Routes
 
-app.use('/auth', authRouter);
-app.use('/schools', schoolsRouter);
-app.use('/lessons', lessonsRouter);
-app.use('/payments', paymentsRouter);
-app.use('/upload', uploadRouter);
-app.use('/webrtc', webrtcRouter);
-app.use('/exams', examsRouter);
-app.use('/quizzes', quizzesRouter);
-app.use('/chat', chatRouter);
-app.use('/notifications', notificationsRouter);
-app.use('/analytics', analyticsRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/schools', schoolsRouter);
+app.use('/api/lessons', lessonsRouter);
+app.use('/api/payments', paymentsRouter);
+app.use('/api/upload', uploadRouter);
+app.use('/api/webrtc', webrtcRouter);
+app.use('/api/exams', examsRouter);
+app.use('/api/quizzes', quizzesRouter);
+app.use('/api/chat', chatRouter);
+app.use('/api/notifications', notificationsRouter);
+app.use('/api/analytics', analyticsRouter);
 
 
 // Sentry error handler

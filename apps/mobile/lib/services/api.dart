@@ -1,15 +1,37 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
-const baseUrl = "https://your-vercel-app.vercel.app/api";
+const baseUrl = "http://localhost:3000/api";
 
 class ApiService {
-  static Future<List> fetchLessons(String token) async {
+  static Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('authToken');
+  }
+
+  static Future<List> fetchLessons() async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
     final res = await http.get(
       Uri.parse("$baseUrl/lessons"),
       headers: {"Authorization": "Bearer $token"},
     );
-    return jsonDecode(res.body);
+    
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      // Handle different response formats
+      if (data is List) {
+        return data;
+      } else if (data is Map && data.containsKey('data')) {
+        return data['data'] as List;
+      } else {
+        return [];
+      }
+    } else {
+      throw Exception('Failed to load lessons: ${res.statusCode}');
+    }
   }
 
   static Future<String> createCheckout(String course, int amount) async {
