@@ -1,6 +1,7 @@
 // packages/db/index.ts
-import prisma from './lib/prisma';
+// Database connection and exports
+// Note: Prisma client needs to be generated before use
+// Run: npx prisma generate
 
 export * from '@prisma/client';
-export { UserRole } from '@prisma/client';
-export default prisma;
+export { default as prisma } from './lib/prisma';

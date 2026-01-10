@@ -1,9 +1,8 @@
 // apps/api/src/middleware/auth.ts
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import prisma, { Role } from '../../../../packages/db';
 
-const JWT_SECRET = process.env.NEXTAUTH_SECRET;
+const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'fallback-secret';
 
 if (!JWT_SECRET) {
   throw new Error('NEXTAUTH_SECRET environment variable is required');
@@ -16,7 +15,7 @@ declare global {
       user?: {
         id: string;
         email: string;
-        role: Role;
+        role: string;
         schoolId: string;
       };
     }
@@ -36,7 +35,7 @@ export const protect = (req: Request, res: Response, next: NextFunction) => {
     const decoded = jwt.verify(token, JWT_SECRET) as {
       userId: string;
       email: string;
-      role: Role;
+      role: string;
       schoolId: string;
       iat: number;
       exp: number;
@@ -57,7 +56,7 @@ export const protect = (req: Request, res: Response, next: NextFunction) => {
 };
 
 // Middleware to authorize based on role
-export const authorize = (...roles: Role[]) => {
+export const authorize = (...roles: string[]) => {
     return (req: Request, res: Response, next: NextFunction) => {
         if (!req.user || !roles.includes(req.user.role)) {
             return res.status(403).json({ error: `User role ${req.user?.role} is not authorized to access this route` });

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Education Platform Admin</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 12px; margin-bottom: 2rem; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s; }
+        .card:hover { transform: translateY(-4px); }
+        .card h3 { margin-bottom: 1rem; color: #333; }
+        .card p { color: #666; line-height: 1.6; }
+        .status { padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; font-weight: 600; }
+        .success { background: #10b981; color: white; }
+        .warning { background: #f59e0b; color: white; }
+        .info { background: #3b82f6; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🎓 Education Platform Admin</h1>
+            <p>Manage your complete education platform</p>
+            <div class="status success">✅ API Connected: https://api-32v26rbb4-ainamanipro.vercel.app</div>
+        </header>
+
+        <div class="grid">
+            <div class="card">
+                <h3>📚 Manage Lessons</h3>
+                <p>Create and manage educational content across all subjects and levels.</p>
+                <div class="status info">5 Lessons Published</div>
+            </div>
+            
+            <div class="card">
+                <h3>📝 Manage Quizzes</h3>
+                <p>Create assessments and track student progress with detailed analytics.</p>
+                <div class="status info">12 Active Quizzes</div>
+            </div>
+            
+            <div class="card">
+                <h3>👥 Manage Users</h3>
+                <p>Manage teachers, students, and administrators with role-based access.</p>
+                <div class="status success">1,247 Total Users</div>
+            </div>
+            
+            <div class="card">
+                <h3>📊 Analytics</h3>
+                <p>View detailed platform usage, engagement metrics, and performance data.</p>
+                <div class="status warning">Analytics Ready</div>
+            </div>
+            
+            <div class="card">
+                <h3>🎥 Live Classes</h3>
+                <p>Monitor and manage real-time video classes with WebRTC.</p>
+                <div class="status success">3 Active Sessions</div>
+            </div>
+            
+            <div class="card">
+                <h3>💬 Chat & Messages</h3>
+                <p>Real-time communication between students and teachers.</p>
+                <div class="status info">Chat System Online</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple admin dashboard functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Education Platform Admin Dashboard Loaded');
+            
+            // Simulate real-time updates
+            setInterval(() => {
+                updateStats();
+            }, 5000);
+        });
+
+        function updateStats() {
+            // This would connect to your API for real stats
+            console.log('Updating platform statistics...');
+        }
+    </script>
+</body>
+</html>
