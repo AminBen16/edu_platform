@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 class QuizScreen extends StatefulWidget {
-  final Map quiz;
-  const QuizScreen(this.quiz, {super.key});
+  final Map<String, dynamic> quiz;
+  const QuizScreen({super.key, required this.quiz});
 
   @override
   State<QuizScreen> createState() => _QuizState();
@@ -58,7 +58,16 @@ class _QuizState extends State<QuizScreen> {
                 const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: () {
-                    // submit answer
+                    // TODO: Implement quiz functionality
+                    if (selected != null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Answer submitted: ${widget.quiz["options"][selected!]}')),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please select an answer')),
+                      );
+                    }
                   },
                   child: const Text("Submit"),
                 ),

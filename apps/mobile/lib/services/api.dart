@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-const baseUrl = "http://localhost:3000/api";
-
 class ApiService {
+  static const String _baseUrl =
+      "https://api-32v26rbb4-ainamanipro.vercel.app/api/v1";
+
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('authToken');
@@ -15,10 +16,10 @@ class ApiService {
     if (token == null) throw Exception('Not authenticated');
 
     final res = await http.get(
-      Uri.parse("$baseUrl/lessons"),
+      Uri.parse("$_baseUrl/lessons"),
       headers: {"Authorization": "Bearer $token"},
     );
-    
+
     if (res.statusCode == 200) {
       final data = jsonDecode(res.body);
       // Handle different response formats
@@ -37,12 +38,9 @@ class ApiService {
   static Future<String> createCheckout(String course, int amount) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/checkout'),
+        Uri.parse('$_baseUrl/checkout'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'course': course,
-          'amount': amount,
-        }),
+        body: jsonEncode({'course': course, 'amount': amount}),
       );
 
       if (response.statusCode == 200) {

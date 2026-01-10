@@ -1,12 +1,18 @@
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
-import '../services/api_service.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
+import '../services/api.dart';
+
+// Helper function for WebRTC peer connection
+Future<RTCPeerConnection> createWebRTCPeerConnection(Map<String, dynamic> configuration) {
+  return createPeerConnection(configuration);
+}
 
 class LiveClassScreen extends StatefulWidget {
   final String? roomId;
   final String? userId;
-  
+
   const LiveClassScreen({super.key, this.roomId, this.userId});
 
   @override
@@ -27,6 +33,7 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
   void initState() {
     super.initState();
     _initializeRenderers();
+    _getUserMedia();
     _connectToSignalingServer();
   }
 
@@ -36,10 +43,10 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
 
   void _connectToSignalingServer() async {
     try {
-      final token = await ApiService().getToken();
+      final token = await getToken();
       if (token == null) return;
 
-      _socket = IO.io('http://localhost:3000/webrtc', {
+      _socket = IO.io('https://api-32v26rbb4-ainamanipro.vercel.app', {
         'auth': {'token': token},
         'transports': ['websocket'],
         'autoConnect': true,
@@ -77,12 +84,10 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
 
   void _joinRoom() {
     final roomId = widget.roomId ?? 'default-room';
-    final userId = widget.userId ?? 'user-${DateTime.now().millisecondsSinceEpoch}';
-    
-    _socket!.emit('join-room', {
-      'roomId': roomId,
-      'userId': userId,
-    });
+    final userId =
+        widget.userId ?? 'user-${DateTime.now().millisecondsSinceEpoch}';
+
+    _socket!.emit('join-room', {'roomId': roomId, 'userId': userId});
   }
 
   void _connectToPeers(List<dynamic> peers) {
@@ -98,17 +103,15 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
       ],
     };
 
-    _peerConnection = await createPeerConnection(configuration);
+    _peerConnection = await createWebRTCPeerConnection(configuration);
 
     _peerConnection!.onIceCandidate = (RTCIceCandidate candidate) {
       if (candidate.candidate != null) {
         _socket!.emit('signal', {
           'targetUserId': peerId,
-          'signal': {
-            'type': 'candidate',
-            'candidate': candidate.toMap(),
-          },
-          'userId': widget.userId ?? 'user-${DateTime.now().millisecondsSinceEpoch}',
+          'signal': {'type': 'candidate', 'candidate': candidate.toMap()},
+          'userId':
+              widget.userId ?? 'user-${DateTime.now().millisecondsSinceEpoch}',
         });
       }
     };
@@ -131,14 +134,12 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
   Future<void> _createOffer(String peerId) async {
     final offer = await _peerConnection!.createOffer();
     await _peerConnection!.setLocalDescription(offer);
-    
+
     _socket!.emit('signal', {
       'targetUserId': peerId,
-      'signal': {
-        'type': 'offer',
-        'sdp': offer.toMap(),
-      },
-      'userId': widget.userId ?? 'user-${DateTime.now().millisecondsSinceEpoch}',
+      'signal': {'type': 'offer', 'sdp': offer.toMap()},
+      'userId':
+          widget.userId ?? 'user-${DateTime.now().millisecondsSinceEpoch}',
     });
   }
 
@@ -164,45 +165,53 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
     await _peerConnection!.setRemoteDescription(RTCSessionDescription(sdp));
     final answer = await _peerConnection!.createAnswer();
     await _peerConnection!.setLocalDescription(answer);
-    
+
     _socket!.emit('signal', {
       'targetUserId': fromUserId,
-      'signal': {
-        'type': 'answer',
-        'sdp': answer.toMap(),
-      },
-      'userId': widget.userId ?? 'user-${DateTime.now().millisecondsSinceEpoch}',
+      'signal': {'type': 'answer', 'sdp': answer.toMap()},
+      'userId':
+          widget.userId ?? 'user-${DateTime.now().millisecondsSinceEpoch}',
     });
   }
 
-  Future<void> _handleAnswer(Map<String, dynamic> sdp, String fromUserId) async {
+  Future<void> _handleAnswer(
+    Map<String, dynamic> sdp,
+    String fromUserId,
+  ) async {
     await _peerConnection!.setRemoteDescription(RTCSessionDescription(sdp));
   }
 
-  Future<void> _handleCandidate(Map<String, dynamic> candidate, String fromUserId) async {
-    await _peerConnection!.addCandidate(RTCIceCandidate(
-      candidate['candidate'],
-      candidate['sdpMid'],
-      candidate['sdpMLineIndex'],
-    ));
+  Future<void> _handleCandidate(
+    Map<String, dynamic> candidate,
+    String fromUserId,
+  ) async {
+    await _peerConnection!.addCandidate(
+      RTCIceCandidate(
+        candidate['candidate'],
+        candidate['sdpMid'],
+        candidate['sdpMLineIndex'],
+      ),
+    );
   }
 
   Future<void> _getUserMedia() async {
     try {
-      final stream = await navigator.mediaDevices.getUserMedia({
+      final stream = await html.navigator.mediaDevices?.getUserMedia({
         'audio': true,
         'video': true,
       });
-      
-      setState(() {
-        _localStream = stream;
-        _localRenderer.srcObject = stream;
-      });
 
-      if (_peerConnection != null) {
-        stream.getTracks().forEach((track) {
-          _peerConnection!.addTrack(track, stream);
+      if (stream != null) {
+        setState(() {
+          _localStream = stream;
+          _localRenderer.srcObject = stream;
         });
+
+        if (_peerConnection != null) {
+          stream.getTracks().forEach((track) {
+            _peerConnection!.addTrack(track, stream!);
+          });
+        }
       }
     } catch (e) {
       debugPrint('Error getting user media: $e');
@@ -318,7 +327,8 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 8.0),
                         child: Card(
                           shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           child: SizedBox(
                             width: 160,
                             height: 120,
