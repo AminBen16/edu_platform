@@ -1,5 +1,6 @@
 // Live sessions and WebRTC management
 import { Router } from 'express';
+import { prisma } from '../../../packages/db';
 
 const router = Router();
 

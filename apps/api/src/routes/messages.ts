@@ -1,5 +1,6 @@
 // Messages and chat routes
 import { Router } from 'express';
+import { prisma } from '../../../packages/db';
 
 const router = Router();
 
