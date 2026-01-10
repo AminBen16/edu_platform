@@ -10,10 +10,6 @@
     {
       "src": "/api/(.*)",
       "dest": "apps/api/src/index.ts"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "apps/admin/public/$1"
     }
   ]
 }
