@@ -1,22 +1,23 @@
-// apps/api/src/index.ts
+// Production API - Complete Education Platform
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import * as Sentry from '@sentry/node';
 
-import schoolsRouter from './routes/schools';
-import lessonsRouter from './routes/lessons_prod';
-import paymentsRouter from './routes/payments';
-import uploadRouter from './routes/upload';
-import webrtcRouter, { handleWebRTCSignaling } from './routes/webrtc';
-import examsRouter from './routes/exams';
-import authRouter from './routes/auth_prod';
-import quizzesRouter from './routes/quizzes';
-import chatRouter from './routes/chat';
-import notificationsRouter from './routes/notifications';
-import analyticsRouter from './routes/analytics';
-
+// Import routes
+import authRoutes from './routes/auth';
+import userRoutes from './routes/users';
+import schoolRoutes from './routes/schools';
+import lessonRoutes from './routes/lessons';
+import quizRoutes from './routes/quizzes';
+import classRoutes from './routes/classes';
+import assignmentRoutes from './routes/assignments';
+import messageRoutes from './routes/messages';
+import liveSessionRoutes from './routes/live-sessions';
+import analyticsRoutes from './routes/analytics';
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN || '',
@@ -32,47 +33,103 @@ const io = new SocketIOServer(server, {
   }
 });
 
-// Initialize WebRTC signaling
-handleWebRTCSignaling(io);
-
-
-// Sentry request handler
+// Middleware
 app.use(Sentry.Handlers.requestHandler());
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Health check route
+// Health check
 app.get('/', (req: Request, res: Response) => {
-  res.status(200).json({ message: 'API is running!' });
+  res.status(200).json({ 
+    message: 'Education Platform API - Production Ready',
+    version: '1.0.0',
+    status: 'operational',
+    timestamp: new Date().toISOString()
+  });
 });
 
-// API Routes
+// API Routes with proper versioning
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/schools', schoolRoutes);
+app.use('/api/v1/lessons', lessonRoutes);
+app.use('/api/v1/quizzes', quizRoutes);
+app.use('/api/v1/classes', classRoutes);
+app.use('/api/v1/assignments', assignmentRoutes);
+app.use('/api/v1/messages', messageRoutes);
+app.use('/api/v1/live-sessions', liveSessionRoutes);
+app.use('/api/v1/analytics', analyticsRoutes);
 
-app.use('/api/auth', authRouter);
-app.use('/api/schools', schoolsRouter);
-app.use('/api/lessons', lessonsRouter);
-app.use('/api/payments', paymentsRouter);
-app.use('/api/upload', uploadRouter);
-app.use('/api/webrtc', webrtcRouter);
-app.use('/api/exams', examsRouter);
-app.use('/api/quizzes', quizzesRouter);
-app.use('/api/chat', chatRouter);
-app.use('/api/notifications', notificationsRouter);
-app.use('/api/analytics', analyticsRouter);
+// Socket.IO for real-time features
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
+  
+  // Join class rooms
+  socket.on('join-class', (classId) => {
+    socket.join(classId);
+    socket.emit('joined-class', { classId, userId: socket.id });
+  });
+  
+  // Real-time chat
+  socket.on('send-message', (data) => {
+    io.to(data.classId).emit('new-message', {
+      ...data,
+      timestamp: new Date().toISOString(),
+      senderId: socket.id
+    });
+  });
+  
+  // Live class WebRTC signaling
+  socket.on('join-live-session', (roomCode) => {
+    socket.join(roomCode);
+    socket.emit('joined-session', { roomCode, userId: socket.id });
+  });
+  
+  socket.on('webrtc-signal', (data) => {
+    socket.to(data.roomCode).emit('webrtc-signal', {
+      ...data,
+      senderId: socket.id
+    });
+  });
+  
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+  });
+});
 
-
-// Sentry error handler
+// Error handling
 app.use(Sentry.Handlers.errorHandler());
 
-// Start server for development
+// 404 handler
+app.use('*', (req: Request, res: Response) => {
+  res.status(404).json({
+    error: 'Endpoint not found',
+    message: `Cannot ${req.method} ${req.path}`,
+    availableEndpoints: [
+      '/api/v1/auth',
+      '/api/v1/users', 
+      '/api/v1/schools',
+      '/api/v1/lessons',
+      '/api/v1/quizzes',
+      '/api/v1/classes',
+      '/api/v1/assignments',
+      '/api/v1/messages',
+      '/api/v1/live-sessions',
+      '/api/v1/analytics'
+    ]
+  });
+});
+
+// Start server for local development
 if (process.env.NODE_ENV !== 'production') {
   const PORT = process.env.PORT || 3000;
   server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`WebRTC signaling available on /webrtc`);
+    console.log(`🚀 Education Platform API running on port ${PORT}`);
+    console.log(`📚 API Documentation: http://localhost:${PORT}/api/v1`);
+    console.log(`🔗 WebSocket server ready for real-time features`);
   });
 }
 
-// This is the entrypoint for Vercel Serverless Functions
+// Export for Vercel serverless
 export default app;
