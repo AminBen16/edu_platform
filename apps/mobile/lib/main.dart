@@ -11,6 +11,161 @@ import 'screens/course_details.dart';
 import 'screens/live_class_screen.dart';
 import 'screens/account_settings.dart';
 
+// Placeholder screens for missing routes
+class AssignmentsScreen extends StatelessWidget {
+  const AssignmentsScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Assignments')),
+      body: const Center(child: Text('Assignments - Coming Soon')),
+    );
+  }
+}
+
+class QuizzesScreen extends StatelessWidget {
+  const QuizzesScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Quizzes')),
+      body: const Center(child: Text('Quizzes - Coming Soon')),
+    );
+  }
+}
+
+class CreateLessonScreen extends StatelessWidget {
+  const CreateLessonScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Create Lesson')),
+      body: const Center(child: Text('Create Lesson - Coming Soon')),
+    );
+  }
+}
+
+class GradingScreen extends StatelessWidget {
+  const GradingScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Grading')),
+      body: const Center(child: Text('Grading - Coming Soon')),
+    );
+  }
+}
+
+class MyClassesScreen extends StatelessWidget {
+  const MyClassesScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('My Classes')),
+      body: const Center(child: Text('My Classes - Coming Soon')),
+    );
+  }
+}
+
+class AnalyticsScreen extends StatelessWidget {
+  const AnalyticsScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Analytics')),
+      body: const Center(child: Text('Analytics - Coming Soon')),
+    );
+  }
+}
+
+class UserManagementScreen extends StatelessWidget {
+  const UserManagementScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('User Management')),
+      body: const Center(child: Text('User Management - Coming Soon')),
+    );
+  }
+}
+
+class SchoolSettingsScreen extends StatelessWidget {
+  const SchoolSettingsScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('School Settings')),
+      body: const Center(child: Text('School Settings - Coming Soon')),
+    );
+  }
+}
+
+class ReportsScreen extends StatelessWidget {
+  const ReportsScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Reports')),
+      body: const Center(child: Text('Reports - Coming Soon')),
+    );
+  }
+}
+
+class AuditLogsScreen extends StatelessWidget {
+  const AuditLogsScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Audit Logs')),
+      body: const Center(child: Text('Audit Logs - Coming Soon')),
+    );
+  }
+}
+
+class ProgressReportsScreen extends StatelessWidget {
+  const ProgressReportsScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Progress Reports')),
+      body: const Center(child: Text('Progress Reports - Coming Soon')),
+    );
+  }
+}
+
+class AttendanceScreen extends StatelessWidget {
+  const AttendanceScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Attendance')),
+      body: const Center(child: Text('Attendance - Coming Soon')),
+    );
+  }
+}
+
+class MessagesScreen extends StatelessWidget {
+  const MessagesScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Messages')),
+      body: const Center(child: Text('Messages - Coming Soon')),
+    );
+  }
+}
+
+class ScheduleScreen extends StatelessWidget {
+  const ScheduleScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Schedule')),
+      body: const Center(child: Text('Schedule - Coming Soon')),
+    );
+  }
+}
+
 void main() {
   runApp(const ProviderScope(child: EduApp()));
 }
@@ -35,6 +190,24 @@ class EduApp extends StatelessWidget {
         '/course-details': (context) => const CourseDetailsScreen(courseId: ''),
         '/live-class': (context) => const LiveClassScreen(classId: ''),
         '/account-settings': (context) => const AccountSettingsScreen(),
+        // Student routes
+        '/assignments': (context) => const AssignmentsScreen(),
+        '/quizzes': (context) => const QuizzesScreen(),
+        // Teacher routes
+        '/create-lesson': (context) => const CreateLessonScreen(),
+        '/grading': (context) => const GradingScreen(),
+        '/my-classes': (context) => const MyClassesScreen(),
+        '/analytics': (context) => const AnalyticsScreen(),
+        // Admin routes
+        '/user-management': (context) => const UserManagementScreen(),
+        '/school-settings': (context) => const SchoolSettingsScreen(),
+        '/reports': (context) => const ReportsScreen(),
+        '/audit-logs': (context) => const AuditLogsScreen(),
+        // Parent routes
+        '/progress-reports': (context) => const ProgressReportsScreen(),
+        '/attendance': (context) => const AttendanceScreen(),
+        '/messages': (context) => const MessagesScreen(),
+        '/schedule': (context) => const ScheduleScreen(),
       },
       onGenerateRoute: (settings) {
         // Handle routes with parameters
