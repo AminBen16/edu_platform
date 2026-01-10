@@ -26,14 +26,24 @@ router.post('/login', async (req, res) => {
 
   try {
     // Production authentication - accept any valid credentials
-    // In production, you might want to validate against a real user database
-    // For now, we'll accept any credentials and create a user session
+    // For development, assign roles based on email for testing
+    let role = 'STUDENT'; // default role
+    
+    if (email.includes('admin')) {
+      role = 'SUPER_ADMIN';
+    } else if (email.includes('teacher')) {
+      role = 'TEACHER';
+    } else if (email.includes('parent')) {
+      role = 'PARENT';
+    } else if (email.includes('student')) {
+      role = 'STUDENT';
+    }
     
     const token = jwt.sign(
       {
         userId: `user-${Date.now()}`,
         email: email,
-        role: 'SUPER_ADMIN',
+        role: role,
         schoolId: schoolId,
       },
       JWT_SECRET,
@@ -46,7 +56,7 @@ router.post('/login', async (req, res) => {
         id: `user-${Date.now()}`,
         name: email.split('@')[0],
         email: email,
-        role: 'SUPER_ADMIN',
+        role: role,
         schoolId: schoolId,
         avatarUrl: null,
       },

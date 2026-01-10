@@ -39,7 +39,24 @@ export const protect = async (req: RequestWithUser, res: Response, next: NextFun
       exp: number;
     };
     
-    // Fetch user from database
+    // For development: Check if this is a dev user (user- timestamp format)
+    if (decoded.userId.startsWith('user-')) {
+      // This is a development user from login endpoint
+      req.user = {
+        id: decoded.userId,
+        email: decoded.email,
+        role: decoded.role,
+        schoolId: decoded.schoolId,
+        name: decoded.email.split('@')[0],
+        avatarUrl: null,
+        emailVerified: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      return next();
+    }
+    
+    // For production: Fetch user from database
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId }
     });
@@ -48,17 +65,10 @@ export const protect = async (req: RequestWithUser, res: Response, next: NextFun
       return res.status(401).json({ error: 'User not found' });
     }
     
-    // Attach user to the request object
-    req.user = {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      schoolId: user.schoolId,
-      permissions: getPermissionsForRole(user.role)
-    };
-
+    req.user = user;
     next();
   } catch (error) {
+    console.error('Auth middleware error:', error);
     return res.status(401).json({ error: 'Not authorized, token failed' });
   }
 };

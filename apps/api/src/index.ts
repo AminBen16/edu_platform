@@ -18,6 +18,7 @@ import assignmentRoutes from './routes/assignments';
 import messageRoutes from './routes/messages';
 import liveSessionRoutes from './routes/live-sessions';
 import analyticsRoutes from './routes/analytics';
+import dashboardRoutes from './routes/dashboard';
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN || '',
@@ -65,6 +66,7 @@ app.use('/api/v1/assignments', assignmentRoutes);
 app.use('/api/v1/messages', messageRoutes);
 app.use('/api/v1/live-sessions', liveSessionRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
+app.use('/api/v1/dashboard', dashboardRoutes);
 
 // Socket.IO for real-time features
 io.on('connection', (socket) => {
