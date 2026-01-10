@@ -75,7 +75,7 @@ router.post('/', protect, authorize('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), require
     if (studentIds.length > 0) {
       const notificationsSent = await NotificationService.sendBulkNotifications(studentIds, {
         type: 'ASSIGNMENT',
-        title: 'New Assignment: ${title}',
+        title: `New Assignment: ${title}`,
         message: `A new assignment "${title}" has been created for your class. Due date: ${dueDate ? new Date(dueDate).toLocaleDateString() : 'No due date'}`,
         data: {
           assignmentId: assignment.id,

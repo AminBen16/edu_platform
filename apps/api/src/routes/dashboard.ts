@@ -44,7 +44,7 @@ router.get('/', protect, async (req: RequestWithUser, res: Response) => {
 
 // Student dashboard data
 async function getStudentDashboard(studentId: string, schoolId: string) {
-  const [enrollments, progress, upcomingClasses] = await Promise.all([
+  const [enrollments, progress, upcomingClasses, completedAssignments, averageGrade] = await Promise.all([
     prisma.enrollment.findMany({
       where: { 
         studentId, 
@@ -60,7 +60,9 @@ async function getStudentDashboard(studentId: string, schoolId: string) {
       }
     }),
     getStudentProgress(studentId),
-    getUpcomingClasses(studentId)
+    getUpcomingClasses(studentId),
+    getCompletedAssignments(studentId),
+    getAverageGrade(studentId)
   ]);
 
   return {
@@ -69,8 +71,8 @@ async function getStudentDashboard(studentId: string, schoolId: string) {
       enrolledCourses: enrollments.length,
       averageProgress: progress.reduce((sum: number, p: any) => sum + (p.percentage || 0), 0) / progress.length,
       upcomingClasses: upcomingClasses.length,
-      completedAssignments: await getCompletedAssignments(studentId), // Calculate from real data
-      averageGrade: await getAverageGrade(studentId) // Calculate from real data
+      completedAssignments: completedAssignments, // Calculate from real data
+      averageGrade: averageGrade // Calculate from real data
     },
     courses: enrollments.map((enrollment: any) => ({
       id: enrollment.lessonId,

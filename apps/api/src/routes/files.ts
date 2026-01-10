@@ -11,49 +11,137 @@ const router = Router();
 
 // Configure multer for file uploads
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => {
-      const uploadPath = path.join(process.cwd(), 'uploads', file.fieldname);
-      cb(null, uploadPath);
-    },
-    limits: {
-      fileSize: 50 * 1024 * 1024, // 50MB per file
-    },
-    fileFilter: (req, file, cb) => {
-      // Allow images, videos, documents
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/webm', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-      cb(null, allowedTypes.includes(file.mimetype));
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB per file
+  },
+  fileFilter: (req: any, file: any, cb: any) => {
+    // Allow images, videos, documents
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/webm', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    cb(null, allowedTypes.includes(file.mimetype));
+  }
+});
+
+// GET /files - List lesson resources for user
+router.get('/', protect, async (req: Request, res: Response) => {
+  const { role, id: userId, schoolId } = req.user! as any;
+
+  try {
+    let resources: any[] = [];
+
+    switch (role) {
+      case 'TEACHER':
+        // Get teacher's lessons and their resources
+        const teacherLessons = await prisma.lesson.findMany({
+          where: { 
+            teacherId: userId,
+            schoolId
+          },
+          select: { id: true }
+        });
+        
+        const lessonIds = teacherLessons.map(l => l.id);
+        
+        resources = await prisma.lessonResource.findMany({
+          where: { 
+            lessonId: { in: lessonIds }
+          },
+          include: {
+            lesson: {
+              select: { id: true, title: true }
+            }
+          }
+        });
+        break;
+      case 'ADMIN':
+      case 'SCHOOL_ADMIN':
+        resources = await prisma.lessonResource.findMany({
+          where: {
+            lesson: { schoolId }
+          },
+          include: {
+            lesson: {
+              select: { id: true, title: true }
+            }
+          }
+        });
+        break;
+      case 'STUDENT':
+        // Get student's enrolled lessons and their resources
+        const studentEnrollments = await prisma.enrollment.findMany({
+          where: { 
+            studentId: userId,
+            status: 'ACTIVE'
+          },
+          select: { lessonId: true }
+        });
+        
+        const enrolledLessonIds = studentEnrollments
+          .map(e => e.lessonId)
+          .filter((id): id is string => id !== null);
+        
+        if (enrolledLessonIds.length > 0) {
+          resources = await prisma.lessonResource.findMany({
+            where: {
+              lessonId: { in: enrolledLessonIds }
+            },
+            include: {
+              lesson: {
+                select: { id: true, title: true }
+              }
+            }
+          });
+        }
+        break;
     }
+
+    res.json({
+      resources,
+      userRole: role,
+      total: resources.length
+    });
+  } catch (error) {
+    console.error('Files error:', error);
+    res.status(500).json({ error: 'Failed to load files' });
   }
 });
 
 // POST /files - Upload files
-router.post('/', protect, authorize('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), requirePermission('files.write'), upload.single('file'), async (req, res) => {
+router.post('/', protect, authorize('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), requirePermission('files.write'), upload.single('file'), async (req: Request, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const { courseId, title, description, type } = req.body;
+    const { title, description, type, lessonId } = req.body;
     const file = req.file;
+    const user = req.user! as any;
 
-    // Create file record in database
-    const fileRecord = await prisma.file.create({
+    // Create uploads directory if it doesn't exist
+    const uploadsDir = path.join(process.cwd(), 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    // Save file to disk
+    const fileName = `${Date.now()}-${file.originalname}`;
+    const filePath = path.join(uploadsDir, fileName);
+    fs.writeFileSync(filePath, file.buffer);
+
+    // Create lesson resource record in database
+    const resource = await prisma.lessonResource.create({
       data: {
-        name: file.originalname,
-        path: file.path,
+        title: title || file.originalname,
+        type: (type as any) || 'DOCUMENT',
+        url: `/uploads/${fileName}`,
         size: file.size,
-        type: type || 'document',
-        courseId,
-        title,
-        description,
-        uploadedBy: req.user!.id
+        lessonId: lessonId || null
       }
     });
 
     res.status(201).json({
       message: 'File uploaded successfully',
-      file: fileRecord
+      resource
     });
   } catch (error) {
     console.error('File upload error:', error);
@@ -61,134 +149,53 @@ router.post('/', protect, authorize('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), require
   }
 });
 
-// GET /files/course/:courseId - Get files for course
-router.get('/course/:courseId', protect, async (req, res) => {
+// GET /files/:id - Get file info
+router.get('/:id', protect, async (req: Request, res: Response) => {
+  const { id } = req.params;
+
   try {
-    const { courseId } = req.params;
-    const { role, userId } = req.user!;
-
-    // Check access permissions
-    const course = await prisma.course.findUnique({
-      where: { id: courseId },
-      include: {
-        instructor: { select: { id: true, name: true } }
-      }
-    });
-
-    if (!course) {
-      return res.status(404).json({ error: 'Course not found' });
-    }
-
-    const hasAccess = role === 'TEACHER' && course.instructorId === userId ||
-                   role === 'ADMIN' || role === 'SCHOOL_ADMIN' ||
-                   (role === 'STUDENT' && await prisma.enrollment.findFirst({
-                     where: { courseId, studentId: userId }
-                   }));
-
-    if (!hasAccess) {
-      return res.status(403).json({ error: 'Access denied to this course' });
-    }
-
-    const files = await prisma.file.findMany({
-      where: { courseId },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    res.json({
-      files,
-      courseId,
-      courseTitle: course.title
-    });
-  } catch (error) {
-    console.error('Get course files error:', error);
-    res.status(500).json({ error: 'Failed to load files' });
-  }
-});
-
-// GET /files/:id - Get single file
-router.get('/:id', protect, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { role, userId } = req.user!;
-
-    const file = await prisma.file.findUnique({
+    const resource = await prisma.lessonResource.findUnique({
       where: { id },
       include: {
-        uploadedBy: {
-          select: { id: true, name: true, email: true }
+        lesson: {
+          select: { id: true, title: true }
         }
       }
     });
 
-    if (!file) {
+    if (!resource) {
       return res.status(404).json({ error: 'File not found' });
     }
 
-    // Check access permissions
-    const hasAccess = role === 'TEACHER' && file.uploadedBy.id === userId ||
-                   role === 'ADMIN' || role === 'SCHOOL_ADMIN' ||
-                   (role === 'STUDENT' && await prisma.enrollment.findFirst({
-                     where: { courseId: file.courseId, studentId: userId }
-                   }));
-
-    if (!hasAccess) {
-      return res.status(403).json({ error: 'Access denied to this file' });
-    }
-
-    // Stream file for download
-    const filePath = path.join(process.cwd(), 'uploads', file.path);
-    const stat = fs.statSync(filePath);
-
-    res.setHeader('Content-Type', file.type);
-    res.setHeader('Content-Length', stat.size);
-    res.setHeader('Content-Disposition', `attachment; filename="${file.name}"`);
-    
-    const fileStream = fs.createReadStream(filePath);
-    fileStream.pipe(res);
+    res.json(resource);
   } catch (error) {
     console.error('Get file error:', error);
-    res.status(500).json({ error: 'Failed to load file' });
+    res.status(500).json({ error: 'Failed to get file' });
   }
 });
 
 // DELETE /files/:id - Delete file
-router.delete('/:id', protect, authorize('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), requirePermission('files.write'), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { role, userId } = req.user!;
+router.delete('/:id', protect, authorize('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), requirePermission('files.delete'), async (req: Request, res: Response) => {
+  const { id } = req.params;
 
-    const file = await prisma.file.findUnique({
-      where: { id },
-      include: {
-        uploadedBy: {
-          select: { id: true, name: true }
-        }
-      }
+  try {
+    // Get resource info to delete file
+    const resource = await prisma.lessonResource.findUnique({
+      where: { id }
     });
 
-    if (!file) {
+    if (!resource) {
       return res.status(404).json({ error: 'File not found' });
     }
 
-    // Check access permissions
-    const hasAccess = role === 'TEACHER' && file.uploadedBy.id === userId ||
-                   role === 'ADMIN' || role === 'SCHOOL_ADMIN' ||
-                   (role === 'STUDENT' && await prisma.enrollment.findFirst({
-                     where: { courseId: file.courseId, studentId: userId }
-                   }));
-
-    if (!hasAccess) {
-      return res.status(403).json({ error: 'Access denied to this file' });
-    }
-
     // Delete file from filesystem
-    const filePath = path.join(process.cwd(), 'uploads', file.path);
+    const filePath = path.join(process.cwd(), resource.url);
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
 
     // Delete from database
-    await prisma.file.delete({
+    await prisma.lessonResource.delete({
       where: { id }
     });
 

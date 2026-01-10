@@ -235,4 +235,16 @@ class ApiService {
       throw Exception('Failed to load lessons');
     }
   }
+
+  // --- Helper Methods ---
+
+  Future<void> _saveToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('authToken', token);
+  }
+
+  Future<String?> _getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('authToken');
+  }
 }
