@@ -9,7 +9,7 @@ const router = Router();
 
 // GET /dashboard - Role-based dashboard data
 router.get('/', protect, async (req: RequestWithUser, res: Response) => {
-  const { role, id: userId, schoolId } = req.user!;
+  const { role, id: userId, schoolId, email, name } = req.user!;
 
   try {
     let dashboardData = {};
@@ -35,7 +35,17 @@ router.get('/', protect, async (req: RequestWithUser, res: Response) => {
         return res.status(403).json({ error: 'Invalid user role' });
     }
 
-    res.json(dashboardData);
+    // Include user information in response
+    res.json({
+      user: {
+        id: userId,
+        email,
+        name,
+        role,
+        schoolId
+      },
+      ...dashboardData
+    });
   } catch (error) {
     console.error('Dashboard error:', error);
     res.status(500).json({ error: 'Failed to load dashboard data' });

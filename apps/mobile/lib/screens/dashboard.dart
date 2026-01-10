@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../services/api_service.dart';
 import 'login.dart';
 
@@ -30,53 +31,37 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       
       if (token != null) {
         final response = await http.get(
-          Uri.parse('${apiService.baseUrl}/dashboard'),
+          Uri.parse('${ApiService.baseUrl}/dashboard'),
           headers: <String, String>{
             'Content-Type': 'application/json; charset=UTF-8',
             'Authorization': 'Bearer $token',
           },
         );
-        // Load user data and courses
-        setState(() {
-          _isLoading = false;
-          userData = {
-            'name': 'Test User',
-            'email': 'test@example.com',
-            'role': 'STUDENT',
-            'schoolId': 'test-school'
-          };
-          courses = [
-            {
-              'id': '1',
-              'title': 'Mathematics 101',
-              'description': 'Introduction to Algebra and Geometry',
-              'progress': 75,
-              'thumbnail': 'https://via.placeholder.com/150x100?text=Math',
-              'instructor': 'Dr. Smith',
-              'duration': '8 weeks',
-              'enrolled': true
-            },
-            {
-              'id': '2',
-              'title': 'Science Fundamentals',
-              'description': 'Basic Physics and Chemistry',
-              'progress': 60,
-              'thumbnail': 'https://via.placeholder.com/150x100?text=Science',
-              'instructor': 'Prof. Johnson',
-              'duration': '10 weeks',
-              'enrolled': true
-            }
-          ];
-          upcomingClasses = [
-            {
-              'id': '1',
-              'title': 'Live Math Session',
-              'time': '2024-01-15 14:00',
-              'instructor': 'Dr. Smith',
-              'joinUrl': '/live-class/1'
-            }
-          ];
-        });
+        
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          setState(() {
+            _isLoading = false;
+            userData = data['user'] ?? {
+              'name': 'User',
+              'email': 'user@example.com',
+              'role': 'STUDENT',
+              'schoolId': 'default-school'
+            };
+            courses = data['courses'] ?? [];
+            upcomingClasses = data['upcomingClasses'] ?? [];
+          });
+        } else {
+          throw Exception('Failed to load dashboard data');
+        }
+      } else {
+        // No token found, redirect to login
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const LoginScreen()),
+            (route) => false,
+          );
+        }
       }
     } catch (e) {
       setState(() {
@@ -164,9 +149,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     const SizedBox(height: 20),
                     _buildStatsCards(),
                     const SizedBox(height: 20),
-                    _buildCoursesSection(),
+                    _buildRoleSpecificContent(),
                     const SizedBox(height: 20),
-                    _buildUpcomingClasses(),
+                    if (userData?['role'] == 'STUDENT') ...[
+                      _buildCoursesSection(),
+                      const SizedBox(height: 20),
+                      _buildUpcomingClasses(),
+                    ],
                   ],
                 ),
               ),
@@ -233,36 +222,136 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildStatsCards() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildStatCard(
-            'Courses Enrolled',
-            '${courses.length}',
-            Icons.book,
-            Colors.blue,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatCard(
-            'Avg Progress',
-            '68%',
-            Icons.trending_up,
-            Colors.green,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatCard(
-            'Completed',
-            '12',
-            Icons.check_circle,
-            Colors.orange,
-          ),
-        ),
-      ],
-    );
+    final role = userData?['role'];
+    
+    switch (role) {
+      case 'TEACHER':
+        return Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                'My Classes',
+                '${courses.length}',
+                Icons.class_,
+                Colors.green,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                'Total Students',
+                '45',
+                Icons.people,
+                Colors.blue,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                'Pending Grades',
+                '8',
+                Icons.pending,
+                Colors.orange,
+              ),
+            ),
+          ],
+        );
+      case 'ADMIN':
+      case 'SUPER_ADMIN':
+        return Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                'Total Users',
+                '234',
+                Icons.people,
+                Colors.purple,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                'Active Schools',
+                '12',
+                Icons.school,
+                Colors.indigo,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                'System Health',
+                '98%',
+                Icons.health_and_safety,
+                Colors.green,
+              ),
+            ),
+          ],
+        );
+      case 'PARENT':
+        return Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                'Children',
+                '2',
+                Icons.family_restroom,
+                Colors.orange,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                'Avg Grade',
+                '85%',
+                Icons.trending_up,
+                Colors.cyan,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                'Attendance',
+                '92%',
+                Icons.calendar_today,
+                Colors.lightGreen,
+              ),
+            ),
+          ],
+        );
+      case 'STUDENT':
+      default:
+        return Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                'Courses Enrolled',
+                '${courses.length}',
+                Icons.book,
+                Colors.blue,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                'Avg Progress',
+                '68%',
+                Icons.trending_up,
+                Colors.green,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                'Completed',
+                '12',
+                Icons.check_circle,
+                Colors.orange,
+              ),
+            ),
+          ],
+        );
+    }
   }
 
   Widget _buildStatCard(String title, String value, IconData icon, Color color) {
@@ -295,6 +384,276 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRoleSpecificContent() {
+    final role = userData?['role'];
+    
+    switch (role) {
+      case 'TEACHER':
+        return _buildTeacherContent();
+      case 'ADMIN':
+      case 'SUPER_ADMIN':
+        return _buildAdminContent();
+      case 'PARENT':
+        return _buildParentContent();
+      case 'STUDENT':
+      default:
+        return _buildStudentContent();
+    }
+  }
+
+  Widget _buildStudentContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'My Learning',
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionCard(
+                'Assignments',
+                'View and submit assignments',
+                Icons.assignment,
+                Colors.blue,
+                () => Navigator.pushNamed(context, '/assignments'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildActionCard(
+                'Quizzes',
+                'Take quizzes and view scores',
+                Icons.quiz,
+                Colors.green,
+                () => Navigator.pushNamed(context, '/quizzes'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTeacherContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Teaching Tools',
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionCard(
+                'Create Lesson',
+                'Create new lesson content',
+                Icons.add_circle,
+                Colors.purple,
+                () => Navigator.pushNamed(context, '/create-lesson'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildActionCard(
+                'Grade Assignments',
+                'Review and grade student work',
+                Icons.grade,
+                Colors.orange,
+                () => Navigator.pushNamed(context, '/grading'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionCard(
+                'My Classes',
+                'Manage your classes',
+                Icons.class_,
+                Colors.red,
+                () => Navigator.pushNamed(context, '/my-classes'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildActionCard(
+                'Analytics',
+                'View class performance',
+                Icons.analytics,
+                Colors.teal,
+                () => Navigator.pushNamed(context, '/analytics'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAdminContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Administration',
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionCard(
+                'User Management',
+                'Manage system users',
+                Icons.people,
+                Colors.deepPurple,
+                () => Navigator.pushNamed(context, '/user-management'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildActionCard(
+                'School Settings',
+                'Configure school settings',
+                Icons.settings,
+                Colors.indigo,
+                () => Navigator.pushNamed(context, '/school-settings'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionCard(
+                'System Reports',
+                'View system analytics',
+                Icons.assessment,
+                Colors.brown,
+                () => Navigator.pushNamed(context, '/reports'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildActionCard(
+                'Audit Logs',
+                'View system activity',
+                Icons.history,
+                Colors.grey,
+                () => Navigator.pushNamed(context, '/audit-logs'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildParentContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Children Overview',
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionCard(
+                'Progress Reports',
+                'View academic progress',
+                Icons.trending_up,
+                Colors.cyan,
+                () => Navigator.pushNamed(context, '/progress-reports'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildActionCard(
+                'Attendance',
+                'Track attendance records',
+                Icons.calendar_today,
+                Colors.amber,
+                () => Navigator.pushNamed(context, '/attendance'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionCard(
+                'Messages',
+                'Communicate with teachers',
+                Icons.message,
+                Colors.lightBlue,
+                () => Navigator.pushNamed(context, '/messages'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildActionCard(
+                'Schedule',
+                'View children\'s schedule',
+                Icons.schedule,
+                Colors.lime,
+                () => Navigator.pushNamed(context, '/schedule'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionCard(String title, String description, IconData icon, Color color, VoidCallback onTap) {
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: color, size: 32),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: color,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
       ),
     );

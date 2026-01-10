@@ -36,12 +36,7 @@ const io = new SocketIOServer(server, {
 // Middleware
 app.use(Sentry.Handlers.requestHandler());
 app.use(cors({
-  origin: [
-    'http://localhost:55719', // Flutter web development
-    'http://localhost:3000',   // Local development
-    'https://*.vercel.app',    // All Vercel deployments
-    'http://localhost:8080',   // Additional local ports
-  ],
+  origin: '*', // Allow all origins for local development
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']

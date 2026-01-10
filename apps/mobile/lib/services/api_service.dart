@@ -194,18 +194,6 @@ class ApiService {
     }
   }
 
-  // --- Helper Methods ---
-
-  Future<void> _saveToken(String token) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('authToken', token);
-  }
-
-  Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('authToken');
-  }
-
   // --- Data Fetching ---
 
   Future<List<dynamic>> fetchSchools() async {

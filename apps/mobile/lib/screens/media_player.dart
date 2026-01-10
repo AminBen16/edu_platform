@@ -35,6 +35,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     _initializePlayer();
   }
 
+  static void _initializePlayerCallback(_VideoPlayerScreenState state) {
+    state._initializePlayer();
+  }
+
   Future<void> _initializePlayer() async {
     try {
       _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
@@ -194,10 +198,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                       SizedBox(height: 16),
                       Text('Failed to load video'),
                       SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () => _initializePlayer(),
-                        child: const Text('Retry'),
-                      ),
+                      Text('Please try again later'),
                     ],
                   ),
                 ),
