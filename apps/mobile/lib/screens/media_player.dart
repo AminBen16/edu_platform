@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
-import 'package:chewie/chewie.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:dio/dio.dart';
@@ -24,7 +24,6 @@ class VideoPlayerScreen extends StatefulWidget {
 
 class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   VideoPlayerController? _videoPlayerController;
-  ChewieController? _chewieController;
   bool _isLoading = true;
   bool _isDownloading = false;
   double _downloadProgress = 0.0;
@@ -40,43 +39,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     try {
       _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
       await _videoPlayerController!.initialize();
-
-      _chewieController = ChewieController(
-        videoPlayerController: _videoPlayerController!,
-        autoPlay: false,
-        looping: false,
-        showControls: true,
-        allowFullScreen: true,
-        allowMuting: true,
-        allowPlaybackSpeedChanging: true,
-        aspectRatio: _videoPlayerController!.value.aspectRatio,
-        errorBuilder: (context, errorMessage) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error, size: 64, color: Colors.red),
-                const SizedBox(height: 16),
-                Text(
-                  'Error loading video',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  errorMessage ?? 'Unknown error occurred',
-                  style: Theme.of(context).textTheme.bodySmall,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: _initializePlayer,
-                  child: const Text('Retry'),
-                ),
-              ],
-            ),
-          );
-        },
-      );
 
       setState(() {
         _isLoading = false;
@@ -96,7 +58,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   @override
   void dispose() {
     _videoPlayerController?.dispose();
-    _chewieController?.dispose();
     super.dispose();
   }
 
@@ -200,11 +161,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _chewieController != null
+          : _videoPlayerController != null
               ? Column(
                   children: [
                     Expanded(
-                      child: Chewie(controller: _chewieController!),
+                      child: AspectRatio(
+                        aspectRatio: _videoPlayerController!.value.aspectRatio,
+                        child: VideoPlayer(_videoPlayerController!),
+                      ),
                     ),
                     if (_isDownloading)
                       Container(
@@ -231,8 +195,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                       Text('Failed to load video'),
                       SizedBox(height: 16),
                       ElevatedButton(
-                        onPressed: _initializePlayer,
-                        child: Text('Retry'),
+                        onPressed: () => _initializePlayer(),
+                        child: const Text('Retry'),
                       ),
                     ],
                   ),

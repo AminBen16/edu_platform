@@ -6,7 +6,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 const String _baseUrl = "http://localhost:3000/api/v1";
 
 class ApiService {
-  // Singleton instance
+  // Getter for baseUrl
+  static String get baseUrl => _baseUrl;
+  
   ApiService._privateConstructor();
   static final ApiService _instance = ApiService._privateConstructor();
   factory ApiService() {
@@ -86,7 +88,7 @@ class ApiService {
   // --- User Profile ---
 
   Future<Map<String, dynamic>> getUserProfile() async {
-    final token = await _getToken();
+    final token = await getToken();
     final response = await http.get(
       Uri.parse('$_baseUrl/users/profile'),
       headers: <String, String>{
@@ -103,7 +105,7 @@ class ApiService {
   }
 
   Future<void> updateProfile({String? name, String? avatarUrl}) async {
-    final token = await _getToken();
+    final token = await getToken();
     final response = await http.put(
       Uri.parse('$_baseUrl/users/profile'),
       headers: <String, String>{
@@ -124,7 +126,7 @@ class ApiService {
   // --- Account Deletion ---
 
   Future<void> requestDeletion(String password) async {
-    final token = await _getToken();
+    final token = await getToken();
     final response = await http.post(
       Uri.parse('$_baseUrl/users/request-deletion'),
       headers: <String, String>{
@@ -142,7 +144,7 @@ class ApiService {
   }
 
   Future<void> restoreAccount() async {
-    final token = await _getToken();
+    final token = await getToken();
     final response = await http.post(
       Uri.parse('$_baseUrl/users/restore-account'),
       headers: <String, String>{
@@ -157,7 +159,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> getDeletionStatus() async {
-    final token = await _getToken();
+    final token = await getToken();
     final response = await http.get(
       Uri.parse('$_baseUrl/users/deletion-status'),
       headers: <String, String>{
@@ -174,7 +176,7 @@ class ApiService {
   }
 
   Future<void> changePassword(String currentPassword, String newPassword) async {
-    final token = await _getToken();
+    final token = await getToken();
     final response = await http.put(
       Uri.parse('$_baseUrl/users/password'),
       headers: <String, String>{
@@ -199,11 +201,6 @@ class ApiService {
     await prefs.setString('authToken', token);
   }
 
-  Future<String?> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('authToken');
-  }
-}
   Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('authToken');
@@ -243,7 +240,7 @@ class ApiService {
     await prefs.setString('authToken', token);
   }
 
-  Future<String?> _getToken() async {
+  Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('authToken');
   }

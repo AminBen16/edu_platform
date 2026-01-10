@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import '../services/api_service.dart';
 import 'login.dart';
 
@@ -25,11 +26,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Future<void> _loadUserData() async {
     try {
       final apiService = ApiService();
-      final token = await apiService._getToken();
+      final token = await apiService.getToken();
       
       if (token != null) {
         final response = await http.get(
-          Uri.parse('${apiService._baseUrl}/dashboard'),
+          Uri.parse('${apiService.baseUrl}/dashboard'),
           headers: <String, String>{
             'Content-Type': 'application/json; charset=UTF-8',
             'Authorization': 'Bearer $token',

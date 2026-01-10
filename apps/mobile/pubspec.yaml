@@ -49,9 +49,6 @@ dependencies:
   # Video Player
   video_player: ^2.8.1
 
-  # Enhanced video UI
-  chewie: ^1.7.4
-
   # Audio Player
   just_audio: ^0.9.36
 
