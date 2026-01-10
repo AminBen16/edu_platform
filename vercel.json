@@ -14,5 +14,11 @@
       "src": "/(.*)",
       "dest": "apps/admin/public/$1"
     }
+  ],
+  "builds": [
+    {
+      "src": "apps/api/src/index.ts",
+      "use": "@vercel/node"
+    }
   ]
 }
