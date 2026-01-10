@@ -24,7 +24,6 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
   bool _showPasswordSection = false;
   bool _showDeletionSection = false;
   
-  Map<String, dynamic>? _userProfile;
   Map<String, dynamic>? _deletionStatus;
 
   @override
@@ -52,9 +51,11 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
         _nameController.text = profile['name'] ?? '';
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load profile: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load profile: ${e.toString()}')),
+        );
+      }
     }
   }
 

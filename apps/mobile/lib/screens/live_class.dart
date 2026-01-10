@@ -1,290 +1,287 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:socket_io_client/socket_io_client.dart' as io;
-import '../services/api_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class LiveClassScreen extends StatefulWidget {
+class LiveClassScreen extends ConsumerStatefulWidget {
   final String classId;
-  final String className;
 
-  const LiveClassScreen({
-    super.key,
-    required this.classId,
-    required this.className,
-  });
+  const LiveClassScreen({super.key, required this.classId});
 
   @override
-  State<LiveClassScreen> createState() => _LiveClassScreenState();
+  ConsumerState<LiveClassScreen> createState() => _LiveClassScreenState();
 }
 
-class _LiveClassScreenState extends State<LiveClassScreen> {
-  RTCPeerConnection? _peerConnection;
-  MediaStream? _localStream;
-  MediaStream? _remoteStream;
-  io.Socket? _socket;
-  bool _isAudioEnabled = true;
-  bool _isVideoEnabled = true;
-  bool _isScreenSharing = false;
-  List<RTCVideoRenderer> _remoteRenderers = [];
-  bool _isConnected = false;
-  bool _isLoading = true;
+class _LiveClassScreenState extends ConsumerState<LiveClassScreen> {
+  bool _isJoined = false;
+  bool _isMuted = false;
+  bool _isVideoOff = false;
+  int _participants = 0;
 
   @override
-  void initState() {
-    super.initState();
-    _initializeWebRTC();
-    _connectToSignalingServer();
-  }
-
-  @override
-  void dispose() {
-    _localStream?.dispose();
-    _remoteStream?.dispose();
-    _peerConnection?.close();
-    _socket?.disconnect();
-    for (final renderer in _remoteRenderers) {
-      renderer.dispose();
-    }
-    super.dispose();
-  }
-
-  Future<void> _initializeWebRTC() async {
-    try {
-      // Create peer connection
-      _peerConnection = await createWebRTCPeerConnection({
-        'iceServers': [
-          {'urls': 'stun:stun.l.google.com:19302'},
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Live Class'),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          IconButton(
+            icon: Icon(_isMuted ? Icons.mic_off : Icons.mic),
+            onPressed: _toggleMute,
+          ),
+          IconButton(
+            icon: Icon(_isVideoOff ? Icons.videocam_off : Icons.videocam),
+            onPressed: _toggleVideo,
+          ),
+          IconButton(
+            icon: Icon(
+              _isJoined ? Icons.wifi : Icons.wifi_off,
+              color: _isJoined ? Colors.green : Colors.red,
+            ),
+            onPressed: _showConnectionStatus,
+          ),
         ],
-      });
-
-      // Get local media
-      _localStream = await navigator.mediaDevices.getUserMedia({
-        'audio': _isAudioEnabled,
-        'video': _isVideoEnabled,
-      });
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      // Add local stream to peer connection
-      _localStream?.getTracks().forEach((track) {
-        _peerConnection?.addTrack(track, _localStream!);
-      });
-
-      // Handle remote stream
-      _peerConnection?.onTrack = (RTCTrackEvent event) {
-        if (event.track.kind == 'video') {
-          setState(() {
-            _remoteStream = event.stream as MediaStream;
-          });
-        }
-      };
-
-      // Handle ICE candidates
-      _peerConnection?.onIceCandidate = (RTCIceCandidateEvent event) {
-        if (event.candidate != null) {
-          _socket?.emit('ice-candidate', {
-            'candidate': event.candidate?.toMap(),
-            'roomId': classId,
-          });
-        }
-      };
-
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error accessing camera/microphone: ${e.toString()}'),
-            backgroundColor: Colors.red,
+      ),
+      body: Column(
+        children: [
+          // Video Area
+          Expanded(
+            flex: 3,
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              margin: const EdgeInsets.all(16),
+              child: Stack(
+                children: [
+                  // Main Video
+                  Center(
+                    child: _isVideoOff
+                        ? const Icon(
+                            Icons.videocam_off,
+                            size: 64,
+                            color: Colors.white,
+                          )
+                        : Container(
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade800,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.person,
+                                size: 64,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                  ),
+                  // Participant Video (small)
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: Container(
+                      width: 100,
+                      height: 75,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade700,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.person,
+                          size: 24,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Class Info Overlay
+                  Positioned(
+                    bottom: 16,
+                    left: 16,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Mathematics - Live',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Dr. Sarah Johnson',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        );
-      }
-    }
-  }
-
-  void _connectToSignalingServer() {
-    try {
-      _socket = io.io('http://localhost:3000', <String, dynamic>{
-        'transports': ['websocket'],
-        'autoConnect': true,
-      });
-
-      _socket?.onConnect((_) {
-        setState(() {
-          _isConnected = true;
-        });
-        
-        // Join room
-        _socket?.emit('join-room', {
-          'roomId': classId,
-          'userId': 'current-user-id',
-        });
-      });
-
-      _socket?.on('user-joined', (data) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${data['userName']} joined the class'),
-            backgroundColor: Colors.green,
+          // Controls and Chat
+          Expanded(
+            flex: 1,
+            child: Container(
+              margin: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  // Participants Info
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.people),
+                            const SizedBox(width: 8),
+                            Text('$_participants Participants'),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _isJoined ? Colors.green : Colors.grey,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            _isJoined ? 'Joined' : 'Not Joined',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Control Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _toggleJoin,
+                          icon: Icon(_isJoined ? Icons.call_end : Icons.call),
+                          label: Text(_isJoined ? 'Leave' : 'Join'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _isJoined ? Colors.red : Colors.green,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            // Open chat
+                          },
+                          icon: const Icon(Icons.chat),
+                          label: const Text('Chat'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Class Info
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'About this class',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Topic: Algebra Fundamentals\n'
+                            'Duration: 45 minutes\n'
+                            'Recording: Available after class',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        );
-      });
-
-      _socket?.on('webrtc-offer', (data) async {
-        await _handleOffer(data['offer']);
-      });
-
-      _socket?.on('webrtc-answer', (data) async {
-        await _handleAnswer(data['answer']);
-      });
-
-      _socket?.on('ice-candidate', (data) async {
-        await _handleIceCandidate(data['candidate']);
-      });
-
-      _socket?.on('user-left', (data) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${data['userName']} left the class'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      });
-
-      _socket?.onDisconnect((_) {
-        setState(() {
-          _isConnected = false;
-        });
-      });
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error connecting to server: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+        ],
+      ),
+    );
   }
 
-  Future<void> _handleOffer(Map<String, dynamic> offer) async {
-    try {
-      await _peerConnection?.setRemoteDescription(
-        RTCSessionDescription(offer['sdp'], offer['type']),
-      );
+  void _toggleJoin() {
+    setState(() {
+      _isJoined = !_isJoined;
+      _participants = _isJoined ? _participants + 1 : _participants - 1;
+    });
 
-      final answer = await _peerConnection?.createAnswer();
-      await _peerConnection?.setLocalDescription(answer);
-
-      _socket?.emit('webrtc-answer', {
-        'answer': answer.toMap(),
-        'roomId': classId,
-      });
-    } catch (e) {
-      print('Error handling offer: $e');
-    }
-  }
-
-  Future<void> _handleAnswer(Map<String, dynamic> answer) async {
-    try {
-      await _peerConnection?.setRemoteDescription(
-        RTCSessionDescription(answer['sdp'], answer['type']),
-      );
-    } catch (e) {
-      print('Error handling answer: $e');
-    }
-  }
-
-  Future<void> _handleIceCandidate(Map<String, dynamic> candidate) async {
-    try {
-      await _peerConnection?.addCandidate(RTCIceCandidate(
-        candidate['candidate'],
-        candidate['sdpMid'],
-        candidate['sdpMLineIndex'],
-      ));
-    } catch (e) {
-      print('Error handling ICE candidate: $e');
-    }
-  }
-
-  Future<void> _toggleAudio() async {
-    try {
-      setState(() {
-        _isAudioEnabled = !_isAudioEnabled;
-      });
-
-      final tracks = _localStream?.getAudioTracks();
-      for (final track in tracks) {
-        track.enabled = _isAudioEnabled;
-      }
-    } catch (e) {
-      print('Error toggling audio: $e');
-    }
-  }
-
-  Future<void> _toggleVideo() async {
-    try {
-      setState(() {
-        _isVideoEnabled = !_isVideoEnabled;
-      });
-
-      final tracks = _localStream?.getVideoTracks();
-      for (final track in tracks) {
-        track.enabled = _isVideoEnabled;
-      }
-    } catch (e) {
-      print('Error toggling video: $e');
-    }
-  }
-
-  Future<void> _toggleScreenShare() async {
-    try {
-      if (_isScreenSharing) {
-        // Stop screen sharing
-        final screenStream = await navigator.mediaDevices.getDisplayMedia({
-          'video': true,
-          'audio': false,
-        });
-
-        final tracks = screenStream.getVideoTracks();
-        for (final track in tracks) {
-          track.stop();
-        }
-
-        setState(() {
-          _isScreenSharing = false;
-        });
-      } else {
-        // Start screen sharing
-        final screenStream = await navigator.mediaDevices.getDisplayMedia({
-          'video': {
-            'cursor': 'always',
-          },
-          'audio': false,
-        });
-
-        final videoTrack = screenStream.getVideoTracks()[0];
-        if (videoTrack != null) {
-          await _peerConnection?.addTrack(videoTrack, screenStream);
-        }
-
-        setState(() {
-          _isScreenSharing = true;
-        });
-      }
-    } catch (e) {
+    if (_isJoined) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error sharing screen: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
+        const SnackBar(content: Text('Joined the live class')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Left the live class')),
       );
     }
+  }
+
+  void _toggleMute() {
+    setState(() {
+      _isMuted = !_isMuted;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_isMuted ? 'Microphone muted' : 'Microphone unmuted')),
+    );
+  }
+
+  void _toggleVideo() {
+    setState(() {
+      _isVideoOff = !_isVideoOff;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_isVideoOff ? 'Camera turned off' : 'Camera turned on')),
+    );
   }
 
   void _showConnectionStatus() {
@@ -300,40 +297,40 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
               Row(
                 children: [
                   Icon(
-                    _isConnected ? Icons.wifi : Icons.wifi_off,
-                    color: _isConnected ? Colors.green : Colors.red,
+                    _isJoined ? Icons.wifi : Icons.wifi_off,
+                    color: _isJoined ? Colors.green : Colors.red,
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    _isConnected ? 'Connected' : 'Disconnected',
+                    _isJoined ? 'Connected' : 'Disconnected',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: _isConnected ? Colors.green : Colors.red,
+                      color: _isJoined ? Colors.green : Colors.red,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
+              const Text(
+                'Server: Connected',
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'WebRTC: Not initialized',
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 8),
               Text(
-                'Server: ${_socket?.connected ?? false ? "Connected" : "Disconnected"}',
+                'Local Stream: ${_isJoined ? "Active" : "Not started"}',
                 style: const TextStyle(fontSize: 14),
               ),
               const SizedBox(height: 8),
               Text(
-                'WebRTC: ${_peerConnection?.connectionState ?? "Not initialized"}',
+                'Remote Users: $_participants',
                 style: const TextStyle(fontSize: 14),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Local Stream: ${_localStream != null ? "Active" : "Not started"}',
-                style: const TextStyle(fontSize: 14),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Remote Users: ${_remoteRenderers.length}',
-                style: const TextStyle(fontSize: 14),
-              ),
-              if (!_isConnected) ...[
+              if (!_isJoined) ...[
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -369,222 +366,16 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
               },
               child: const Text('Close'),
             ),
-            if (!_isConnected)
+            if (!_isJoined)
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop();
-                  _connectToSignalingServer();
+                  _toggleJoin();
                 },
                 child: const Text('Reconnect'),
               ),
           ],
         );
       },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(className),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        actions: [
-          IconButton(
-            icon: Icon(
-              _isConnected ? Icons.wifi : Icons.wifi_off,
-              color: _isConnected ? Colors.green : Colors.red,
-            ),
-            onPressed: _showConnectionStatus,
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                // Local video
-                Container(
-                  height: 200,
-                  width: double.infinity,
-                  color: Colors.black,
-                  child: _localStream != null
-                      ? RTCVideoView(_localStream!)
-                      : const Center(
-                          child: Text(
-                            'Camera Off',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ),
-                ),
-                
-                // Remote videos
-                if (_remoteRenderers.isNotEmpty)
-                  Container(
-                    height: 200,
-                    width: double.infinity,
-                    color: Colors.grey[900],
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _remoteRenderers.length,
-                      itemBuilder: (context, index) {
-                        return Container(
-                          width: 150,
-                          margin: const EdgeInsets.all(4),
-                          child: RTCVideoView(_remoteRenderers[index]),
-                        );
-                      },
-                    ),
-                  ),
-                
-                // Controls
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: _toggleAudio,
-                            icon: Icon(
-                              _isAudioEnabled ? Icons.mic : Icons.mic_off,
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _isAudioEnabled ? Colors.green : Colors.red,
-                            ),
-                          ),
-                          ElevatedButton.icon(
-                            onPressed: _toggleVideo,
-                            icon: Icon(
-                              _isVideoEnabled ? Icons.videocam : Icons.videocam_off,
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _isVideoEnabled ? Colors.green : Colors.red,
-                            ),
-                          ),
-                          ElevatedButton.icon(
-                            onPressed: _toggleScreenShare,
-                            icon: Icon(
-                              _isScreenSharing ? Icons.stop_screen_share : Icons.screen_share,
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _isScreenSharing ? Colors.orange : Colors.blue,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      
-
-                      // Chat area
-                      Container(
-                        height: 200,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey[300]!),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Column(
-                          children: [
-                            Padding(
-                              padding: EdgeInsets.all(8),
-                              child: Text(
-                                'Class Chat',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            Expanded(
-                              child: ListView(
-                                children: [
-                                  ChatMessage(
-                                    sender: 'Teacher',
-                                    message: 'Welcome to the live class!',
-                                    isOwn: false,
-                                  ),
-                                  ChatMessage(
-                                    sender: 'You',
-                                    message: 'Hello everyone!',
-                                    isOwn: true,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-    );
-  }
-}
-
-class ChatMessage extends StatelessWidget {
-  final String sender;
-  final String message;
-  final bool isOwn;
-
-  const ChatMessage({
-    super.key,
-    required this.sender,
-    required this.message,
-    required this.isOwn,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-      child: Row(
-        mainAxisAlignment: isOwn ? MainAxisAlignment.end : MainAxisAlignment.start,
-        children: [
-          if (!isOwn) ...[
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: Theme.of(context).primaryColor,
-              child: Text(
-                sender[0].toUpperCase(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isOwn ? Theme.of(context).primaryColor : Colors.grey[200],
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                message,
-                style: TextStyle(
-                  color: isOwn ? Colors.white : Colors.black87,
-                ),
-              ),
-            ),
-          ),
-          if (isOwn) ...[
-            const SizedBox(width: 8),
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: Colors.grey[400],
-              child: const Icon(
-                Icons.person,
-                size: 16,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
+    );}
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
 import '../services/api_service.dart';
 
 class QuizScreen extends ConsumerStatefulWidget {
@@ -57,8 +58,8 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
       // Mock quiz data for now
       setState(() {
         quiz = {
-          'id': quizId,
-          'title': quizTitle,
+          'id': widget.quizId,
+          'title': widget.quizTitle,
           'description': 'Test your knowledge on this topic',
           'duration': 30,
           'questions': [
@@ -126,10 +127,10 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
 
       for (int i = 0; i < questions.length; i++) {
         final question = questions[i];
-        totalPoints += question['points'] ?? 10;
+        totalPoints += (question['points'] as int?) ?? 10;
         
         if (selectedAnswers[i] == question['correctAnswer']) {
-          score += question['points'] ?? 10;
+          score += (question['points'] as int?) ?? 10;
         }
       }
 
@@ -142,7 +143,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
         Navigator.of(context).pushReplacementNamed('/quiz-result', arguments: {
           'score': score,
           'totalPoints': totalPoints,
-          'percentage': percentage,
+          'percentage': percentage.toString(),
           'totalQuestions': questions.length,
           'correctAnswers': selectedAnswers.values.where((answer) => 
             answer != null && questions[int.parse(selectedAnswers.keys.firstWhere((k) => selectedAnswers[k] == answer))]['correctAnswer'] == answer

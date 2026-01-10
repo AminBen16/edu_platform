@@ -277,7 +277,8 @@ class LessonDetailScreen extends StatelessWidget {
                           context,
                           MaterialPageRoute(
                             builder: (_) => QuizScreen(
-                              quiz: lesson['quiz'],
+                              quizId: lesson['quiz']['id'] ?? '',
+                              quizTitle: lesson['quiz']['title'] ?? 'Quiz',
                             ),
                           ),
                         );
