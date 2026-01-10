@@ -10,9 +10,9 @@ import 'screens/settings.dart';
 import 'screens/course_details.dart';
 import 'screens/live_class_screen.dart';
 import 'screens/account_settings.dart';
-import 'screens/assignments_screen.dart';
-import 'screens/quizzes_screen.dart';
-import 'screens/create_lesson_screen.dart';
+import 'screens/assignments_screen_simple.dart';
+import 'screens/quizzes_screen_simple.dart';
+import 'screens/create_lesson_screen_simple.dart';
 
 
 class GradingScreen extends StatelessWidget {

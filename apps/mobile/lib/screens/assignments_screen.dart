@@ -322,8 +322,6 @@ class _AssignmentsScreenState extends ConsumerState<AssignmentsScreen> {
                                     ],
                                   ],
                                 ),
-                              ],
-                            ),
                           ),
                         );
                       },
