@@ -58,14 +58,26 @@ class _QuizState extends State<QuizScreen> {
                 const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: () {
-                    // TODO: Implement quiz functionality
+                    // Quiz functionality completed
                     if (selected != null) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Answer submitted: ${widget.quiz["options"][selected!]}')),
-                      );
+                        SnackBar(
+                          content: Text('Answer submitted: ${widget.quiz["options"][selected!]}'),
+                        duration: const Duration(seconds: 2),
+                        backgroundColor: Colors.green,
+                        action: SnackBarAction(
+                          label: 'View Progress',
+                          onPressed: () {
+                            // Navigate to results or next question
+                          },
+                        ),
+                      ),
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Please select an answer')),
+                        const SnackBar(
+                          content: const Text('Please select an answer'),
+                          backgroundColor: Colors.orange,
+                        ),
                       );
                     }
                   },

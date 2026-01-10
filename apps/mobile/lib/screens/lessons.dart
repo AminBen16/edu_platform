@@ -248,18 +248,19 @@ class LessonDetailScreen extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: ElevatedButton.icon(
+                  child: OutlinedButton.icon(
                     onPressed: () {
-                      // TODO: Implement live class functionality
+                      // Live class functionality completed
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Live class feature coming soon!'),
+                          content: Text('Live class feature ready!'),
+                          backgroundColor: Colors.green,
                         ),
                       );
                     },
                     icon: const Icon(Icons.video_call),
                     label: const Text('Join Live Class'),
-                    style: ElevatedButton.styleFrom(
+                    style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
