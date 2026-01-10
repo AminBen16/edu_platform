@@ -1,9 +1,11 @@
 // apps/api/src/routes/lessons.ts
 import { Router } from 'express';
+import { prisma } from '../../../../packages/db';
+import { protect } from '../middleware/auth';
 
 const router = Router();
 
-// Mock lessons data
+// Mock lessons data for fallback
 const mockLessons = [
   {
     id: '1',
@@ -34,31 +36,59 @@ const mockLessons = [
   },
 ];
 
-// GET /lessons - List lessons
-router.get('/', async (req, res) => {
+// GET /lessons - List lessons for user's school
+router.get('/', protect, async (req, res) => {
     try {
-        res.json(mockLessons);
+        // Use real database if available, fallback to mock data
+        if (process.env.DATABASE_URL && prisma) {
+            const lessons = await prisma.lesson.findMany({
+                where: { schoolId: req.user!.schoolId },
+                orderBy: { createdAt: 'desc' },
+            });
+            res.json(lessons);
+        } else {
+            // Fallback to mock data for demo
+            res.json(mockLessons);
+        }
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch lessons.' });
     }
 });
 
 // POST /lessons - Create a lesson
-router.post('/', async (req, res) => {
+router.post('/', protect, async (req, res) => {
     const { title, content, topicId } = req.body;
     if (!title || !content || !topicId) {
         return res.status(400).json({ error: 'Title, content, and topicId are required.' });
     }
+    
     try {
-        const newLesson = {
-            id: `lesson-${Date.now()}`,
-            title,
-            description: content,
-            topicId,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-        };
-        res.status(201).json(newLesson);
+        let lesson;
+        
+        // Use real database if available
+        if (process.env.DATABASE_URL && prisma) {
+            lesson = await prisma.lesson.create({
+                data: {
+                    title,
+                    description: content,
+                    topicId,
+                    schoolId: req.user!.schoolId,
+                    authorId: req.user!.id,
+                },
+            });
+        } else {
+            // Fallback to mock data for demo
+            lesson = {
+                id: `lesson-${Date.now()}`,
+                title,
+                description: content,
+                topicId,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            };
+        }
+        
+        res.status(201).json(lesson);
     } catch (error) {
         res.status(500).json({ error: 'Failed to create lesson.' });
     }
