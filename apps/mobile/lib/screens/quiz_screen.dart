@@ -63,19 +63,20 @@ class _QuizState extends State<QuizScreen> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('Answer submitted: ${widget.quiz["options"][selected!]}'),
-                        duration: const Duration(seconds: 2),
-                        backgroundColor: Colors.green,
-                        action: SnackBarAction(
-                          label: 'View Progress',
-                          onPressed: () {
-                            // Navigate to results or next question
-                          },
+                          duration: const Duration(seconds: 2),
+                          backgroundColor: Colors.green,
+                          action: SnackBarAction(
+                            label: 'View Progress',
+                            onPressed: () {
+                              // Navigate to results or next question
+                            },
+                          ),
                         ),
-                      ),
+                      );
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: const Text('Please select an answer'),
+                          content: Text('Please select an answer'),
                           backgroundColor: Colors.orange,
                         ),
                       );

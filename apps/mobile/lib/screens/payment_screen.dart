@@ -6,7 +6,7 @@ class PaymentScreen extends StatelessWidget {
   final String course;
   final int amount;
 
-  PaymentScreen({required this.course, required this.amount});
+  const PaymentScreen({super.key, required this.course, required this.amount});
 
   @override
   Widget build(BuildContext context) {

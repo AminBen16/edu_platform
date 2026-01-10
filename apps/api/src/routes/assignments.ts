@@ -1,6 +1,6 @@
 // Assignments management routes
 import { Router } from 'express';
-import { prisma } from '../../../packages/db';
+import { prisma } from '../lib/database';
 
 const router = Router();
 

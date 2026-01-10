@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api.dart';
+import 'quiz_screen.dart';
 
 class LessonsScreen extends StatefulWidget {
   const LessonsScreen({super.key});
@@ -120,7 +121,7 @@ class _LessonsState extends State<LessonsScreen> {
                       )
                     : ListView.separated(
                         itemCount: lessons.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        separatorBuilder: (_, _) => const SizedBox(height: 12),
                         itemBuilder: (_, i) => Card(
                           elevation: 2,
                           shape: RoundedRectangleBorder(
@@ -197,7 +198,7 @@ class LessonDetailScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceVariant,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -232,7 +233,7 @@ class LessonDetailScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   border: Border.all(
-                    color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                    color: Theme.of(context).colorScheme.outline.withAlpha(77),
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -269,12 +270,25 @@ class LessonDetailScreen extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      // TODO: Implement quiz functionality
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Quiz feature coming soon!'),
-                        ),
-                      );
+                      if (lesson['quiz'] != null &&
+                          lesson['quiz']['questions'] != null &&
+                          lesson['quiz']['questions'].isNotEmpty) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => QuizScreen(
+                              quiz: lesson['quiz'],
+                            ),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Quiz not available for this lesson.'),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                      }
                     },
                     icon: const Icon(Icons.quiz),
                     label: const Text('Take Quiz'),

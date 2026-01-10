@@ -1,6 +1,6 @@
 // apps/api/src/routes/lessons.ts
 import { Router } from 'express';
-import { prisma } from '../../../packages/db';
+import { prisma } from '../lib/database';
 import { protect } from '../middleware/auth';
 
 const router = Router();
@@ -41,9 +41,8 @@ router.get('/', protect, async (req, res) => {
     try {
         // Use real database if available, fallback to mock data
         if (process.env.DATABASE_URL && prisma) {
-            const lessons = await prisma.lesson.findMany({
+            const lessons = await prisma.findLessons({
                 where: { schoolId: req.user!.schoolId },
-                orderBy: { createdAt: 'desc' },
             });
             res.json(lessons);
         } else {
@@ -67,14 +66,12 @@ router.post('/', protect, async (req, res) => {
         
         // Use real database if available
         if (process.env.DATABASE_URL && prisma) {
-            lesson = await prisma.lesson.create({
-                data: {
-                    title,
-                    description: content,
-                    topicId,
-                    schoolId: req.user!.schoolId,
-                    authorId: req.user!.id,
-                },
+            lesson = await prisma.createLesson({
+                title,
+                description: content,
+                topicId,
+                schoolId: req.user!.schoolId,
+                authorId: req.user!.id,
             });
         } else {
             // Fallback to mock data for demo

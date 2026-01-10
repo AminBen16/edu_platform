@@ -12,7 +12,7 @@ class TeacherUploadScreen extends StatefulWidget {
 class _TeacherUploadState extends State<TeacherUploadScreen> {
   File? file;
 
-  pickFile() async {
+  Future<void> pickFile() async {
     final picked = await ImagePicker().pickVideo(source: ImageSource.camera);
     if (picked != null) setState(() => file = File(picked.path));
   }
@@ -45,7 +45,7 @@ class _TeacherUploadState extends State<TeacherUploadScreen> {
               if (file != null)
                 Card(
                   color:
-                      Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
+                      Theme.of(context).colorScheme.secondary.withAlpha(26),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                   child: Padding(

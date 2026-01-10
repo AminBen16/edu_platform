@@ -1,13 +1,7 @@
-import 'dart:html' as html;
 import 'package:flutter/material.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../services/api.dart';
-
-// Helper function for WebRTC peer connection
-Future<RTCPeerConnection> createWebRTCPeerConnection(Map<String, dynamic> configuration) {
-  return createPeerConnection(configuration);
-}
 
 class LiveClassScreen extends StatefulWidget {
   final String? roomId;
@@ -23,7 +17,7 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
   RTCPeerConnection? _peerConnection;
   final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
   final Map<String, RTCVideoRenderer> _remoteRenderers = {};
-  IO.Socket? _socket;
+  io.Socket? _socket;
   MediaStream? _localStream;
   bool _isAudioEnabled = true;
   bool _isVideoEnabled = true;
@@ -41,12 +35,21 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
     await _localRenderer.initialize();
   }
 
+  final ApiService _apiService = ApiService();
+
+  Future<String?> getToken() async {
+    return await _apiService.getToken();
+  }
+
   void _connectToSignalingServer() async {
     try {
       final token = await getToken();
-      if (token == null) return;
+      if (token == null) {
+        debugPrint("Authentication token not found. Cannot connect to signaling server.");
+        return;
+      }
 
-      _socket = IO.io('https://api-32v26rbb4-ainamanipro.vercel.app', {
+      _socket = io.io('https://api-32v26rbb4-ainamanipro.vercel.app', {
         'auth': {'token': token},
         'transports': ['websocket'],
         'autoConnect': true,
@@ -61,7 +64,9 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
 
       _socket!.on('peers-in-room', (data) {
         debugPrint('Peers in room: $data');
-        _connectToPeers(data['peers']);
+        if (data['peers'] is List) {
+          _connectToPeers(data['peers']);
+        }
       });
 
       _socket!.on('user-joined', (data) {
@@ -92,7 +97,9 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
 
   void _connectToPeers(List<dynamic> peers) {
     for (final peerId in peers) {
-      _createPeerConnection(peerId, true);
+      if (peerId is String) {
+        _createPeerConnection(peerId, true);
+      }
     }
   }
 
@@ -103,7 +110,7 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
       ],
     };
 
-    _peerConnection = await createWebRTCPeerConnection(configuration);
+    _peerConnection = await createPeerConnection(configuration);
 
     _peerConnection!.onIceCandidate = (RTCIceCandidate candidate) {
       if (candidate.candidate != null) {
@@ -125,6 +132,13 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
         });
       });
     };
+
+    // Add local stream to the peer connection
+    if (_localStream != null) {
+      _localStream!.getTracks().forEach((track) {
+        _peerConnection!.addTrack(track, _localStream!);
+      });
+    }
 
     if (isInitiator) {
       await _createOffer(peerId);
@@ -162,7 +176,7 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
 
   Future<void> _handleOffer(Map<String, dynamic> sdp, String fromUserId) async {
     await _createPeerConnection(fromUserId, false);
-    await _peerConnection!.setRemoteDescription(RTCSessionDescription(sdp));
+    await _peerConnection!.setRemoteDescription(RTCSessionDescription(sdp['sdp'], sdp['type']));
     final answer = await _peerConnection!.createAnswer();
     await _peerConnection!.setLocalDescription(answer);
 
@@ -178,7 +192,7 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
     Map<String, dynamic> sdp,
     String fromUserId,
   ) async {
-    await _peerConnection!.setRemoteDescription(RTCSessionDescription(sdp));
+    await _peerConnection!.setRemoteDescription(RTCSessionDescription(sdp['sdp'], sdp['type']));
   }
 
   Future<void> _handleCandidate(
@@ -196,22 +210,20 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
 
   Future<void> _getUserMedia() async {
     try {
-      final stream = await html.navigator.mediaDevices?.getUserMedia({
+      final stream = await navigator.mediaDevices.getUserMedia({
         'audio': true,
         'video': true,
       });
 
-      if (stream != null) {
-        setState(() {
-          _localStream = stream;
-          _localRenderer.srcObject = stream;
-        });
+      setState(() {
+        _localStream = stream;
+        _localRenderer.srcObject = stream;
+      });
 
-        if (_peerConnection != null) {
-          stream.getTracks().forEach((track) {
-            _peerConnection!.addTrack(track, stream!);
-          });
-        }
+      if (_peerConnection != null) {
+        stream.getTracks().forEach((track) {
+          _peerConnection!.addTrack(track, stream);
+        });
       }
     } catch (e) {
       debugPrint('Error getting user media: $e');
@@ -227,22 +239,24 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
 
   void _toggleAudio() {
     if (_localStream != null) {
+      final enabled = !_isAudioEnabled;
       _localStream!.getAudioTracks().forEach((track) {
-        track.enabled = !_isAudioEnabled;
+        track.enabled = enabled;
       });
       setState(() {
-        _isAudioEnabled = !_isAudioEnabled;
+        _isAudioEnabled = enabled;
       });
     }
   }
 
   void _toggleVideo() {
     if (_localStream != null) {
+      final enabled = !_isVideoEnabled;
       _localStream!.getVideoTracks().forEach((track) {
-        track.enabled = !_isVideoEnabled;
+        track.enabled = enabled;
       });
       setState(() {
-        _isVideoEnabled = !_isVideoEnabled;
+        _isVideoEnabled = enabled;
       });
     }
   }
@@ -252,22 +266,26 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
       _isSpeakerEnabled = !_isSpeakerEnabled;
     });
     for (final renderer in _remoteRenderers.values) {
-      renderer.audioVolume = _isSpeakerEnabled ? 1.0 : 0.0;
+      // RTCVideoRenderer does not have a volume property, this is a placeholder
+      // You might need to handle audio output on the native side
     }
   }
 
   void _leaveRoom() {
-    _socket?.emit('leave-room');
+    _socket?.emit('leave-room', {'roomId': widget.roomId, 'userId': widget.userId});
     _cleanup();
+    Navigator.of(context).pop();
   }
 
   void _cleanup() {
+    _localStream?.getTracks().forEach((track) => track.stop());
     _localStream?.dispose();
     _localRenderer.dispose();
     for (final renderer in _remoteRenderers.values) {
       renderer.dispose();
     }
     _remoteRenderers.clear();
+    _peerConnection?.close();
     _peerConnection?.dispose();
     _socket?.disconnect();
   }
@@ -298,8 +316,9 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
             onPressed: _toggleSpeaker,
           ),
           IconButton(
-            icon: const Icon(Icons.exit_to_app),
+            icon: const Icon(Icons.call_end),
             onPressed: _leaveRoom,
+            tooltip: 'Leave Room',
           ),
         ],
       ),
@@ -309,54 +328,65 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
           Container(
             margin: const EdgeInsets.all(8),
             height: 150,
-            child: RTCVideoView(_localRenderer),
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: _localRenderer.srcObject != null
+                ? RTCVideoView(_localRenderer, mirror: true)
+                : const Center(child: CircularProgressIndicator()),
           ),
           // Remote videos
           Expanded(
             child: _remoteRenderers.isEmpty
                 ? Center(
                     child: Text(
-                      "Remote participants will appear here",
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      "Waiting for others to join...",
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                   )
-                : ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: _remoteRenderers.entries.map((entry) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                        child: Card(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: SizedBox(
-                            width: 160,
-                            height: 120,
-                            child: RTCVideoView(entry.value),
-                          ),
-                        ),
+                : GridView.builder(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 4 / 3,
+                    ),
+                    itemCount: _remoteRenderers.length,
+                    itemBuilder: (context, index) {
+                      final entry = _remoteRenderers.entries.elementAt(index);
+                      return Card(
+                        clipBehavior: Clip.antiAlias,
+                        child: RTCVideoView(entry.value),
                       );
-                    }).toList(),
+                    },
                   ),
           ),
-          // Control buttons
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          // Control buttons (optional, as they are in the AppBar)
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Wrap(
+              spacing: 16,
+              alignment: WrapAlignment.center,
               children: [
-                ElevatedButton(
-                  onPressed: _getUserMedia,
-                  child: const Text('Start Camera'),
+                FloatingActionButton(
+                  heroTag: 'toggle_audio',
+                  onPressed: _toggleAudio,
+                  child: Icon(_isAudioEnabled ? Icons.mic : Icons.mic_off),
                 ),
-                ElevatedButton(
+                FloatingActionButton(
+                  heroTag: 'toggle_video',
+                  onPressed: _toggleVideo,
+                  child: Icon(_isVideoEnabled ? Icons.videocam : Icons.videocam_off),
+                ),
+                FloatingActionButton(
+                  backgroundColor: Colors.red,
+                  heroTag: 'leave_room',
                   onPressed: _leaveRoom,
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                  child: const Text('Leave Room'),
+                  child: const Icon(Icons.call_end),
                 ),
               ],
             ),
-          ),
+          )
         ],
       ),
     );

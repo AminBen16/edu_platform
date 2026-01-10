@@ -1,6 +1,6 @@
 // Users management routes
 import { Router } from 'express';
-import { prisma } from '../../../packages/db';
+import { prisma } from '../lib/database';
 import jwt from 'jsonwebtoken';
 
 const router = Router();

@@ -1,7 +1,20 @@
 import 'package:flutter/material.dart';
 
-class SchoolOnboarding extends StatelessWidget {
+class SchoolOnboarding extends StatefulWidget {
+  const SchoolOnboarding({super.key});
+
+  @override
+  State<SchoolOnboarding> createState() => _SchoolOnboardingState();
+}
+
+class _SchoolOnboardingState extends State<SchoolOnboarding> {
   final TextEditingController controller = TextEditingController();
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +34,7 @@ class SchoolOnboarding extends StatelessWidget {
               const SizedBox(height: 32),
               TextField(
                 controller: controller,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: "School Name",
                   prefixIcon: Icon(Icons.school),
                 ),
@@ -31,7 +44,7 @@ class SchoolOnboarding extends StatelessWidget {
                 onPressed: () {
                   // call API to create school
                 },
-                child: Text("Continue"),
+                child: const Text("Continue"),
               ),
             ],
           ),
