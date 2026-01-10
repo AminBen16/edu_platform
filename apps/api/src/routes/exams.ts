@@ -1,6 +1,6 @@
 // apps/api/src/routes/exams.ts
 import { Router } from 'express';
-import { prisma } from '../lib/database';
+import { prisma } from '../config/database';
 
 const router = Router();
 

@@ -1,6 +1,7 @@
 // Messages and chat routes
 import { Router } from 'express';
-import { prisma } from '../lib/database';
+import { prisma } from '../config/database';
+import { protect } from '../middleware/auth';
 
 const router = Router();
 

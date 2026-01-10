@@ -1,6 +1,6 @@
 // apps/api/src/routes/analytics.ts
 import { Router } from 'express';
-import { prisma } from '../lib/database';
+import { prisma } from '../config/database';
 
 const router = Router();
 

@@ -1,6 +1,6 @@
 // apps/api/src/routes/lessons.ts
 import { Router } from 'express';
-import { prisma } from '../lib/database';
+import { prisma } from '../config/database';
 import { protect } from '../middleware/auth';
 
 const router = Router();
@@ -41,8 +41,9 @@ router.get('/', protect, async (req, res) => {
     try {
         // Use real database if available, fallback to mock data
         if (process.env.DATABASE_URL && prisma) {
-            const lessons = await prisma.findLessons({
+            const lessons = await prisma.lesson.findMany({
                 where: { schoolId: req.user!.schoolId },
+                orderBy: { createdAt: 'desc' }
             });
             res.json(lessons);
         } else {
@@ -56,9 +57,9 @@ router.get('/', protect, async (req, res) => {
 
 // POST /lessons - Create a lesson
 router.post('/', protect, async (req, res) => {
-    const { title, content, topicId } = req.body;
-    if (!title || !content || !topicId) {
-        return res.status(400).json({ error: 'Title, content, and topicId are required.' });
+    const { title, content, subjectId } = req.body;
+    if (!title || !content || !subjectId) {
+        return res.status(400).json({ error: 'Title, content, and subjectId are required.' });
     }
     
     try {
@@ -66,12 +67,14 @@ router.post('/', protect, async (req, res) => {
         
         // Use real database if available
         if (process.env.DATABASE_URL && prisma) {
-            lesson = await prisma.createLesson({
-                title,
-                description: content,
-                topicId,
-                schoolId: req.user!.schoolId,
-                authorId: req.user!.id,
+            lesson = await prisma.lesson.create({
+                data: {
+                    title,
+                    description: content,
+                    subjectId,
+                    schoolId: req.user!.schoolId,
+                    teacherId: req.user!.id,
+                },
             });
         } else {
             // Fallback to mock data for demo
@@ -79,7 +82,7 @@ router.post('/', protect, async (req, res) => {
                 id: `lesson-${Date.now()}`,
                 title,
                 description: content,
-                topicId,
+                subjectId,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
             };

@@ -1,6 +1,6 @@
 // apps/api/src/routes/schools.ts
 import { Router } from 'express';
-import prisma, { Role } from '../lib/database';
+import { prisma } from '../config/database';
 import { authorize, protect } from '../middleware/auth';
 
 const router = Router();
@@ -11,7 +11,7 @@ router.get('/', protect, async (req, res) => {
     const user = req.user!;
     let schools;
 
-    if (user.role === Role.SUPER_ADMIN) {
+    if (user.role === 'SUPER_ADMIN') {
       schools = await prisma.school.findMany({
         orderBy: { createdAt: 'desc' },
       });
@@ -30,7 +30,7 @@ router.get('/', protect, async (req, res) => {
 });
 
 // POST /schools - Creates a new school (SUPER_ADMIN only)
-router.post('/', protect, authorize(Role.SUPER_ADMIN), async (req, res) => {
+router.post('/', protect, authorize('SUPER_ADMIN'), async (req, res) => {
     const { name, logoUrl } = req.body;
 
     if (!name) {

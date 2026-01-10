@@ -1,36 +1,44 @@
 // apps/api/src/routes/chat.ts
 import { Router } from 'express';
-import prisma from 'db';
+import { prisma } from '../config/database';
 import { protect } from '../middleware/auth';
 
 const router = Router();
 
-// GET /chat/threads - List chat threads for the user's school
-router.get('/threads', protect, async (req, res) => {
+// GET /chat/messages - Get messages for a class
+router.get('/messages', protect, async (req, res) => {
+  const { classId } = req.query;
   try {
-    const threads = await prisma.chat.findMany({
-      where: { schoolId: req.user!.schoolId },
-      orderBy: { updatedAt: 'desc' },
+    const messages = await prisma.message.findMany({
+      where: { classId: classId as string },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        sender: {
+          select: { id: true, name: true, email: true }
+        }
+      }
     });
-    res.json(threads);
+    res.json(messages);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch chat threads.' });
+    res.status(500).json({ error: 'Failed to fetch messages.' });
   }
 });
 
-// POST /chat/message - Send a message in a thread
+// POST /chat/message - Send a message
 router.post('/message', protect, async (req, res) => {
-  const { chatId, content } = req.body;
-  if (!chatId || !content) {
-    return res.status(400).json({ error: 'Thread ID and content are required.' });
+  const { content, type, classId, fileUrl } = req.body;
+  if (!content || !classId) {
+    return res.status(400).json({ error: 'Content and class ID are required.' });
   }
   try {
-    const message = await prisma.chatMessage.create({
+    const message = await prisma.message.create({
       data: {
-        chatId,
         content,
-        authorId: req.user!.id,
-        schoolId: req.user!.schoolId,
+        type: type || 'TEXT',
+        fileUrl,
+        senderId: req.user!.id,
+        classId,
+        isRead: false,
       },
     });
     res.status(201).json(message);
