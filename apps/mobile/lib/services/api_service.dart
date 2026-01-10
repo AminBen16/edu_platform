@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Use local development API URL - change to deployed URL when ready
-const String _baseUrl = "http://localhost:3000/api";
+// Use production API URL
+const String _baseUrl = "https://api-1bbb57hmy-ainamanipro.vercel.app/api/v1";
 
 class ApiService {
   // Singleton instance
