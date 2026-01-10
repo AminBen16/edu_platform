@@ -16,8 +16,15 @@ const upload = multer({
     fileSize: 50 * 1024 * 1024, // 50MB per file
   },
   fileFilter: (req: any, file: any, cb: any) => {
-    // Allow images, videos, documents
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/webm', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    // Allow images, videos, documents, and audio files
+    const allowedTypes = [
+      'image/jpeg', 'image/png', 'image/gif', 
+      'video/mp4', 'video/webm', 'video/avi', 'video/mov',
+      'audio/mp3', 'audio/wav', 'audio/m4a', 'audio/ogg', 'audio/aac',
+      'application/pdf', 'application/msword', 
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    ];
     cb(null, allowedTypes.includes(file.mimetype));
   }
 });

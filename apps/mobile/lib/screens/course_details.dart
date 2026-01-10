@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../widgets/media_content_viewer.dart';
 
 class CourseDetailsScreen extends ConsumerStatefulWidget {
   final String courseId;
@@ -150,6 +151,47 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen> {
                   'This comprehensive mathematics course covers algebra, geometry, and trigonometry fundamentals. Students will develop problem-solving skills and mathematical reasoning through interactive lessons and practical applications.',
                   style: TextStyle(fontSize: 16),
                 ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            
+            // Course Media Content
+            const Text(
+              'Course Media',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            Container(
+              height: 300,
+              child: MediaContentViewer(
+                resources: [
+                  {
+                    'id': '1',
+                    'title': 'Introduction to Algebra',
+                    'type': 'video/mp4',
+                    'url': 'https://example.com/intro.mp4',
+                    'size': 25000000,
+                  },
+                  {
+                    'id': '2',
+                    'title': 'Mathematics Lecture 1',
+                    'type': 'audio/mp3',
+                    'url': 'https://example.com/lecture1.mp3',
+                    'size': 12000000,
+                  },
+                  {
+                    'id': '3',
+                    'title': 'Course Syllabus',
+                    'type': 'application/pdf',
+                    'url': 'https://example.com/syllabus.pdf',
+                    'size': 500000,
+                  },
+                ],
+                courseTitle: 'Mathematics',
               ),
             ),
             const SizedBox(height: 24),
