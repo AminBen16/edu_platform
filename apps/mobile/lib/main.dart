@@ -10,40 +10,10 @@ import 'screens/settings.dart';
 import 'screens/course_details.dart';
 import 'screens/live_class_screen.dart';
 import 'screens/account_settings.dart';
+import 'screens/assignments_screen.dart';
+import 'screens/quizzes_screen.dart';
+import 'screens/create_lesson_screen.dart';
 
-// Placeholder screens for missing routes
-class AssignmentsScreen extends StatelessWidget {
-  const AssignmentsScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Assignments')),
-      body: const Center(child: Text('Assignments - Coming Soon')),
-    );
-  }
-}
-
-class QuizzesScreen extends StatelessWidget {
-  const QuizzesScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Quizzes')),
-      body: const Center(child: Text('Quizzes - Coming Soon')),
-    );
-  }
-}
-
-class CreateLessonScreen extends StatelessWidget {
-  const CreateLessonScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Create Lesson')),
-      body: const Center(child: Text('Create Lesson - Coming Soon')),
-    );
-  }
-}
 
 class GradingScreen extends StatelessWidget {
   const GradingScreen({super.key});
@@ -195,9 +165,6 @@ class EduApp extends StatelessWidget {
         '/quizzes': (context) => const QuizzesScreen(),
         // Teacher routes
         '/create-lesson': (context) => const CreateLessonScreen(),
-        '/grading': (context) => const GradingScreen(),
-        '/my-classes': (context) => const MyClassesScreen(),
-        '/analytics': (context) => const AnalyticsScreen(),
         // Admin routes
         '/user-management': (context) => const UserManagementScreen(),
         '/school-settings': (context) => const SchoolSettingsScreen(),
