@@ -3,6 +3,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../config/database';
+import { AuthenticatedUser, RequestWithUser } from '../types/auth';
 
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'fallback-secret';
 
@@ -14,18 +15,12 @@ if (!JWT_SECRET) {
 declare global {
   namespace Express {
     interface Request {
-      user?: {
-        id: string;
-        email: string;
-        role: string;
-        schoolId: string;
-        permissions?: string[];
-      };
+      user?: AuthenticatedUser;
     }
   }
 }
 
-export const protect = async (req: Request, res: Response, next: NextFunction) => {
+export const protect = async (req: RequestWithUser, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -46,11 +41,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
     
     // Fetch user from database
     const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      include: {
-        school: true,
-        enrollments: true
-      }
+      where: { id: decoded.userId }
     });
 
     if (!user) {
@@ -88,7 +79,7 @@ function getPermissionsForRole(role: string): string[] {
 
 // Middleware to authorize based on role
 export const authorize = (...roles: string[]) => {
-    return (req: Request, res: Response, next: NextFunction) => {
+    return (req: RequestWithUser, res: Response, next: NextFunction) => {
         if (!req.user || !roles.includes(req.user.role)) {
             return res.status(403).json({ 
               error: `User role ${req.user?.role} is not authorized to access this route`,
@@ -101,7 +92,7 @@ export const authorize = (...roles: string[]) => {
 
 // Middleware to check specific permissions
 export const requirePermission = (permission: string) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: RequestWithUser, res: Response, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).json({ error: 'Authentication required' });
     }
