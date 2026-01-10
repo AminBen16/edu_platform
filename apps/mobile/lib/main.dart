@@ -10,131 +10,12 @@ import 'screens/settings.dart';
 import 'screens/course_details.dart';
 import 'screens/live_class_screen.dart';
 import 'screens/account_settings.dart';
-import 'screens/assignments_screen_simple.dart';
-import 'screens/quizzes_screen_simple.dart';
-import 'screens/create_lesson_screen_simple.dart';
+import 'screens/grading_screen.dart';
+import 'screens/analytics_screen.dart';
+import 'screens/user_management_screen.dart';
+import 'screens/progress_reports_screen.dart';
 
 
-class GradingScreen extends StatelessWidget {
-  const GradingScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Grading')),
-      body: const Center(child: Text('Grading - Coming Soon')),
-    );
-  }
-}
-
-class MyClassesScreen extends StatelessWidget {
-  const MyClassesScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('My Classes')),
-      body: const Center(child: Text('My Classes - Coming Soon')),
-    );
-  }
-}
-
-class AnalyticsScreen extends StatelessWidget {
-  const AnalyticsScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Analytics')),
-      body: const Center(child: Text('Analytics - Coming Soon')),
-    );
-  }
-}
-
-class UserManagementScreen extends StatelessWidget {
-  const UserManagementScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('User Management')),
-      body: const Center(child: Text('User Management - Coming Soon')),
-    );
-  }
-}
-
-class SchoolSettingsScreen extends StatelessWidget {
-  const SchoolSettingsScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('School Settings')),
-      body: const Center(child: Text('School Settings - Coming Soon')),
-    );
-  }
-}
-
-class ReportsScreen extends StatelessWidget {
-  const ReportsScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Reports')),
-      body: const Center(child: Text('Reports - Coming Soon')),
-    );
-  }
-}
-
-class AuditLogsScreen extends StatelessWidget {
-  const AuditLogsScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Audit Logs')),
-      body: const Center(child: Text('Audit Logs - Coming Soon')),
-    );
-  }
-}
-
-class ProgressReportsScreen extends StatelessWidget {
-  const ProgressReportsScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Progress Reports')),
-      body: const Center(child: Text('Progress Reports - Coming Soon')),
-    );
-  }
-}
-
-class AttendanceScreen extends StatelessWidget {
-  const AttendanceScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Attendance')),
-      body: const Center(child: Text('Attendance - Coming Soon')),
-    );
-  }
-}
-
-class MessagesScreen extends StatelessWidget {
-  const MessagesScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Messages')),
-      body: const Center(child: Text('Messages - Coming Soon')),
-    );
-  }
-}
-
-class ScheduleScreen extends StatelessWidget {
-  const ScheduleScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Schedule')),
-      body: const Center(child: Text('Schedule - Coming Soon')),
-    );
-  }
-}
 
 void main() {
   runApp(const ProviderScope(child: EduApp()));
@@ -165,6 +46,9 @@ class EduApp extends StatelessWidget {
         '/quizzes': (context) => const QuizzesScreen(),
         // Teacher routes
         '/create-lesson': (context) => const CreateLessonScreen(),
+        '/grading': (context) => const GradingScreen(),
+        '/my-classes': (context) => const MyClassesScreen(),
+        '/analytics': (context) => const AnalyticsScreen(),
         // Admin routes
         '/user-management': (context) => const UserManagementScreen(),
         '/school-settings': (context) => const SchoolSettingsScreen(),
