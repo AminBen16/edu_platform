@@ -95,15 +95,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           IconButton(
             icon: const Icon(Icons.notifications),
             onPressed: () {
-              // TODO: Implement notifications
+              Navigator.pushNamed(context, '/notifications');
             },
           ),
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'profile') {
-                // TODO: Navigate to profile
+                Navigator.pushNamed(context, '/profile');
               } else if (value == 'settings') {
-                // TODO: Navigate to settings
+                Navigator.pushNamed(context, '/settings');
               } else if (value == 'logout') {
                 _logout();
               }
@@ -314,7 +314,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 child: Card(
                   child: InkWell(
                     onTap: () {
-                      // TODO: Navigate to course details
+                      Navigator.pushNamed(context, '/course-details', arguments: course['id']);
                     },
                     borderRadius: BorderRadius.circular(8),
                     child: Padding(
@@ -418,7 +418,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             subtitle: Text(classData['time'] ?? ''),
             trailing: ElevatedButton(
               onPressed: () {
-                // TODO: Navigate to live class
+                Navigator.pushNamed(context, '/live-class', arguments: classData['id']);
               },
               child: const Text('Join'),
             ),

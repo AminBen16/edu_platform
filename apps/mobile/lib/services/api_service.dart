@@ -173,6 +173,25 @@ class ApiService {
     }
   }
 
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    final token = await _getToken();
+    final response = await http.put(
+      Uri.parse('$_baseUrl/users/password'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(<String, String>{
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(jsonDecode(response.body)['error'] ?? 'Failed to change password.');
+    }
+  }
+
   // --- Helper Methods ---
 
   Future<void> _saveToken(String token) async {

@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import { prisma } from '../config/database';
 import { protect, authorize } from '../middleware/auth';
 import { RequestWithUser } from '../types/auth';
+import EmailService from '../services/emailService';
 
 const router = Router();
 
@@ -103,8 +104,24 @@ router.post('/invite', protect, authorize('ADMIN', 'SCHOOL_ADMIN', 'SUPER_ADMIN'
       }
     });
 
-    // TODO: Send invitation email
-    // await sendInvitationEmail(email, invitationCode, schoolId);
+    // Send invitation email
+    const school = await prisma.school.findUnique({
+      where: { id: schoolId },
+      select: { name: true }
+    });
+
+    if (school) {
+      const emailSent = await EmailService.sendInvitationEmail(
+        email,
+        name,
+        invitationCode,
+        school.name
+      );
+      
+      if (!emailSent) {
+        console.warn('Failed to send invitation email, but invitation was created');
+      }
+    }
     
     res.json({ 
       success: true, 

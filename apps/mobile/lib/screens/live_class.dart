@@ -287,6 +287,102 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
     }
   }
 
+  void _showConnectionStatus() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Connection Status'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    _isConnected ? Icons.wifi : Icons.wifi_off,
+                    color: _isConnected ? Colors.green : Colors.red,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _isConnected ? 'Connected' : 'Disconnected',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: _isConnected ? Colors.green : Colors.red,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Server: ${_socket?.connected ?? false ? "Connected" : "Disconnected"}',
+                style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'WebRTC: ${_peerConnection?.connectionState ?? "Not initialized"}',
+                style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Local Stream: ${_localStream != null ? "Active" : "Not started"}',
+                style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Remote Users: ${_remoteRenderers.length}',
+                style: const TextStyle(fontSize: 14),
+              ),
+              if (!_isConnected) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Troubleshooting:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text('• Check your internet connection'),
+                      Text('• Ensure the server is running'),
+                      Text('• Try refreshing the page'),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Close'),
+            ),
+            if (!_isConnected)
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _connectToSignalingServer();
+                },
+                child: const Text('Reconnect'),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -299,9 +395,7 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
               _isConnected ? Icons.wifi : Icons.wifi_off,
               color: _isConnected ? Colors.green : Colors.red,
             ),
-            onPressed: () {
-              // TODO: Show connection status
-            },
+            onPressed: _showConnectionStatus,
           ),
         ],
       ),

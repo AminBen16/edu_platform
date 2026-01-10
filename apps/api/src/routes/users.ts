@@ -1,11 +1,13 @@
 // Users management routes
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../config/database';
 import { protect, authorize } from '../middleware/auth';
 import { RequestWithUser } from '../types/auth';
+import { logAudit } from '../middleware/auditLog';
+import EmailService from '../services/emailService';
 
 const router = Router();
 
@@ -76,10 +78,10 @@ router.post('/request-deletion', authenticateToken, async (req: any, res: any) =
   }
 
   try {
-    // Get user with password
+    // Get user with password and school info
     const user = await prisma.user.findUnique({
       where: { id: req.user!.id },
-      select: { id: true, email: true, password: true }
+      select: { id: true, email: true, password: true, name: true, schoolId: true }
     });
 
     if (!user || !user.password) {
@@ -134,8 +136,24 @@ router.post('/request-deletion', authenticateToken, async (req: any, res: any) =
       }
     });
 
-    // TODO: Send deletion confirmation email
-    // await sendDeletionEmail(user.email, deletionToken);
+    // Send deletion confirmation email
+    const school = await prisma.school.findUnique({
+      where: { id: user.schoolId },
+      select: { name: true }
+    });
+
+    if (school) {
+      const emailSent = await EmailService.sendDeletionConfirmationEmail(
+        user.email,
+        user.name,
+        deletionToken,
+        school.name
+      );
+      
+      if (!emailSent) {
+        console.warn('Failed to send deletion confirmation email, but deletion request was created');
+      }
+    }
 
     res.json({ 
       message: 'Deletion confirmation sent to your email',
@@ -268,6 +286,56 @@ router.post('/restore-account', authenticateToken, async (req: any, res: any) =>
   } catch (error) {
     console.error('Account restoration error:', error);
     res.status(500).json({ error: 'Failed to restore account' });
+  }
+});
+
+// PUT /users/password - Change user password
+router.put('/password', protect, async (req: Request, res: Response) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'Current password and new password are required' });
+  }
+
+  if (newPassword.length < 8) {
+    return res.status(400).json({ error: 'New password must be at least 8 characters long' });
+  }
+
+  try {
+    // Get user with password
+    const user = await prisma.user.findUnique({
+      where: { id: (req as RequestWithUser).user!.id }
+    });
+
+    if (!user || !user.password) {
+      return res.status(400).json({ error: 'User not found or no password set' });
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({ error: 'Current password is incorrect' });
+    }
+
+    // Hash new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 12);
+
+    // Update password
+    await prisma.user.update({
+      where: { id: (req as RequestWithUser).user!.id },
+      data: { password: hashedNewPassword }
+    });
+
+    // Log password change
+    await logAudit((req as RequestWithUser).user!.id, 'PASSWORD_CHANGED', 'user', {
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Password change error:', error);
+    res.status(500).json({ error: 'Failed to change password' });
   }
 });
 

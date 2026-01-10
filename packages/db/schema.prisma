@@ -123,6 +123,7 @@ model User {
   invitations            Invitation[]
   deletionRequest        DeletionRequest?
   auditLogs              AuditLog[]
+  notifications          Notification[]
 
   @@unique([email, schoolId]) // Unique email per school
 }
@@ -488,4 +489,19 @@ enum ParticipantRole {
   TEACHER
   STUDENT
   OBSERVER
+}
+
+// Notification system
+model Notification {
+  id        String      @id @default(cuid())
+  userId    String      @map("user_id")
+  type      String      // ASSIGNMENT, GRADE, ANNOUNCEMENT, REMINDER
+  title     String
+  message   String
+  data      Json?       // Additional notification data
+  isRead    Boolean     @default(false) @map("is_read")
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

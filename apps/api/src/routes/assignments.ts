@@ -2,6 +2,7 @@
 import { Router, Response, Request } from 'express';
 import { protect, authorize, requirePermission } from '../middleware/auth';
 import { prisma } from '../config/database';
+import NotificationService from '../services/notificationService';
 
 const router = Router();
 
@@ -68,9 +69,24 @@ router.post('/', protect, authorize('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), require
       }
     });
 
-    // TODO: Send real notifications
-    for (const enrollment of enrollments) {
-      console.log(`Assignment created for student: ${enrollment.student.user?.name}`);
+    // Send real notifications to enrolled students
+    const studentIds = enrollments.map(e => e.studentId);
+    
+    if (studentIds.length > 0) {
+      const notificationsSent = await NotificationService.sendBulkNotifications(studentIds, {
+        type: 'ASSIGNMENT',
+        title: 'New Assignment: ${title}',
+        message: `A new assignment "${title}" has been created for your class. Due date: ${dueDate ? new Date(dueDate).toLocaleDateString() : 'No due date'}`,
+        data: {
+          assignmentId: assignment.id,
+          title: assignment.title,
+          description: assignment.description,
+          dueDate: assignment.dueDate,
+          maxScore: assignment.maxScore
+        }
+      });
+      
+      console.log(`Notifications sent to ${notificationsSent} students`);
     }
 
     res.status(201).json(assignment);

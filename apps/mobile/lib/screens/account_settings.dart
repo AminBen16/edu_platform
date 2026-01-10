@@ -123,9 +123,11 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
     });
 
     try {
-      // TODO: Implement password change API
-      // final apiService = ApiService();
-      // await apiService.changePassword(_passwordController.text);
+      final apiService = ApiService();
+      await apiService.changePassword(
+        _passwordController.text,
+        _confirmPasswordController.text
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
