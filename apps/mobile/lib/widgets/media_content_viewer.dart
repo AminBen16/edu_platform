@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../screens/media_player.dart';
-import '../services/api_service.dart';
+import '../services/api.dart';
+import 'document_viewer.dart';
 
 class MediaContentViewer extends ConsumerStatefulWidget {
   final List<dynamic> resources;
@@ -121,10 +122,7 @@ class _MediaContentViewerState extends ConsumerState<MediaContentViewer> {
               title: const Text('View Document'),
               onTap: () {
                 Navigator.pop(context);
-                // Implement document viewer
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Document viewer coming soon!')),
-                );
+                _openDocumentViewer(resource);
               },
             ),
             ListTile(
@@ -141,17 +139,64 @@ class _MediaContentViewerState extends ConsumerState<MediaContentViewer> {
     );
   }
 
+  void _openDocumentViewer(dynamic resource) {
+    final url = resource['url'] ?? '';
+    final title = resource['title'] ?? 'Document';
+    final type = resource['type'] ?? '';
+    
+    // Determine document type
+    String documentType = 'pdf';
+    if (type.contains('pdf')) {
+      documentType = 'pdf';
+    } else if (type.contains('word') || type.contains('document')) {
+      documentType = 'word';
+    } else if (type.contains('text')) {
+      documentType = 'text';
+    } else if (type.contains('sheet') || type.contains('excel')) {
+      documentType = 'excel';
+    } else if (type.contains('presentation') || type.contains('powerpoint')) {
+      documentType = 'powerpoint';
+    }
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DocumentViewerWidget(
+          url: url,
+          title: title,
+          type: documentType,
+          onClose: () => Navigator.pop(context),
+        ),
+      ),
+    );
+  }
+
   Future<void> _downloadDocument(dynamic resource) async {
     try {
-      final apiService = ApiService();
-      // Implement document download logic
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Download started!')),
-      );
+      final url = resource['url'] ?? '';
+      final title = resource['title'] ?? 'Document';
+      final type = resource['type'] ?? '';
+      
+      // Use the API service to download the file
+      final file = await ApiService.downloadFile(url, '${title}_${DateTime.now().millisecondsSinceEpoch}');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Document downloaded successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Download failed: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Download failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
