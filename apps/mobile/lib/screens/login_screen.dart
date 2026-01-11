@@ -38,9 +38,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         _passwordController.text,
       );
 
-      // Store token and navigate to home
+      // Store token and navigate to dashboard
       // In a real app, you'd use a proper auth state management
-      Navigator.of(context).pushReplacementNamed('/home');
+      Navigator.of(context).pushReplacementNamed('/dashboard');
     } catch (e) {
       setState(() => _error = e.toString().replaceAll('Exception: ', ''));
     } finally {
