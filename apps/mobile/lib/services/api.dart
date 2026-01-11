@@ -63,6 +63,11 @@ class ApiService {
     }
   }
 
+  // Logout method
+  static Future<void> logout() async {
+    await removeToken();
+  }
+
   static Future<List> fetchLessons() async {
     final token = await getToken();
     if (token == null) throw Exception('Not authenticated');

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import '../services/api_service.dart';
-import 'login.dart';
+import '../services/api.dart';
+import 'login_screen.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -26,12 +26,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   Future<void> _loadUserData() async {
     try {
-      final apiService = ApiService();
-      final token = await apiService.getToken();
+      final token = await ApiService.getToken();
       
       if (token != null) {
         final response = await http.get(
-          Uri.parse('${ApiService.baseUrl}/dashboard'),
+          Uri.parse('${ApiService._baseUrl}/dashboard'),
           headers: <String, String>{
             'Content-Type': 'application/json; charset=UTF-8',
             'Authorization': 'Bearer $token',
@@ -812,8 +811,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   Future<void> _logout() async {
     try {
-      final apiService = ApiService();
-      await apiService.logout();
+      await ApiService.logout();
       
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
