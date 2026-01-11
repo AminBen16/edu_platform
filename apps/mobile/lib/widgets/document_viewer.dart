@@ -49,7 +49,10 @@ class _DocumentViewerWidgetState extends State<DocumentViewerWidget> {
 
   Future<void> _loadDocument() async {
     try {
-      setState(() => _isLoading = true, _error = null);
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
       
       final response = await http.get(Uri.parse(widget.url));
       if (response.statusCode != 200) {
@@ -83,11 +86,13 @@ class _DocumentViewerWidgetState extends State<DocumentViewerWidget> {
         _totalPages = 1;
       }
       
-      setState(() => _isLoading = false);
+      setState(() {
+        _isLoading = false;
+      });
     } catch (e) {
       setState(() {
-        _isLoading = false,
-        _error = 'Failed to load document: $e',
+        _isLoading = false;
+        _error = 'Failed to load document: $e';
       });
     }
   }
@@ -324,11 +329,11 @@ Contact information
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(color: Colors.blue[800]),
+                  CircularProgressIndicator(color: Colors.blue),
                   SizedBox(height: 16),
                   Text(
                     'Loading document...',
-                    style: TextStyle(color: Colors.blue[800]),
+                    style: TextStyle(color: Colors.blue),
                   ),
                 ],
               ),
@@ -493,12 +498,11 @@ Contact information
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            backgroundColor: Colors.yellow[200],
+            color: Colors.yellow[200],
             child: Text(
               currentResult,
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
-                backgroundColor: Colors.yellow,
               ),
             ),
           ),
