@@ -12,7 +12,19 @@ const mockLessons = [
     title: 'Introduction to Mathematics',
     description: 'Basic concepts and fundamentals of mathematics',
     content: 'This lesson covers numbers, basic operations, and introductory algebra.',
-    topicId: 'math-101',
+    videoUrl: null,
+    documentUrl: null,
+    duration: 45,
+    order: 1,
+    isPublished: true,
+    subject: 'Mathematics',
+    class: 'Grade 1',
+    difficulty: 'Beginner',
+    tags: ['Introduction', 'Theory', 'Assessment'],
+    schoolId: 'school123',
+    teacherId: 'teacher-1',
+    subjectId: 'math-101',
+    classId: 'grade-1',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -21,7 +33,19 @@ const mockLessons = [
     title: 'Physics Fundamentals',
     description: 'Introduction to basic physics concepts including motion, forces, and energy.',
     content: 'Learn about Newton\'s laws, kinematics, and basic mechanics.',
-    topicId: 'physics-101',
+    videoUrl: 'https://example.com/physics-video.mp4',
+    documentUrl: 'https://example.com/physics-notes.pdf',
+    duration: 60,
+    order: 1,
+    isPublished: true,
+    subject: 'Physics',
+    class: 'Grade 10',
+    difficulty: 'Intermediate',
+    tags: ['Theory', 'Practical', 'Video'],
+    schoolId: 'school123',
+    teacherId: 'teacher-2',
+    subjectId: 'physics-101',
+    classId: 'grade-10',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -30,7 +54,19 @@ const mockLessons = [
     title: 'Chemistry Basics',
     description: 'Understanding atoms, molecules, and chemical reactions.',
     content: 'Explore the periodic table, chemical bonds, and basic reactions.',
-    topicId: 'chemistry-101',
+    videoUrl: null,
+    documentUrl: 'https://example.com/chemistry-guide.pdf',
+    duration: 50,
+    order: 1,
+    isPublished: true,
+    subject: 'Chemistry',
+    class: 'Grade 11',
+    difficulty: 'Advanced',
+    tags: ['Theory', 'Reading', 'Assessment'],
+    schoolId: 'school123',
+    teacherId: 'teacher-3',
+    subjectId: 'chemistry-101',
+    classId: 'grade-11',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -57,9 +93,24 @@ router.get('/', protect, async (req, res) => {
 
 // POST /lessons - Create a lesson
 router.post('/', protect, async (req, res) => {
-    const { title, content, subjectId } = req.body;
-    if (!title || !content || !subjectId) {
-        return res.status(400).json({ error: 'Title, content, and subjectId are required.' });
+    const { 
+        title, 
+        description, 
+        duration, 
+        videoUrl, 
+        documentUrl, 
+        subject, 
+        class: className,
+        difficulty, 
+        tags, 
+        isPublished, 
+        type 
+    } = req.body;
+    
+    if (!title || !description || !duration || !subject || !className || !difficulty) {
+        return res.status(400).json({ 
+            error: 'Title, description, duration, subject, class, and difficulty are required.' 
+        });
     }
     
     try {
@@ -70,8 +121,16 @@ router.post('/', protect, async (req, res) => {
             lesson = await prisma.lesson.create({
                 data: {
                     title,
-                    description: content,
-                    subjectId,
+                    description,
+                    duration: duration ? parseInt(duration) : null,
+                    videoUrl,
+                    documentUrl,
+                    subject,
+                    class: className,
+                    difficulty,
+                    tags: tags || [],
+                    isPublished: isPublished || false,
+                    type: 'LESSON',
                     schoolId: req.user!.schoolId,
                     teacherId: req.user!.id,
                 },
@@ -81,15 +140,29 @@ router.post('/', protect, async (req, res) => {
             lesson = {
                 id: `lesson-${Date.now()}`,
                 title,
-                description: content,
-                subjectId,
+                description,
+                duration: duration ? parseInt(duration) : 45,
+                videoUrl,
+                documentUrl,
+                subject,
+                class: className,
+                difficulty,
+                tags: tags || [],
+                isPublished: isPublished || false,
+                type: 'LESSON',
+                schoolId: req.user!.schoolId,
+                teacherId: req.user!.id,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
             };
+            
+            // Add to mock lessons array for demo
+            mockLessons.unshift(lesson);
         }
         
         res.status(201).json(lesson);
     } catch (error) {
+        console.error('Lesson creation error:', error);
         res.status(500).json({ error: 'Failed to create lesson.' });
     }
 });

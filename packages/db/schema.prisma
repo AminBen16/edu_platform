@@ -214,9 +214,14 @@ model Lesson {
   content     String? // Rich text content
   type        LessonType @default(LESSON)
   videoUrl    String?    @map("video_url") // Recorded video URL
+  documentUrl String?    @map("document_url") // Document URL
   duration    Int? // Duration in minutes
   order       Int? // For lesson sequencing
   isPublished Boolean    @default(false) @map("is_published")
+  subject     String? // Subject name (string field)
+  class       String? // Class/Grade name (string field)
+  difficulty  String? // Difficulty level (string field)
+  tags        String[]   // Array of tags
   schoolId    String     @map("school_id")
   subjectId   String?    @map("subject_id")
   teacherId   String?    @map("teacher_id")
