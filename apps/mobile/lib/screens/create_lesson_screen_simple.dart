@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../services/api.dart';
+import '../services/notification_service.dart';
 
 class CreateLessonScreen extends ConsumerStatefulWidget {
   const CreateLessonScreen({super.key});
@@ -97,6 +98,17 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
       );
 
       if (response.statusCode == 201) {
+        // Send notifications
+        await NotificationService().sendNotification(
+          title: 'New Lesson Available',
+          message: 'A new lesson has been created: ${_titleController.text.trim()}',
+          type: NotificationType.content_created,
+          contentId: jsonDecode(response.body)['id'],
+          contentType: 'lesson',
+          recipients: ['students', 'parents', 'admin'],
+          channels: ['in_app', 'push'],
+        );
+        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(

@@ -19,6 +19,8 @@ import analyticsRoutes from './routes/analytics';
 import dashboardRoutes from './routes/dashboard';
 import uploadRoutes from './routes/upload';
 import downloadRoutes from './routes/download';
+import contentRoutes from './routes/content';
+import notificationRoutes from './routes/notifications';
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN || '',
@@ -80,6 +82,8 @@ app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/upload', uploadRoutes);
 app.use('/api/v1/download', downloadRoutes);
+app.use('/api/v1/content', contentRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
 
 // Error handling
 app.use(Sentry.Handlers.errorHandler());
