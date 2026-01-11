@@ -5,8 +5,18 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 
 class ApiService {
-  static const String _baseUrl =
-      "https://api-32v26rbb4-ainamanipro.vercel.app/api/v1";
+  static String get _baseUrl {
+    // Check if running in debug mode (local development)
+    const bool isDebugMode = !const bool.fromEnvironment('dart.vm.product');
+    
+    if (isDebugMode) {
+      // Local development
+      return "http://localhost:3000/api/v1";
+    } else {
+      // Production
+      return "https://api-32v26rbb4-ainamanipro.vercel.app/api/v1";
+    }
+  }
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
