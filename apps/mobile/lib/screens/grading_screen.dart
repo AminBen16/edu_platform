@@ -83,7 +83,7 @@ class _GradingScreenState extends ConsumerState<GradingScreen> {
     });
   }
 
-  List<Map<String, dynamic>> get _filteredSubmissions() {
+  List<Map<String, dynamic>> get _filteredSubmissions {
     if (_selectedClass == null) return _submissions;
     return _submissions.where((submission) => submission['className'] == _selectedClass).toList();
   }
@@ -189,7 +189,7 @@ class _GradingScreenState extends ConsumerState<GradingScreen> {
                 const Divider(),
                 // Submissions list
                 Expanded(
-                  child: _filteredSubmissions().isEmpty
+                  child: _filteredSubmissions.isEmpty
                       ? Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -221,9 +221,9 @@ class _GradingScreenState extends ConsumerState<GradingScreen> {
                         )
                       : ListView.builder(
                           padding: const EdgeInsets.all(16),
-                          itemCount: _filteredSubmissions().length,
+                          itemCount: _filteredSubmissions.length,
                           itemBuilder: (context, index) {
-                            final submission = _filteredSubmissions()[index];
+                            final submission = _filteredSubmissions[index];
                             return Card(
                               margin: const EdgeInsets.only(bottom: 16),
                               child: Padding(

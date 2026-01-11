@@ -264,6 +264,7 @@ class _AssignmentsScreenState extends ConsumerState<AssignmentsScreen> {
                                       ),
                                     ],
                                   ),
+                                ],
                                 if (assignment['progress'] > 0 && assignment['progress'] < 100) ...[
                                   const SizedBox(height: 8),
                                   LinearProgressIndicator(
@@ -322,6 +323,8 @@ class _AssignmentsScreenState extends ConsumerState<AssignmentsScreen> {
                                     ],
                                   ],
                                 ),
+                              ],
+                            ),
                           ),
                         );
                       },

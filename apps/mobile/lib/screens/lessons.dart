@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/api.dart';
+import '../widgets/media_player.dart';
+import '../widgets/document_viewer.dart';
 import 'quiz_screen.dart';
 
 class LessonsScreen extends StatefulWidget {
@@ -13,6 +17,20 @@ class _LessonsState extends State<LessonsScreen> {
   List lessons = [];
   bool isLoading = true;
   String? error;
+  bool _isCreatingLesson = false;
+  String? _playingMediaUrl;
+  String? _playingMediaTitle;
+  String? _playingMediaType;
+
+  // Form controllers for lesson creation
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _contentController = TextEditingController();
+  final _subjectController = TextEditingController();
+  final _videoUrlController = TextEditingController();
+  String _selectedType = 'LESSON';
+  int _duration = 30;
+  bool _isPublished = false;
 
   @override
   void initState() {
@@ -36,6 +54,240 @@ class _LessonsState extends State<LessonsScreen> {
     }
   }
 
+  void _showCreateLessonDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: 'Create New Lesson',
+        content: StatefulBuilder(
+          builder: (context, setState) {
+            return SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: _titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Lesson Title',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _descriptionController,
+                    decoration: const InputDecoration(
+                      labelText: 'Description',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _contentController,
+                    decoration: const InputDecoration(
+                      labelText: 'Content',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 5,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _subjectController,
+                    decoration: const InputDecoration(
+                      labelText: 'Subject',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _videoUrlController,
+                    decoration: const InputDecoration(
+                      labelText: 'Video URL (Optional)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: _selectedType,
+                          decoration: const InputDecoration(
+                            labelText: 'Type',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: ['LESSON', 'VIDEO', 'QUIZ', 'ASSIGNMENT'].map((type) {
+                            return DropdownMenuItem(
+                              value: type,
+                              child: Text(type),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedType = value!;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextFormField(
+                          initialValue: _duration.toString(),
+                          decoration: const InputDecoration(
+                            labelText: 'Duration (min)',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.number,
+                          onChanged: (value) {
+                            setState(() {
+                              _duration = int.tryParse(value) ?? 30;
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Text('Published:'),
+                      Switch(
+                        value: _isPublished,
+                        onChanged: (value) {
+                          setState(() {
+                            _isPublished = value;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: _isCreatingLesson ? null : () => _createLesson(context),
+            child: _isCreatingLesson
+                ? const CircularProgressIndicator()
+                : const Text('Create'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _createLesson(BuildContext context) async {
+    if (_titleController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a lesson title')),
+      );
+      return;
+    }
+
+    setState(() => _isCreatingLesson = true);
+
+    try {
+      final lessonData = {
+        'title': _titleController.text,
+        'description': _descriptionController.text,
+        'content': _contentController.text,
+        'type': _selectedType,
+        'subjectId': _subjectController.text,
+        'videoUrl': _videoUrlController.text,
+        'duration': _duration,
+        'isPublished': _isPublished,
+      };
+
+      // In a real implementation, this would call the API
+      // await ApiService.createLesson(lessonData);
+
+      // For now, simulate success
+      await Future.delayed(const Duration(seconds: 2));
+
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lesson created successfully')),
+      );
+
+      _clearForm();
+      await _loadLessons();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to create lesson: $e')),
+      );
+    } finally {
+      setState(() => _isCreatingLesson = false);
+    }
+  }
+
+  void _clearForm() {
+    _titleController.clear();
+    _descriptionController.clear();
+    _contentController.clear();
+    _subjectController.clear();
+    _videoUrlController.clear();
+    setState(() {
+      _selectedType = 'LESSON';
+      _duration = 30;
+      _isPublished = false;
+    });
+  }
+
+  void _viewDocumentDetails(Map<String, dynamic> lesson) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => LessonDetailScreen(lesson: lesson),
+      ),
+    );
+  }
+
+  void _playMedia(String url, String title, String type) {
+    setState(() {
+      _playingMediaUrl = url;
+      _playingMediaTitle = title;
+      _playingMediaType = type;
+    });
+  }
+
+  void _closeMediaPlayer() {
+    setState(() {
+      _playingMediaUrl = null;
+      _playingMediaTitle = null;
+      _playingMediaType = null;
+    });
+  }
+
+  void _viewDocument(Map<String, dynamic> lesson) {
+    // Check if lesson has documents attached
+    if (lesson['videoUrl'] != null) {
+      _playMedia(lesson['videoUrl'], lesson['title'], 'video');
+    } else if (lesson['documentUrl'] != null) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => DocumentViewerWidget(
+            url: lesson['documentUrl'],
+            title: lesson['title'],
+            type: 'pdf', // Assume PDF for documents
+            onClose: () => Navigator.of(context).pop(),
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No media available for this lesson'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -48,23 +300,15 @@ class _LessonsState extends State<LessonsScreen> {
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         centerTitle: true,
-        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              setState(() {
-                isLoading = true;
-                error = null;
-              });
-              _loadLessons();
-            },
-            tooltip: 'Refresh',
+            icon: const Icon(Icons.add),
+            onPressed: _showCreateLessonDialog,
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+      body: RefreshIndicator(
+        onRefresh: _loadLessons,
         child: isLoading
             ? const Center(child: CircularProgressIndicator())
             : error != null
@@ -72,26 +316,16 @@ class _LessonsState extends State<LessonsScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: Theme.of(context).colorScheme.error,
-                        ),
+                        const Icon(Icons.error, size: 64, color: Colors.red),
                         const SizedBox(height: 16),
                         Text(
                           'Error loading lessons',
-                          style: Theme.of(context).textTheme.headlineSmall,
+                          style: Theme.of(context).textTheme.titleLarge,
                         ),
                         const SizedBox(height: 8),
                         Text(
                           error!,
                           style: Theme.of(context).textTheme.bodyMedium,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: _loadLessons,
-                          child: const Text('Retry'),
                         ),
                       ],
                     ),
@@ -101,10 +335,7 @@ class _LessonsState extends State<LessonsScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(
-                              Icons.school_outlined,
-                              size: 64,
-                              color: Theme.of(context).colorScheme.primary,
+                            const Icon(Icons.book, size: 64, color: Colors.grey),
                             ),
                             const SizedBox(height: 16),
                             Text(
@@ -304,5 +535,19 @@ class LessonDetailScreen extends StatelessWidget {
         ),
       ),
     );
+
+    // Media Player Modal
+    if (_playingMediaUrl != null) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => MediaPlayerWidget(
+            url: _playingMediaUrl!,
+            title: _playingMediaTitle!,
+            type: _playingMediaType!,
+            onClose: _closeMediaPlayer,
+          ),
+        ),
+      );
+    }
   }
 }

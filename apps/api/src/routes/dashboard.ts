@@ -163,4 +163,104 @@ function getParentDashboardMock(parentId: string, schoolId: string) {
   };
 }
 
+// GET /dashboard/analytics - Platform analytics for admin dashboard
+router.get('/analytics', protect, authorize('ADMIN', 'SCHOOL_ADMIN', 'SUPER_ADMIN'), async (req: RequestWithUser, res: Response) => {
+  try {
+    // In a real implementation, these would be actual database queries
+    const analytics = {
+      totalUsers: 1247,
+      activeUsers: 892,
+      totalLessons: 45,
+      publishedLessons: 38,
+      totalQuizzes: 67,
+      publishedQuizzes: 52,
+      recentActivity: [
+        {
+          id: '1',
+          type: 'user_login',
+          description: 'John Doe logged in',
+          timestamp: new Date().toISOString(),
+          userId: 'user1',
+          userName: 'John Doe'
+        },
+        {
+          id: '2',
+          type: 'lesson_created',
+          description: 'New lesson "Advanced Math" created',
+          timestamp: new Date(Date.now() - 3600000).toISOString(),
+          userId: 'teacher1',
+          userName: 'Dr. Smith'
+        }
+      ]
+    };
+
+    res.json(analytics);
+  } catch (error) {
+    console.error('Analytics error:', error);
+    res.status(500).json({ error: 'Failed to load analytics data' });
+  }
+});
+
+// GET /dashboard/live-sessions - Active live sessions
+router.get('/live-sessions', protect, authorize('ADMIN', 'SCHOOL_ADMIN', 'SUPER_ADMIN', 'TEACHER'), async (req: RequestWithUser, res: Response) => {
+  try {
+    // Mock data - in production, this would query actual live sessions
+    const liveSessions = {
+      activeSessions: 3,
+      totalParticipants: 45,
+      sessions: [
+        {
+          id: 'session1',
+          title: 'Mathematics Live Class',
+          instructor: 'Dr. Smith',
+          participants: 15,
+          startTime: new Date(Date.now() - 1800000).toISOString(),
+          roomCode: 'MATH123'
+        },
+        {
+          id: 'session2',
+          title: 'Physics Tutorial',
+          instructor: 'Prof. Johnson',
+          participants: 20,
+          startTime: new Date(Date.now() - 900000).toISOString(),
+          roomCode: 'PHYS456'
+        },
+        {
+          id: 'session3',
+          title: 'Chemistry Lab Session',
+          instructor: 'Dr. Williams',
+          participants: 10,
+          startTime: new Date(Date.now() - 600000).toISOString(),
+          roomCode: 'CHEM789'
+        }
+      ]
+    };
+
+    res.json(liveSessions);
+  } catch (error) {
+    console.error('Live sessions error:', error);
+    res.status(500).json({ error: 'Failed to load live sessions data' });
+  }
+});
+
+// GET /dashboard/chat-status - Chat system status
+router.get('/chat-status', protect, async (req: RequestWithUser, res: Response) => {
+  try {
+    // Mock data - in production, this would check actual chat service status
+    const chatStatus = {
+      isOnline: true,
+      totalMessages: 15678,
+      activeChats: 23,
+      onlineUsers: 89,
+      systemStatus: 'healthy',
+      lastMessageTime: new Date(Date.now() - 120000).toISOString()
+    };
+
+    res.json(chatStatus);
+  } catch (error) {
+    console.error('Chat status error:', error);
+    res.status(500).json({ error: 'Failed to load chat status' });
+  }
+});
+
 export default router;

@@ -13,6 +13,9 @@ interface NotificationOptions {
 const notificationsStore: any[] = [];
 
 class NotificationService {
+  static getPublicUrl(): string {
+    return process.env.PUBLIC_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  }
   static async sendNotification(options: NotificationOptions): Promise<boolean> {
     try {
       // Store notification in memory (fallback when DB is not available)
@@ -87,7 +90,7 @@ class NotificationService {
           <p>${options.message}</p>
           ${options.data ? this.generateDataSection(options.data) : ''}
           <div style="text-align: center; margin-top: 30px;">
-            <a href="http://localhost:3000/dashboard" 
+            <a href="${NotificationService.getPublicUrl()}/dashboard" 
                style="background-color: ${colors[options.type]}; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px; display: inline-block;">
               View Dashboard
             </a>
@@ -101,7 +104,7 @@ class NotificationService {
   }
 
   private static generateEmailText(options: NotificationOptions, userName: string): string {
-    return `Hello ${userName},\n\n${options.message}\n\nView your dashboard: http://localhost:3000/dashboard\n\n© 2024 Education Platform. All rights reserved.`;
+    return `Hello ${userName},\n\n${options.message}\n\nView your dashboard: ${NotificationService.getPublicUrl()}/dashboard\n\n© 2024 Education Platform. All rights reserved.`;
   }
 
   private static generateDataSection(data: any): string {

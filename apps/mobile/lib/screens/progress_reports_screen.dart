@@ -83,7 +83,7 @@ class _ProgressReportsScreenState extends ConsumerState<ProgressReportsScreen> {
     });
   }
 
-  List<Map<String, dynamic>> get _filteredChildren() {
+  List<Map<String, dynamic>> get _filteredChildren {
     if (_selectedChild == 'All') return _children;
     return _children.where((child) => child['id'] == _selectedChild).toList();
   }
@@ -172,15 +172,15 @@ class _ProgressReportsScreenState extends ConsumerState<ProgressReportsScreen> {
                               );
                             }),
                           ],
-                        ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 const Divider(),
                 // Child Progress Cards
                 Expanded(
-                  child: _filteredChildren().isEmpty
+                  child: _filteredChildren.isEmpty
                       ? Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -212,9 +212,9 @@ class _ProgressReportsScreenState extends ConsumerState<ProgressReportsScreen> {
                         )
                       : ListView.builder(
                           padding: const EdgeInsets.all(16),
-                          itemCount: _filteredChildren().length,
+                          itemCount: _filteredChildren.length,
                           itemBuilder: (context, index) {
-                            final child = _filteredChildren()[index];
+                            final child = _filteredChildren[index];
                             return Card(
                               margin: const EdgeInsets.only(bottom: 16),
                               child: Padding(
@@ -299,7 +299,6 @@ class _ProgressReportsScreenState extends ConsumerState<ProgressReportsScreen> {
                                         ),
                                       ],
                                     ),
-                                    ],
                                     const SizedBox(height: 16),
                                     // Recent Activity
                                     Text(
@@ -337,7 +336,10 @@ class _ProgressReportsScreenState extends ConsumerState<ProgressReportsScreen> {
                                       ),
                                     ),
                                     const SizedBox(height: 8),
-                                    ...child['assignments'].map((assignment) {
+                                    ...(child['assignments'] as List).map((assignment) {
+                                      final grade = assignment['grade'] as int;
+                                      final maxScore = (assignment['maxScore'] ?? 100) as int;
+
                                       return Padding(
                                         padding: const EdgeInsets.only(bottom: 8),
                                         child: Row(
@@ -357,43 +359,40 @@ class _ProgressReportsScreenState extends ConsumerState<ProgressReportsScreen> {
                                                 crossAxisAlignment: CrossAxisAlignment.end,
                                                 children: [
                                                   Text(
-                                                    '${assignment['grade']}/${assignment['maxScore'] ?? 100}',
+                                                    '$grade/$maxScore',
                                                     style: TextStyle(
                                                       fontSize: 16,
                                                       fontWeight: FontWeight.bold,
-                                                      color: _getGradeColor(assignment['grade']),
+                                                      color: _getGradeColor(grade),
                                                     ),
                                                   ),
                                                   Container(
                                                     width: 60,
                                                     height: 8,
                                                     decoration: BoxDecoration(
-                                                      color: _getGradeColor(assignment['grade']),
+                                                      color: _getGradeColor(grade),
                                                       borderRadius: BorderRadius.circular(4),
                                                     ),
                                                   ),
                                                 ],
                                               ),
-                                            ],
-                                          ),
-                                          const SizedBox(width: 12),
-                                          IconButton(
-                                            icon: const Icon(Icons.visibility),
-                                            onPressed: () {
-                                              // TODO: Show assignment details
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(
-                                                  content: Text('Assignment details coming soon!'),
-                                                  backgroundColor: Colors.orange,
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    );
+                                            ),
+                                            const SizedBox(width: 12),
+                                            IconButton(
+                                              icon: const Icon(Icons.visibility),
+                                              onPressed: () {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text('Assignment details coming soon!'),
+                                                    backgroundColor: Colors.orange,
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      );
                                     }).toList(),
-                                  ],
                                   ],
                                 ),
                               ),

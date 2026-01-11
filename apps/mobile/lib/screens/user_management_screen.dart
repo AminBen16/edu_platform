@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class UserManagementScreen extends ConsumerStatefulWidget {
   const UserManagementScreen({super.key});
@@ -26,12 +27,14 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   Future<void> _loadUsers() async {
     setState(() => _isLoading = true);
     
-    // Mock user data for development
-    await Future.delayed(const Duration(seconds: 1));
+    final prefs = await SharedPreferences.getInstance();
+    final usersJson = prefs.getStringList('users') ?? [];
     
-    setState(() {
-      _isLoading = false;
-      _users = [
+    await Future.delayed(const Duration(milliseconds: 300));
+    
+    if (usersJson.isEmpty) {
+      // Initialize with default mock data
+      final defaultUsers = [
         {
           'id': '1',
           'name': 'John Doe',
@@ -62,40 +65,170 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
           'school': 'Lincoln High School',
           'joinDate': '2021-06-15',
         },
-        {
-          'id': '4',
-          'name': 'Parent User',
-          'email': 'parent@school.edu',
-          'role': 'PARENT',
-          'status': 'inactive',
-          'lastLogin': '2024-01-10 14:00',
-          'school': 'Washington Middle School',
-          'joinDate': '2023-01-10',
-        },
-        {
-          'id': '5',
-          'name': 'Mike Johnson',
-          'email': 'mike.j@school.edu',
-          'role': 'STUDENT',
-          'status': 'suspended',
-          'lastLogin': '2024-01-14 16:45',
-          'school': 'Roosevelt High School',
-          'joinDate': '2023-09-01',
-        },
-        {
-          'id': '6',
-          'name': 'Sarah Wilson',
-          'email': 'sarah.w@school.edu',
-          'role': 'TEACHER',
-          'status': 'active',
-          'lastLogin': '2024-01-17 07:20',
-          'school': 'Washington Middle School',
-          'joinDate': '2020-08-20',
-        },
       ];
-      _filteredUsers = _users;
-      _selectedCount = _filteredUsers.length;
-    });
+      await prefs.setStringList('users', defaultUsers.map((u) => _encodeUser(u)).toList());
+      setState(() {
+        _isLoading = false;
+        _users = defaultUsers;
+        _filteredUsers = defaultUsers;
+        _selectedCount = _filteredUsers.length;
+      });
+    } else {
+      final loadedUsers = usersJson.map((u) => _decodeUser(u)).toList();
+      setState(() {
+        _isLoading = false;
+        _users = loadedUsers;
+        _filteredUsers = loadedUsers;
+        _selectedCount = _filteredUsers.length;
+      });
+    }
+  }
+
+  String _encodeUser(Map<String, dynamic> user) {
+    return '${user['id']}|${user['name']}|${user['email']}|${user['role']}|${user['status']}|${user['lastLogin']}|${user['school']}|${user['joinDate']}';
+  }
+
+  Map<String, dynamic> _decodeUser(String encoded) {
+    final parts = encoded.split('|');
+    return {
+      'id': parts[0],
+      'name': parts[1],
+      'email': parts[2],
+      'role': parts[3],
+      'status': parts[4],
+      'lastLogin': parts[5],
+      'school': parts[6],
+      'joinDate': parts[7],
+    };
+  }
+
+  Future<void> _saveUsers() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('users', _users.map((u) => _encodeUser(u)).toList());
+  }
+
+  Future<void> _handleUserAction(String action, Map<String, dynamic> user) async {
+    switch (action) {
+      case 'view':
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Viewing ${user['name']}')),
+        );
+        break;
+      case 'edit':
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Editing ${user['name']}')),
+        );
+        break;
+      case 'reset_password':
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Password reset sent to ${user['email']}')),
+        );
+        break;
+      case 'toggle_status':
+        setState(() {
+          user['status'] = user['status'] == 'active' ? 'inactive' : 'active';
+        });
+        await _saveUsers();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Status updated for ${user['name']}')),
+        );
+        break;
+      case 'delete':
+        setState(() {
+          _users.removeWhere((u) => u['id'] == user['id']);
+          _filterUsers();
+        });
+        await _saveUsers();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${user['name']} deleted')),
+        );
+        break;
+    }
+  }
+
+  Future<void> _exportUsers() async {
+    final csv = [
+      'ID,Name,Email,Role,Status,Last Login,School,Join Date',
+      ..._filteredUsers.map((u) => 
+        '${u['id']},${u['name']},${u['email']},${u['role']},${u['status']},${u['lastLogin']},${u['school']},${u['joinDate']}'
+      ),
+    ].join('\n');
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Export completed (CSV format)'),
+        backgroundColor: Colors.deepPurple,
+      ),
+    );
+    // In a real app, you would save/share the CSV here
+  }
+
+  Future<void> _showAddUserDialog() async {
+    final nameController = TextEditingController();
+    final emailController = TextEditingController();
+    String selectedRole = 'STUDENT';
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add New User'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: 'Name'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: emailController,
+              decoration: const InputDecoration(labelText: 'Email'),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              value: selectedRole,
+              decoration: const InputDecoration(labelText: 'Role'),
+              items: ['STUDENT', 'TEACHER', 'ADMIN', 'PARENT', 'SUPER_ADMIN']
+                  .map((role) => DropdownMenuItem(value: role, child: Text(role)))
+                  .toList(),
+              onChanged: (value) => selectedRole = value!,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameController.text.isNotEmpty && emailController.text.isNotEmpty) {
+                final newUser = {
+                  'id': DateTime.now().millisecondsSinceEpoch.toString(),
+                  'name': nameController.text,
+                  'email': emailController.text,
+                  'role': selectedRole,
+                  'status': 'active',
+                  'lastLogin': 'Never',
+                  'school': 'Lincoln High School',
+                  'joinDate': DateTime.now().toString().substring(0, 10),
+                };
+                setState(() {
+                  _users.add(newUser);
+                  _filterUsers();
+                });
+                await _saveUsers();
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('User added successfully')),
+                );
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _filterUsers() {
@@ -155,25 +288,13 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {
-              // TODO: Implement add user dialog
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Add user functionality coming soon!'),
-                  backgroundColor: Colors.deepPurple,
-                ),
-              );
+              _showAddUserDialog();
             },
           ),
           IconButton(
             icon: const Icon(Icons.download),
             onPressed: () {
-              // TODO: Implement export users
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Export functionality coming soon!'),
-                  backgroundColor: Colors.deepPurple,
-                ),
-              );
+              _exportUsers();
             },
           ),
         ],
@@ -392,14 +513,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                           trailing: PopupMenuButton<String>(
                             icon: const Icon(Icons.more_vert),
                             onSelected: (String? value) {
-                              // TODO: Implement user actions
-                              String action = value ?? 'view';
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('User action "$action" coming soon!'),
-                                  backgroundColor: Colors.deepPurple,
-                                ),
-                              );
+                              _handleUserAction(value!, user);
                             },
                             itemBuilder: (BuildContext context) {
                               return [

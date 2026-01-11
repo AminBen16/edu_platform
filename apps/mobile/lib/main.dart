@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'theme.dart';
-import 'screens/login.dart';
+import 'screens/login_screen.dart';
+import 'screens/registration_screen.dart';
 import 'screens/dashboard.dart';
-import 'screens/register.dart';
 import 'screens/notifications.dart';
 import 'screens/profile.dart';
 import 'screens/settings.dart';
@@ -14,6 +14,16 @@ import 'screens/grading_screen.dart';
 import 'screens/analytics_screen.dart';
 import 'screens/user_management_screen.dart';
 import 'screens/progress_reports_screen.dart';
+import 'screens/assignments_screen.dart';
+import 'screens/quizzes_screen.dart';
+import 'screens/create_lesson_screen.dart';
+import 'screens/my_classes_screen.dart';
+import 'screens/school_settings_screen.dart';
+import 'screens/reports_screen.dart';
+import 'screens/audit_logs_screen.dart';
+import 'screens/attendance_screen.dart';
+import 'screens/messages_screen.dart';
+import 'screens/schedule_screen.dart';
 
 
 
@@ -34,7 +44,6 @@ class EduApp extends StatelessWidget {
       routes: {
         '/login': (context) => const LoginScreen(),
         '/dashboard': (context) => const DashboardScreen(),
-        '/register': (context) => RegisterScreen(invitationCode: ''),
         '/notifications': (context) => const NotificationsScreen(),
         '/profile': (context) => const ProfileScreen(),
         '/settings': (context) => const SettingsScreen(),
@@ -65,7 +74,7 @@ class EduApp extends StatelessWidget {
         if (settings.name == '/register') {
           final invitationCode = settings.arguments as String? ?? '';
           return MaterialPageRoute(
-            builder: (context) => RegisterScreen(invitationCode: invitationCode),
+            builder: (context) => RegistrationScreen(invitationCode: invitationCode),
           );
         }
         if (settings.name == '/course-details') {

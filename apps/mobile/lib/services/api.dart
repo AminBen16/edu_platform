@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 class ApiService {
   static const String _baseUrl =
@@ -51,6 +53,103 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Error creating checkout: $e');
+    }
+  }
+
+  // Download file from API
+  static Future<File> downloadFile(String url, String filename) async {
+    try {
+      final token = await getToken();
+      if (token == null) throw Exception('Not authenticated');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      if (response.statusCode == 200) {
+        // Get the directory for storing files
+        final directory = await getApplicationDocumentsDirectory();
+        final filePath = '${directory.path}/$filename';
+        final file = File(filePath);
+        
+        // Write the file to disk
+        await file.writeAsBytes(response.bodyBytes);
+        return file;
+      } else {
+        throw Exception('Failed to download file: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error downloading file: $e');
+    }
+  }
+
+  // Download lesson as PDF
+  static Future<File> downloadLesson(String lessonId, String title) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await http.get(
+      Uri.parse("$_baseUrl/download/lesson/$lessonId"),
+      headers: {"Authorization": "Bearer $token"},
+    );
+
+    if (response.statusCode == 200) {
+      final directory = await getApplicationDocumentsDirectory();
+      final filename = '${title.replaceAll(RegExp(r'[^\w\s-]'), '_')}.pdf';
+      final filePath = '${directory.path}/$filename';
+      final file = File(filePath);
+      
+      await file.writeAsBytes(response.bodyBytes);
+      return file;
+    } else {
+      throw Exception('Failed to download lesson: ${response.statusCode}');
+    }
+  }
+
+  // Download quiz as PDF
+  static Future<File> downloadQuiz(String quizId, String title) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await http.get(
+      Uri.parse("$_baseUrl/download/quiz/$quizId"),
+      headers: {"Authorization": "Bearer $token"},
+    );
+
+    if (response.statusCode == 200) {
+      final directory = await getApplicationDocumentsDirectory();
+      final filename = '${title.replaceAll(RegExp(r'[^\w\s-]'), '_')}.pdf';
+      final filePath = '${directory.path}/$filename';
+      final file = File(filePath);
+      
+      await file.writeAsBytes(response.bodyBytes);
+      return file;
+    } else {
+      throw Exception('Failed to download quiz: ${response.statusCode}');
+    }
+  }
+
+  // Download assignment as PDF
+  static Future<File> downloadAssignment(String assignmentId, String title) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await http.get(
+      Uri.parse("$_baseUrl/download/assignment/$assignmentId"),
+      headers: {"Authorization": "Bearer $token"},
+    );
+
+    if (response.statusCode == 200) {
+      final directory = await getApplicationDocumentsDirectory();
+      final filename = '${title.replaceAll(RegExp(r'[^\w\s-]'), '_')}.pdf';
+      final filePath = '${directory.path}/$filename';
+      final file = File(filePath);
+      
+      await file.writeAsBytes(response.bodyBytes);
+      return file;
+    } else {
+      throw Exception('Failed to download assignment: ${response.statusCode}');
     }
   }
 }

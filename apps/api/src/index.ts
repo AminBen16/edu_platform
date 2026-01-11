@@ -1,8 +1,6 @@
 // Production API - Complete Education Platform
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import * as Sentry from '@sentry/node';
@@ -19,6 +17,8 @@ import messageRoutes from './routes/messages';
 import liveSessionRoutes from './routes/live-sessions';
 import analyticsRoutes from './routes/analytics';
 import dashboardRoutes from './routes/dashboard';
+import uploadRoutes from './routes/upload';
+import downloadRoutes from './routes/download';
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN || '',
@@ -26,13 +26,6 @@ Sentry.init({
 });
 
 const app: Express = express();
-const server = createServer(app);
-const io = new SocketIOServer(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
-  }
-});
 
 // Middleware
 app.use(Sentry.Handlers.requestHandler());
@@ -67,43 +60,8 @@ app.use('/api/v1/messages', messageRoutes);
 app.use('/api/v1/live-sessions', liveSessionRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
-
-// Socket.IO for real-time features
-io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
-  
-  // Join class rooms
-  socket.on('join-class', (classId) => {
-    socket.join(classId);
-    socket.emit('joined-class', { classId, userId: socket.id });
-  });
-  
-  // Real-time chat
-  socket.on('send-message', (data) => {
-    io.to(data.classId).emit('new-message', {
-      ...data,
-      timestamp: new Date().toISOString(),
-      senderId: socket.id
-    });
-  });
-  
-  // Live class WebRTC signaling
-  socket.on('join-live-session', (roomCode) => {
-    socket.join(roomCode);
-    socket.emit('joined-session', { roomCode, userId: socket.id });
-  });
-  
-  socket.on('webrtc-signal', (data) => {
-    socket.to(data.roomCode).emit('webrtc-signal', {
-      ...data,
-      senderId: socket.id
-    });
-  });
-  
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
-  });
-});
+app.use('/api/v1/upload', uploadRoutes);
+app.use('/api/v1/download', downloadRoutes);
 
 // Error handling
 app.use(Sentry.Handlers.errorHandler());
@@ -123,7 +81,9 @@ app.use('*', (req: Request, res: Response) => {
       '/api/v1/assignments',
       '/api/v1/messages',
       '/api/v1/live-sessions',
-      '/api/v1/analytics'
+      '/api/v1/analytics',
+      '/api/v1/upload',
+      '/api/v1/download'
     ]
   });
 });
@@ -131,6 +91,51 @@ app.use('*', (req: Request, res: Response) => {
 // Start server for local development
 if (process.env.NODE_ENV !== 'production') {
   const PORT = process.env.PORT || 3000;
+  const server = createServer(app);
+  const io = new SocketIOServer(server, {
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"]
+    }
+  });
+
+  // Socket.IO for real-time features (local dev only)
+  io.on('connection', (socket) => {
+    console.log('User connected:', socket.id);
+    
+    // Join class rooms
+    socket.on('join-class', (classId) => {
+      socket.join(classId);
+      socket.emit('joined-class', { classId, userId: socket.id });
+    });
+    
+    // Real-time chat
+    socket.on('send-message', (data) => {
+      io.to(data.classId).emit('new-message', {
+        ...data,
+        timestamp: new Date().toISOString(),
+        senderId: socket.id
+      });
+    });
+    
+    // Live class WebRTC signaling
+    socket.on('join-live-session', (roomCode) => {
+      socket.join(roomCode);
+      socket.emit('joined-session', { roomCode, userId: socket.id });
+    });
+    
+    socket.on('webrtc-signal', (data) => {
+      socket.to(data.roomCode).emit('webrtc-signal', {
+        ...data,
+        senderId: socket.id
+      });
+    });
+    
+    socket.on('disconnect', () => {
+      console.log('User disconnected:', socket.id);
+    });
+  });
+
   server.listen(PORT, () => {
     console.log(`🚀 Education Platform API running on port ${PORT}`);
     console.log(`📚 API Documentation: http://localhost:${PORT}/api/v1`);
@@ -139,4 +144,6 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Export for Vercel serverless
-export default app;
+export default function handler(req: Request, res: Response) {
+  return (app as any)(req, res);
+}

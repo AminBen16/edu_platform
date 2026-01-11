@@ -23,3 +23,10 @@ pubspec.lock
 Thumbs.db
 
 .vercel
+
+.env
+.env.*
+apps/**/.env
+apps/**/.env.*
+packages/**/.env
+packages/**/.env.*

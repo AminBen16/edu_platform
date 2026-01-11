@@ -23,21 +23,26 @@ dependencies:
   # Local Storage
   shared_preferences: ^2.2.2
   path_provider: ^2.1.1
+  shared_preferences_windows: ^2.4.0
+  path_provider_windows: ^2.2.1
 
   # JSON Serialization
   json_annotation: ^4.8.1
 
   # URL Launcher for payments
   url_launcher: ^6.2.0
+  url_launcher_windows: ^3.1.0
 
   # Image Picker for uploads
   image_picker: ^1.0.4
+  image_picker_windows: ^0.2.1+1
 
   # Screen Recording
   flutter_screen_recording: ^2.0.24
 
   # Video/Recording audio
   record: ^5.0.0
+  record_windows: ^1.0.0
 
   # Socket.IO for chat
   socket_io_client: ^3.0.2

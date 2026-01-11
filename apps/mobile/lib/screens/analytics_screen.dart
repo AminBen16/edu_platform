@@ -222,7 +222,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ...classes.map((class_) => Padding(
+            ...classes.map((class_) {
+              final avgProgress = (class_['avgProgress'] as num?) ?? 0;
+
+              return Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: Row(
                 children: [
@@ -232,7 +235,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          class_['name'],
+                          (class_['name'] as String?) ?? '',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -260,14 +263,15 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
                     width: 60,
                     height: 60,
                     child: CircularProgressIndicator(
-                      value: class_['avgProgress'] / 100.0,
+                      value: avgProgress / 100.0,
                       backgroundColor: Colors.blue[100],
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
                     ),
                   ),
                 ],
               ),
-            )).toList(),
+            );
+            }),
           ],
         ),
       ),
@@ -319,7 +323,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
                   _buildGradeBar('B', 35, Colors.blue),
                   _buildGradeBar('C', 20, Colors.orange),
                   _buildGradeBar('D', 15, Colors.red),
-                  _buildGradeBar('F', 5, Colors.grey[400]),
+                  _buildGradeBar('F', 5, Colors.grey.shade400),
                 ],
               ),
             ),
@@ -331,7 +335,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
                 _buildGradeLegend('B', Colors.blue),
                 _buildGradeLegend('C', Colors.orange),
                 _buildGradeLegend('D', Colors.red),
-                _buildGradeLegend('F', Colors.grey[400]),
+                _buildGradeLegend('F', Colors.grey.shade400),
               ],
             ),
           ],
@@ -446,6 +450,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
                         ),
                       ],
                     ),
+                  ),
                   const SizedBox(width: 20),
                   Expanded(
                     child: Column(
@@ -468,6 +473,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
                         ),
                       ],
                     ),
+                  ),
                   const SizedBox(width: 20),
                   Expanded(
                     child: Column(
@@ -490,6 +496,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
                         ),
                       ],
                     ),
+                  ),
                   const SizedBox(width: 20),
                   Expanded(
                     child: Column(

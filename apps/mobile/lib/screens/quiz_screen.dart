@@ -145,9 +145,11 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
           'totalPoints': totalPoints,
           'percentage': percentage.toString(),
           'totalQuestions': questions.length,
-          'correctAnswers': selectedAnswers.values.where((answer) => 
-            answer != null && questions[int.parse(selectedAnswers.keys.firstWhere((k) => selectedAnswers[k] == answer))]['correctAnswer'] == answer
-          ).length,
+          'correctAnswers': selectedAnswers.entries
+              .where((entry) =>
+                  entry.value != null &&
+                  questions[entry.key]['correctAnswer'] == entry.value)
+              .length,
         });
       }
     } catch (e) {

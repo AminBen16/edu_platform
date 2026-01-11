@@ -315,6 +315,7 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen> {
                                           ],
                                         ),
                                       ),
+                                    ],
                                   ],
                                 ),
                                 const SizedBox(height: 12),
