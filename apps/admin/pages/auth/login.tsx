@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/router';
+import { api } from '../../lib/api';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -15,19 +15,20 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const result = await signIn('credentials', {
-        redirect: false,
+      const response = await api.post('/auth/login', {
         email,
         password,
       });
 
-      if (result?.error) {
-        setError('Invalid credentials');
-      } else {
-        router.push('/');
+      // Store token and user data
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('authToken', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
       }
-    } catch (err) {
-      setError('Login failed');
+
+      router.push('/');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Login failed');
     } finally {
       setLoading(false);
     }

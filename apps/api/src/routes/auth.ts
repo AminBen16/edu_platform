@@ -18,26 +18,37 @@ if (!JWT_SECRET) {
 
 // POST /auth/login - Production login without database
 router.post('/login', async (req, res) => {
-  const { email, password, schoolId } = req.body;
+  const { email, password } = req.body;
 
-  if (!email || !password || !schoolId) {
-    return res.status(400).json({ error: 'Email, password, and schoolId are required.' });
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required.' });
   }
 
   try {
     // Production authentication - accept any valid credentials
     // For development, assign roles based on email for testing
     let role = 'STUDENT'; // default role
+    let schoolId = 'school123'; // default school ID
     
     if (email.includes('admin')) {
       role = 'SUPER_ADMIN';
+      schoolId = 'school123';
     } else if (email.includes('teacher')) {
       role = 'TEACHER';
+      schoolId = 'school123';
     } else if (email.includes('parent')) {
       role = 'PARENT';
+      schoolId = 'school123';
     } else if (email.includes('student')) {
       role = 'STUDENT';
+      schoolId = 'school123';
     }
+    
+    // In a real implementation, you would:
+    // 1. Query the database for the user by email
+    // 2. Get the schoolId from the user record
+    // 3. Verify the password
+    // 4. Return the user's actual schoolId
     
     const token = jwt.sign(
       {

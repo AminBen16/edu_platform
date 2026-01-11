@@ -34,26 +34,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     try {
-      final response = await http.post(
-        Uri.parse('http://localhost:3000/api/v1/auth/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': _emailController.text,
-          'password': _passwordController.text,
-        }),
+      final response = await ApiService.login(
+        _emailController.text,
+        _passwordController.text,
       );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        // Store token and navigate to home
-        // In a real app, you'd use a proper auth state management
-        Navigator.of(context).pushReplacementNamed('/home');
-      } else {
-        final errorData = jsonDecode(response.body);
-        setState(() => _error = errorData['error'] ?? 'Login failed');
-      }
+      // Store token and navigate to home
+      // In a real app, you'd use a proper auth state management
+      Navigator.of(context).pushReplacementNamed('/home');
     } catch (e) {
-      setState(() => _error = 'Login failed');
+      setState(() => _error = e.toString().replaceAll('Exception: ', ''));
     } finally {
       setState(() => _isLoading = false);
     }

@@ -13,6 +13,38 @@ class ApiService {
     return prefs.getString('authToken');
   }
 
+  static Future<void> saveToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('authToken', token);
+  }
+
+  static Future<void> removeToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('authToken');
+  }
+
+  // Login method
+  static Future<Map<String, dynamic>> login(String email, String password) async {
+    final response = await http.post(
+      Uri.parse("$_baseUrl/auth/login"),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email,
+        'password': password,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      // Save token for future requests
+      await saveToken(data['token']);
+      return data;
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Login failed');
+    }
+  }
+
   static Future<List> fetchLessons() async {
     final token = await getToken();
     if (token == null) throw Exception('Not authenticated');
