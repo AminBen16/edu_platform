@@ -35,6 +35,9 @@ class ApiService {
 
   // Login method
   static Future<Map<String, dynamic>> login(String email, String password) async {
+    print('Attempting login to: $_baseUrl/auth/login');
+    print('Environment debug mode: ${!const bool.fromEnvironment('dart.vm.product')}');
+    
     final response = await http.post(
       Uri.parse("$_baseUrl/auth/login"),
       headers: {'Content-Type': 'application/json'},
@@ -43,6 +46,9 @@ class ApiService {
         'password': password,
       }),
     );
+
+    print('Response status: ${response.statusCode}');
+    print('Response body: ${response.body}');
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);

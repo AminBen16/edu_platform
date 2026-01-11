@@ -18,9 +18,19 @@ if (!JWT_SECRET) {
 
 // POST /auth/login - Production login without database
 router.post('/login', async (req, res) => {
+  console.log('Login request received:', {
+    body: req.body,
+    headers: req.headers,
+    method: req.method,
+    url: req.url
+  });
+
   const { email, password } = req.body;
 
+  console.log('Extracted credentials:', { email, password: password ? '***' : 'undefined' });
+
   if (!email || !password) {
+    console.log('Validation failed:', { email: !!email, password: !!password });
     return res.status(400).json({ error: 'Email and password are required.' });
   }
 
