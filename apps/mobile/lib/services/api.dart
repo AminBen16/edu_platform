@@ -5,7 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 
 class ApiService {
-  static String get _baseUrl {
+  static String get baseUrl {
     // Check if running in debug mode (local development)
     // For Flutter web, check the debug flag more reliably
     final bool isDebugMode = const bool.fromEnvironment('debug', defaultValue: false) ||
@@ -19,6 +19,8 @@ class ApiService {
       return "https://api-32v26rbb4-ainamanipro.vercel.app/api/v1";
     }
   }
+
+  static String get _baseUrl => baseUrl;
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();

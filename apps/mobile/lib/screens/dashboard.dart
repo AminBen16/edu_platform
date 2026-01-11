@@ -30,7 +30,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       
       if (token != null) {
         final response = await http.get(
-          Uri.parse('${ApiService._baseUrl}/dashboard'),
+          Uri.parse('${ApiService.baseUrl}/dashboard'),
           headers: <String, String>{
             'Content-Type': 'application/json; charset=UTF-8',
             'Authorization': 'Bearer $token',
