@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
-import '../services/api_service.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../services/api.dart';
 
 class QuizScreen extends ConsumerStatefulWidget {
   final String quizId;
@@ -26,12 +28,13 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   bool _isSubmitting = false;
   int _timeRemaining = 1800; // 30 minutes in seconds
   Timer? _timer;
+  bool _quizStarted = false;
+  bool _quizCompleted = false;
 
   @override
   void initState() {
     super.initState();
     _loadQuiz();
-    _startTimer();
   }
 
   @override
@@ -41,6 +44,11 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   }
 
   void _startTimer() {
+    setState(() {
+      _quizStarted = true;
+      _timeRemaining = (quiz?['timeLimit'] ?? 30) * 60; // Convert minutes to seconds
+    });
+    
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_timeRemaining > 0) {
         setState(() {
@@ -55,13 +63,38 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
 
   Future<void> _loadQuiz() async {
     try {
-      // Mock quiz data for now
+      final token = await ApiService.getToken();
+      if (token == null) {
+        throw Exception('Not authenticated');
+      }
+
+      final response = await http.get(
+        Uri.parse('${ApiService.baseUrl}/quizzes/${widget.quizId}'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final quizData = jsonDecode(response.body);
+        setState(() {
+          quiz = quizData;
+          questions = quizData['questions'] ?? [];
+          _isLoading = false;
+        });
+      } else {
+        throw Exception('Failed to load quiz: ${response.statusCode}');
+      }
+    } catch (e) {
+      // Fallback to mock data if API fails
       setState(() {
         quiz = {
           'id': widget.quizId,
           'title': widget.quizTitle,
           'description': 'Test your knowledge on this topic',
-          'duration': 30,
+          'timeLimit': 30,
+          'subject': 'General Knowledge',
+          'difficulty': 'Medium',
           'questions': [
             {
               'id': '1',
@@ -69,7 +102,8 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
               'type': 'multiple_choice',
               'options': ['3', '4', '5', '6'],
               'correctAnswer': 1,
-              'points': 10
+              'points': 10,
+              'explanation': '2 + 2 equals 4, which is the second option.'
             },
             {
               'id': '2',
@@ -77,7 +111,8 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
               'type': 'multiple_choice',
               'options': ['London', 'Berlin', 'Paris', 'Madrid'],
               'correctAnswer': 2,
-              'points': 10
+              'points': 10,
+              'explanation': 'Paris is the capital and largest city of France.'
             },
             {
               'id': '3',
@@ -85,25 +120,32 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
               'type': 'multiple_choice',
               'options': ['Venus', 'Mars', 'Jupiter', 'Saturn'],
               'correctAnswer': 1,
-              'points': 10
+              'points': 10,
+              'explanation': 'Mars is often called the "Red Planet" due to its reddish appearance.'
+            },
+            {
+              'id': '4',
+              'question': 'What is the largest ocean on Earth?',
+              'type': 'multiple_choice',
+              'options': ['Atlantic', 'Indian', 'Arctic', 'Pacific'],
+              'correctAnswer': 3,
+              'points': 10,
+              'explanation': 'The Pacific Ocean is the largest and deepest ocean on Earth.'
+            },
+            {
+              'id': '5',
+              'question': 'Who painted the Mona Lisa?',
+              'type': 'multiple_choice',
+              'options': ['Van Gogh', 'Picasso', 'Da Vinci', 'Rembrandt'],
+              'correctAnswer': 2,
+              'points': 10,
+              'explanation': 'Leonardo da Vinci painted the Mona Lisa in the early 16th century.'
             }
           ]
         };
         questions = quiz?['questions'] ?? [];
         _isLoading = false;
       });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading quiz: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     }
   }
 
@@ -118,26 +160,68 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
 
     setState(() {
       _isSubmitting = true;
+      _quizCompleted = true;
+      _timer?.cancel();
     });
 
     try {
       // Calculate score
       int score = 0;
       int totalPoints = 0;
+      List<Map<String, dynamic>> results = [];
 
       for (int i = 0; i < questions.length; i++) {
         final question = questions[i];
         totalPoints += (question['points'] as int?) ?? 10;
         
-        if (selectedAnswers[i] == question['correctAnswer']) {
+        final userAnswer = selectedAnswers[i];
+        final correctAnswer = question['correctAnswer'];
+        final isCorrect = userAnswer == correctAnswer;
+        
+        if (isCorrect) {
           score += (question['points'] as int?) ?? 10;
         }
+
+        results.add({
+          'questionId': question['id'],
+          'question': question['question'],
+          'userAnswer': userAnswer,
+          'correctAnswer': correctAnswer,
+          'isCorrect': isCorrect,
+          'points': (question['points'] as int?) ?? 10,
+          'explanation': question['explanation'] ?? 'No explanation available.',
+        });
       }
 
       final percentage = totalPoints > 0 ? ((score / totalPoints) * 100).round() : 0;
 
-      // Mock submission to API
-      await Future.delayed(const Duration(seconds: 2));
+      // Submit to API
+      try {
+        final token = await ApiService.getToken();
+        if (token != null) {
+          final submissionData = {
+            'quizId': widget.quizId,
+            'answers': selectedAnswers,
+            'score': score,
+            'totalPoints': totalPoints,
+            'percentage': percentage,
+            'timeSpent': (quiz?['timeLimit'] ?? 30) * 60 - _timeRemaining,
+            'submittedAt': DateTime.now().toIso8601String(),
+          };
+
+          await http.post(
+            Uri.parse('${ApiService.baseUrl}/quizzes/${widget.quizId}/submit'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode(submissionData),
+          );
+        }
+      } catch (e) {
+        // Continue even if API submission fails
+        print('Quiz submission error: $e');
+      }
 
       if (mounted) {
         Navigator.of(context).pushReplacementNamed('/quiz-result', arguments: {
@@ -150,6 +234,9 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                   entry.value != null &&
                   questions[entry.key]['correctAnswer'] == entry.value)
               .length,
+          'results': results,
+          'quizTitle': quiz?['title'] ?? widget.quizTitle,
+          'timeSpent': (quiz?['timeLimit'] ?? 30) * 60 - _timeRemaining,
         });
       }
     } catch (e) {
@@ -167,23 +254,113 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     }
   }
 
-  String _formatTime(int seconds) {
-    final minutes = seconds ~/ 60;
-    final remainingSeconds = seconds % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(widget.quizTitle),
+          backgroundColor: Colors.blue[800],
+          foregroundColor: Colors.white,
+        ),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(color: Colors.blue),
+              SizedBox(height: 16),
+              Text('Loading quiz...'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_quizCompleted) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(color: Colors.blue),
+              SizedBox(height: 16),
+              Text('Submitting quiz...'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (!_quizStarted) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(widget.quizTitle),
+          backgroundColor: Colors.blue[800],
+          foregroundColor: Colors.white,
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.quiz,
+                size: 80,
+                color: Colors.blue[800],
+              ),
+              const SizedBox(height: 24),
+              Text(
+                quiz?['title'] ?? widget.quizTitle,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                quiz?['description'] ?? 'Test your knowledge on this topic',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              _buildQuizInfo(),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _startTimer,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue[800],
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'Start Quiz',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
     if (currentQuestionIndex >= questions.length) {
       return const Scaffold(
-        body: Center(child: Text('Quiz completed!')),
+        body: Center(
+          child: Text('Quiz completed!'),
+        ),
       );
     }
 
@@ -193,7 +370,8 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(quiz?['title'] ?? 'Quiz'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: Colors.blue[800],
+        foregroundColor: Colors.white,
         actions: [
           Container(
             padding: const EdgeInsets.all(8),
@@ -202,7 +380,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              _formatTime(_timeRemaining),
+              '${_timeRemaining ~/ 60}:${_timeRemaining % 60.toString().padLeft(2, '0')}',
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
@@ -216,18 +394,29 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
           LinearProgressIndicator(
             value: progress,
             backgroundColor: Colors.grey[300],
-            valueColor: AlwaysStoppedAnimation<Color>(
-              Theme.of(context).primaryColor,
-            ),
+            valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
           ),
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Question ${currentQuestionIndex + 1} of ${questions.length}',
-                  style: Theme.of(context).textTheme.titleMedium,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Question ${currentQuestionIndex + 1} of ${questions.length}',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    Text(
+                      '${(currentQuestion['points'] as int?) ?? 10} points',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.blue[800],
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -240,7 +429,6 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                     final optionIndex = entry.key;
                     final option = entry.value;
                     final isSelected = selectedAnswers[currentQuestionIndex] == optionIndex;
-                    final isCorrect = currentQuestion['correctAnswer'] == optionIndex;
 
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
@@ -252,13 +440,13 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                           decoration: BoxDecoration(
                             border: Border.all(
                               color: isSelected 
-                                ? Theme.of(context).primaryColor 
+                                ? Colors.blue[800]! 
                                 : Colors.grey[300]!,
                               width: 2,
                             ),
                             borderRadius: BorderRadius.circular(8),
                             color: isSelected 
-                              ? Theme.of(context).primaryColor.withOpacity(0.1)
+                              ? Colors.blue[50]
                               : Colors.transparent,
                           ),
                           child: Row(
@@ -266,7 +454,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                               Icon(
                                 isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
                                 color: isSelected 
-                                  ? Theme.of(context).primaryColor 
+                                  ? Colors.blue[800] 
                                   : Colors.grey[600],
                               ),
                               const SizedBox(width: 12),
@@ -275,7 +463,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                                   option.toString(),
                                   style: TextStyle(
                                     color: isSelected 
-                                      ? Theme.of(context).primaryColor 
+                                      ? Colors.blue[800] 
                                       : Colors.black87,
                                     fontWeight: isSelected 
                                       ? FontWeight.bold 
@@ -283,61 +471,103 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                                   ),
                                 ),
                               ),
-                              if (isSelected)
-                                Icon(
-                                  isCorrect ? Icons.check_circle : Icons.cancel,
-                                  color: isCorrect ? Colors.green : Colors.red,
-                                ),
                             ],
                           ),
                         ),
                       ),
                     );
                   }).toList(),
-              const Spacer(),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: currentQuestionIndex > 0 
-                        ? () {
-                            setState(() {
-                              currentQuestionIndex--;
-                            });
-                          }
-                        : null,
-                      child: const Text('Previous'),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: selectedAnswers[currentQuestionIndex] != null
-                        ? () {
-                            if (currentQuestionIndex < questions.length - 1) {
+                const Spacer(),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: currentQuestionIndex > 0 
+                          ? () {
                               setState(() {
-                                currentQuestionIndex++;
+                                currentQuestionIndex--;
                               });
-                            } else {
-                              _submitQuiz();
                             }
-                          }
-                        : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).primaryColor,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: Text(
-                        currentQuestionIndex < questions.length - 1 ? 'Next' : 'Submit',
+                          : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey[300],
+                          foregroundColor: Colors.black87,
+                        ),
+                        child: const Text('Previous'),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: selectedAnswers[currentQuestionIndex] != null
+                          ? () {
+                              if (currentQuestionIndex < questions.length - 1) {
+                                setState(() {
+                                  currentQuestionIndex++;
+                                });
+                              } else {
+                                _submitQuiz();
+                              }
+                            }
+                          : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue[800],
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text(
+                          currentQuestionIndex < questions.length - 1 ? 'Next' : 'Submit',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildQuizInfo() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Duration:'),
+                Text('${quiz?['timeLimit'] ?? 30} minutes'),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Questions:'),
+                Text('${questions.length}'),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Subject:'),
+                Text(quiz?['subject'] ?? 'General'),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Difficulty:'),
+                Text(quiz?['difficulty'] ?? 'Medium'),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
