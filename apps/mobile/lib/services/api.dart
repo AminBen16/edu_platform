@@ -7,7 +7,8 @@ import 'dart:io';
 class ApiService {
   static String get _baseUrl {
     // Check if running in debug mode (local development)
-    const bool isDebugMode = !const bool.fromEnvironment('dart.vm.product');
+    // For Flutter web, check if we're in debug mode
+    const bool isDebugMode = const bool.fromEnvironment('debug', defaultValue: false);
     
     if (isDebugMode) {
       // Local development

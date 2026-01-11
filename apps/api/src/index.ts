@@ -48,6 +48,24 @@ app.get('/', (req: Request, res: Response) => {
   });
 });
 
+// Test endpoint for debugging
+app.get('/test', (req: Request, res: Response) => {
+  console.log('Test endpoint hit:', {
+    method: req.method,
+    headers: req.headers,
+    body: req.body,
+    url: req.url
+  });
+  
+  res.status(200).json({ 
+    message: 'Test endpoint working',
+    received: {
+      body: req.body,
+      contentType: req.headers['content-type']
+    }
+  });
+});
+
 // API Routes with proper versioning
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
