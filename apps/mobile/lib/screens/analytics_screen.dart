@@ -9,7 +9,6 @@ class AnalyticsScreen extends ConsumerStatefulWidget {
 }
 
 class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerProviderStateMixin {
-  String _selectedPeriod = 'month';
   bool _isLoading = true;
 
   @override
@@ -37,11 +36,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.date_range),
-            onSelected: (String? value) {
-              setState(() {
-                _selectedPeriod = value ?? 'month';
-              });
-            },
+            onSelected: (String? value) {},
             itemBuilder: (BuildContext context) {
               return [
                 const PopupMenuItem<String>(
@@ -259,13 +254,13 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
                     ),
                   ),
                   const SizedBox(width: 16),
-                  Container(
+                  SizedBox(
                     width: 60,
                     height: 60,
                     child: CircularProgressIndicator(
                       value: avgProgress / 100.0,
                       backgroundColor: Colors.blue[100],
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
                     ),
                   ),
                 ],
@@ -360,7 +355,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
           Container(
             height: 100,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.3),
+              color: color.withAlpha((255 * 0.3).round()),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Align(
@@ -378,7 +373,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
           ),
           Text(
             '${percentage.toInt()}%',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
@@ -402,7 +397,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
         const SizedBox(width: 8),
         Text(
           grade,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
@@ -553,7 +548,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
         const SizedBox(width: 4),
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.w600,
           ),

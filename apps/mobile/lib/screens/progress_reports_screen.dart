@@ -5,14 +5,14 @@ class ProgressReportsScreen extends ConsumerStatefulWidget {
   const ProgressReportsScreen({super.key});
 
   @override
-  ConsumerState<ProgressReportsScreen> createState() => _ProgressReportsScreenState();
+  ConsumerState<ProgressReportsScreen> createState() =>
+      _ProgressReportsScreenState();
 }
 
 class _ProgressReportsScreenState extends ConsumerState<ProgressReportsScreen> {
   List<Map<String, dynamic>> _children = [];
   bool _isLoading = true;
   String _selectedChild = 'All';
-  String _selectedPeriod = 'month';
 
   @override
   void initState() {
@@ -22,10 +22,10 @@ class _ProgressReportsScreenState extends ConsumerState<ProgressReportsScreen> {
 
   Future<void> _loadChildrenData() async {
     setState(() => _isLoading = true);
-    
+
     // Mock children data for development
     await Future.delayed(const Duration(seconds: 1));
-    
+
     setState(() {
       _isLoading = false;
       _children = [
@@ -98,11 +98,7 @@ class _ProgressReportsScreenState extends ConsumerState<ProgressReportsScreen> {
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.date_range),
-            onSelected: (String? value) {
-              setState(() {
-                _selectedPeriod = value ?? 'month';
-              });
-            },
+            onSelected: (String? value) {},
             itemBuilder: (BuildContext context) {
               return [
                 const PopupMenuItem<String>(
@@ -152,7 +148,9 @@ class _ProgressReportsScreenState extends ConsumerState<ProgressReportsScreen> {
                               selected: _selectedChild == 'All',
                               onSelected: (bool selected) {
                                 setState(() {
-                                  _selectedChild = selected ? 'All' : _selectedChild;
+                                  _selectedChild = selected
+                                      ? 'All'
+                                      : _selectedChild;
                                 });
                               },
                               backgroundColor: Colors.orange[100],
@@ -165,10 +163,14 @@ class _ProgressReportsScreenState extends ConsumerState<ProgressReportsScreen> {
                                 selected: isSelected,
                                 onSelected: (bool selected) {
                                   setState(() {
-                                    _selectedChild = selected ? child['id'] : 'All';
+                                    _selectedChild = selected
+                                        ? child['id']
+                                        : 'All';
                                   });
                                 },
-                                backgroundColor: isSelected ? Colors.orange[100] : null,
+                                backgroundColor: isSelected
+                                    ? Colors.orange[100]
+                                    : null,
                               );
                             }),
                           ],
@@ -240,7 +242,8 @@ class _ProgressReportsScreenState extends ConsumerState<ProgressReportsScreen> {
                                         const SizedBox(width: 16),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 child['name'],
@@ -263,13 +266,7 @@ class _ProgressReportsScreenState extends ConsumerState<ProgressReportsScreen> {
                                         IconButton(
                                           icon: const Icon(Icons.notifications),
                                           onPressed: () {
-                                            // TODO: Implement notifications
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(
-                                                content: Text('Notifications coming soon!'),
-                                                backgroundColor: Colors.orange,
-                                              ),
-                                            );
+                                            _showNotificationsPanel();
                                           },
                                         ),
                                       ],
@@ -279,11 +276,19 @@ class _ProgressReportsScreenState extends ConsumerState<ProgressReportsScreen> {
                                     Row(
                                       children: [
                                         Expanded(
-                                          child: _buildQuickStat('Average Grade', '${child['avgGrade']}%', Colors.blue),
+                                          child: _buildQuickStat(
+                                            'Average Grade',
+                                            '${child['avgGrade']}%',
+                                            Colors.blue,
+                                          ),
                                         ),
                                         const SizedBox(width: 12),
                                         Expanded(
-                                          child: _buildQuickStat('Attendance', '${child['attendance']}%', Colors.green),
+                                          child: _buildQuickStat(
+                                            'Attendance',
+                                            '${child['attendance']}%',
+                                            Colors.green,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -291,11 +296,19 @@ class _ProgressReportsScreenState extends ConsumerState<ProgressReportsScreen> {
                                     Row(
                                       children: [
                                         Expanded(
-                                          child: _buildQuickStat('Assignments', '${child['assignments'].length}', Colors.purple),
+                                          child: _buildQuickStat(
+                                            'Assignments',
+                                            '${child['assignments'].length}',
+                                            Colors.purple,
+                                          ),
                                         ),
                                         const SizedBox(width: 12),
                                         Expanded(
-                                          child: _buildQuickStat('Behavior', child['behavior'], Colors.orange),
+                                          child: _buildQuickStat(
+                                            'Behavior',
+                                            child['behavior'],
+                                            Colors.orange,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -303,9 +316,12 @@ class _ProgressReportsScreenState extends ConsumerState<ProgressReportsScreen> {
                                     // Recent Activity
                                     Text(
                                       'Recent Activity',
-                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                     ),
                                     const SizedBox(height: 8),
                                     Container(
@@ -315,7 +331,8 @@ class _ProgressReportsScreenState extends ConsumerState<ProgressReportsScreen> {
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             child['recentActivity'],
@@ -331,17 +348,26 @@ class _ProgressReportsScreenState extends ConsumerState<ProgressReportsScreen> {
                                     // Assignment Grades
                                     Text(
                                       'Recent Assignment Grades',
-                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                     ),
                                     const SizedBox(height: 8),
-                                    ...(child['assignments'] as List).map((assignment) {
+                                    ...(child['assignments'] as List).map((
+                                      assignment,
+                                    ) {
                                       final grade = assignment['grade'] as int;
-                                      final maxScore = (assignment['maxScore'] ?? 100) as int;
+                                      final maxScore =
+                                          (assignment['maxScore'] ?? 100)
+                                              as int;
 
                                       return Padding(
-                                        padding: const EdgeInsets.only(bottom: 8),
+                                        padding: const EdgeInsets.only(
+                                          bottom: 8,
+                                        ),
                                         child: Row(
                                           children: [
                                             Expanded(
@@ -356,22 +382,31 @@ class _ProgressReportsScreenState extends ConsumerState<ProgressReportsScreen> {
                                             ),
                                             Expanded(
                                               child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.end,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.end,
                                                 children: [
                                                   Text(
                                                     '$grade/$maxScore',
                                                     style: TextStyle(
                                                       fontSize: 16,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: _getGradeColor(grade),
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: _getGradeColor(
+                                                        grade,
+                                                      ),
                                                     ),
                                                   ),
                                                   Container(
                                                     width: 60,
                                                     height: 8,
                                                     decoration: BoxDecoration(
-                                                      color: _getGradeColor(grade),
-                                                      borderRadius: BorderRadius.circular(4),
+                                                      color: _getGradeColor(
+                                                        grade,
+                                                      ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            4,
+                                                          ),
                                                     ),
                                                   ),
                                                 ],
@@ -379,20 +414,19 @@ class _ProgressReportsScreenState extends ConsumerState<ProgressReportsScreen> {
                                             ),
                                             const SizedBox(width: 12),
                                             IconButton(
-                                              icon: const Icon(Icons.visibility),
+                                              icon: const Icon(
+                                                Icons.visibility,
+                                              ),
                                               onPressed: () {
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text('Assignment details coming soon!'),
-                                                    backgroundColor: Colors.orange,
-                                                  ),
+                                                _showAssignmentDetails(
+                                                  assignment,
                                                 );
                                               },
                                             ),
                                           ],
                                         ),
                                       );
-                                    }).toList(),
+                                    }),
                                   ],
                                 ),
                               ),
@@ -405,23 +439,121 @@ class _ProgressReportsScreenState extends ConsumerState<ProgressReportsScreen> {
     );
   }
 
+  void _showNotificationsPanel() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Notifications'),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 400,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Recent Notifications',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView(
+                  children: const [
+                    ListTile(
+                      leading: Icon(
+                        Icons.announcement,
+                        color: Colors.blue,
+                      ),
+                      title: Text('New assignment posted'),
+                      subtitle: Text('Math homework due tomorrow'),
+                      trailing: Text('2h ago'),
+                    ),
+                    Divider(),
+                    ListTile(
+                      leading: Icon(Icons.grade, color: Colors.green),
+                      title: Text('Grade posted'),
+                      subtitle: Text('Science quiz graded: 95%'),
+                      trailing: Text('1d ago'),
+                    ),
+                    Divider(),
+                    ListTile(
+                      leading: Icon(Icons.event, color: Colors.orange),
+                      title: Text('Parent meeting scheduled'),
+                      subtitle: Text('Tomorrow at 3:00 PM'),
+                      trailing: Text('2d ago'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          TextButton(
+            onPressed: () {
+              // Mark all as read
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('All notifications marked as read'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            child: const Text('Mark All Read'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAssignmentDetails(Map<String, dynamic> assignment) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(assignment['subject']),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Grade: ${assignment['grade']}',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Status: ${assignment['status']}',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildQuickStat(String label, String value, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withAlpha((255 * 0.1).round()),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
-          ),
+          Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
           const SizedBox(height: 4),
           Text(
             value,

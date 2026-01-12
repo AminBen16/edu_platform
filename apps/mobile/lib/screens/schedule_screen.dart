@@ -22,10 +22,10 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
 
   Future<void> _loadScheduleData() async {
     setState(() => _isLoading = true);
-    
+
     // Mock schedule data for development
     await Future.delayed(const Duration(seconds: 1));
-    
+
     setState(() {
       _isLoading = false;
       _events = [
@@ -37,7 +37,8 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
           'location': 'Room 201',
           'type': 'test',
           'teacher': 'Dr. Smith',
-          'description': 'Comprehensive test covering algebraic expressions and geometric proofs',
+          'description':
+              'Comprehensive test covering algebraic expressions and geometric proofs',
         },
         {
           'id': '2',
@@ -57,7 +58,8 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
           'location': 'Room 305',
           'type': 'discussion',
           'teacher': 'Ms. Davis',
-          'description': 'Peer review session for essay outlines and thesis statements',
+          'description':
+              'Peer review session for essay outlines and thesis statements',
         },
         {
           'id': '4',
@@ -67,7 +69,8 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
           'location': 'Conference Room A',
           'type': 'conference',
           'teacher': 'Ms. Davis',
-          'description': 'Quarterly parent-teacher conferences to discuss student progress',
+          'description':
+              'Quarterly parent-teacher conferences to discuss student progress',
         },
         {
           'id': '5',
@@ -77,7 +80,8 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
           'location': 'Auditorium',
           'type': 'assembly',
           'teacher': 'All Staff',
-          'description': 'Monthly school assembly with student recognition and announcements',
+          'description':
+              'Monthly school assembly with student recognition and announcements',
         },
         {
           'id': '6',
@@ -95,7 +99,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
 
   List<Map<String, dynamic>> get _filteredEvents {
     List<Map<String, dynamic>> filtered = _events;
-    
+
     // Filter by date
     if (_selectedView != 'all') {
       final now = DateTime.now();
@@ -104,15 +108,16 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
           filtered = filtered.where((event) {
             final eventDate = DateTime.parse(event['date']);
             return eventDate.year == now.year &&
-                   eventDate.month == now.month &&
-                   eventDate.day == now.day;
+                eventDate.month == now.month &&
+                eventDate.day == now.day;
           }).toList();
         case 'week':
           final weekStart = now.subtract(Duration(days: now.weekday - 1));
           final weekEnd = weekStart.add(const Duration(days: 6));
           filtered = filtered.where((event) {
             final eventDate = DateTime.parse(event['date']);
-            return !eventDate.isBefore(weekStart) && !eventDate.isAfter(weekEnd);
+            return !eventDate.isBefore(weekStart) &&
+                !eventDate.isAfter(weekEnd);
           }).toList();
         case 'month':
           filtered = filtered.where((event) {
@@ -121,7 +126,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
           }).toList();
       }
     }
-    
+
     return filtered;
   }
 
@@ -155,13 +160,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
           IconButton(
             icon: const Icon(Icons.calendar_today),
             onPressed: () {
-              // TODO: Implement calendar view
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Calendar view coming soon!'),
-                  backgroundColor: Colors.purple,
-                ),
-              );
+              _showCalendarView();
             },
           ),
         ],
@@ -177,7 +176,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<String>(
-                          value: _selectedView,
+                          initialValue: _selectedView,
                           decoration: const InputDecoration(
                             labelText: 'View',
                             border: OutlineInputBorder(),
@@ -186,8 +185,14 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                           items: const [
                             DropdownMenuItem(value: 'all', child: Text('All')),
                             DropdownMenuItem(value: 'day', child: Text('Day')),
-                            DropdownMenuItem(value: 'week', child: Text('Week')),
-                            DropdownMenuItem(value: 'month', child: Text('Month')),
+                            DropdownMenuItem(
+                              value: 'week',
+                              child: Text('Week'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'month',
+                              child: Text('Month'),
+                            ),
                           ],
                           onChanged: (value) {
                             setState(() {
@@ -269,15 +274,21 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                                           width: 12,
                                           height: 12,
                                           decoration: BoxDecoration(
-                                            color: _getEventTypeColor(event['type']),
-                                            borderRadius: BorderRadius.circular(2),
+                                            color: _getEventTypeColor(
+                                              event['type'],
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              2,
+                                            ),
                                           ),
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
                                           event['type'].toUpperCase(),
                                           style: TextStyle(
-                                            color: _getEventTypeColor(event['type']),
+                                            color: _getEventTypeColor(
+                                              event['type'],
+                                            ),
                                             fontSize: 10,
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -285,7 +296,8 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                                         const SizedBox(width: 12),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 event['title'],
@@ -333,7 +345,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                                         ),
                                       ],
                                     ),
-                                  const SizedBox(height: 12),
+                                    const SizedBox(height: 12),
                                     Text(
                                       event['description'],
                                       style: TextStyle(
@@ -350,9 +362,189 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                             );
                           },
                         ),
-                  ),
+                ),
               ],
             ),
+    );
+  }
+
+  void _showCalendarView() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.9,
+          height: MediaQuery.of(context).size.height * 0.8,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Calendar View',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 7,
+                    childAspectRatio: 1.0,
+                  ),
+                  itemCount: 35, // 5 weeks * 7 days
+                  itemBuilder: (context, index) {
+                    final day = index - 2; // Start from Monday of current week
+                    final isToday = day == DateTime.now().day;
+                    final hasEvents = _events.any(
+                      (item) =>
+                          DateTime.parse(item['date']).day == day &&
+                          day > 0 &&
+                          day <= 31,
+                    );
+
+                    return Container(
+                      margin: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: isToday
+                            ? Colors.purple.withValues(alpha: 0.3)
+                            : Colors.transparent,
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Stack(
+                        children: [
+                          Center(
+                            child: Text(
+                              day > 0 && day <= 31 ? '$day' : '',
+                              style: TextStyle(
+                                fontWeight: isToday
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                color: isToday ? Colors.purple : Colors.black,
+                              ),
+                            ),
+                          ),
+                          if (hasEvents && day > 0 && day <= 31)
+                            Positioned(
+                              bottom: 2,
+                              right: 2,
+                              child: Container(
+                                width: 6,
+                                height: 6,
+                                decoration: const BoxDecoration(
+                                  color: Colors.purple,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _selectedDate = DateTime.now();
+                      });
+                      Navigator.pop(context);
+                    },
+                    icon: const Icon(Icons.today),
+                    label: const Text('Today'),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showAddEventDialog();
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add Event'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAddEventDialog() {
+    final titleController = TextEditingController();
+    final timeController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Event'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(
+                labelText: 'Event Title',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: timeController,
+              decoration: const InputDecoration(
+                labelText: 'Time',
+                border: OutlineInputBorder(),
+                hintText: 'e.g., 10:00 AM',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (titleController.text.isNotEmpty) {
+                setState(() {
+                  _events.add({
+                    'id': (_events.length + 1).toString(),
+                    'title': titleController.text,
+                    'time': timeController.text.isNotEmpty
+                        ? timeController.text
+                        : 'Time TBD',
+                    'date': _selectedDate.toIso8601String().split('T')[0],
+                    'location': 'TBD',
+                    'type': 'event',
+                    'teacher': 'User',
+                    'description': 'Custom event',
+                  });
+                });
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Event added successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
     );
   }
 }

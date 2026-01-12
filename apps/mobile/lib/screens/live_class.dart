@@ -349,7 +349,7 @@ class _LiveClassScreenState extends ConsumerState<LiveClassScreen> {
                           color: Colors.red,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       Text('• Check your internet connection'),
                       Text('• Ensure the server is running'),
                       Text('• Try refreshing the page'),

@@ -1,195 +1,266 @@
 // apps/api/src/routes/quizzes.ts
 import { Router } from 'express';
 import { prisma } from '../config/database';
-import { protect, authorize } from '../middleware/auth';
+import { protect } from '../middleware/auth';
+import { UserRole } from '@prisma/client';
 
 const router = Router();
 
-// Mock quizzes data for fallback
-const mockQuizzes = [
-  {
-    id: 'quiz-1',
-    title: 'Mathematics Basics Quiz',
-    description: 'Test your knowledge of basic mathematics',
-    type: 'QUIZ',
-    timeLimit: 30,
-    maxAttempts: 1,
-    passingScore: 70.0,
-    isPublished: true,
-    subject: 'Mathematics',
-    difficulty: 'Beginner',
-    questions: [
-      {
-        id: '1',
-        question: 'What is 2 + 2?',
-        type: 'multiple_choice',
-        options: ['3', '4', '5', '6'],
-        correctAnswer: 1,
-        points: 10,
-        explanation: '2 + 2 equals 4, which is the second option.'
-      },
-      {
-        id: '2',
-        question: 'What is 5 x 3?',
-        type: 'multiple_choice',
-        options: ['15', '8', '20', '12'],
-        correctAnswer: 0,
-        points: 10,
-        explanation: '5 multiplied by 3 equals 15.'
-      }
-    ],
-    schoolId: 'school123',
-    teacherId: 'teacher-1',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
-
-// GET /quizzes - List quizzes for the user's school
+// GET /quizzes - List quizzes for user's school
 router.get('/', protect, async (req, res) => {
-  try {
-    // Use real database if available, fallback to mock data
-    if (process.env.DATABASE_URL && prisma) {
-      const quizzes = await prisma.quiz.findMany({
-        where: { schoolId: req.user!.schoolId },
-        orderBy: { createdAt: 'desc' },
-      });
-      res.json(quizzes);
-    } else {
-      // Fallback to mock data for demo
-      res.json(mockQuizzes);
+    try {
+        const quizzes = await prisma.quiz.findMany({
+            where: { schoolId: req.user!.schoolId },
+            orderBy: { createdAt: 'desc' },
+            include: {
+                teacher: {
+                    select: {
+                        user: {
+                            select: { name: true }
+                        }
+                    }
+                },
+                subject: {
+                    select: { name: true }
+                }
+            }
+        });
+        res.json(quizzes);
+    } catch (error) {
+        console.error('Failed to fetch quizzes:', error);
+        res.status(500).json({ error: 'Failed to fetch quizzes.' });
     }
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch quizzes.' });
-  }
 });
 
-// GET /quizzes/:id - Get a specific quiz
+// GET /quizzes/:id - Get a specific quiz with questions
 router.get('/:id', protect, async (req, res) => {
-  try {
     const { id } = req.params;
-    
-    // Use real database if available, fallback to mock data
-    if (process.env.DATABASE_URL && prisma) {
-      const quiz = await prisma.quiz.findFirst({
-        where: { 
-          id,
-          schoolId: req.user!.schoolId 
-        },
-      });
-      
-      if (!quiz) {
-        return res.status(404).json({ error: 'Quiz not found.' });
-      }
-      
-      res.json(quiz);
-    } else {
-      // Fallback to mock data for demo
-      const quiz = mockQuizzes.find(q => q.id === id);
-      if (!quiz) {
-        return res.status(404).json({ error: 'Quiz not found.' });
-      }
-      res.json(quiz);
+    try {
+        const quiz = await prisma.quiz.findUnique({
+            where: { id, schoolId: req.user!.schoolId },
+        });
+
+        if (!quiz) {
+            return res.status(404).json({ error: 'Quiz not found' });
+        }
+        res.json(quiz);
+    } catch (error) {
+        console.error('Get quiz error:', error);
+        res.status(500).json({ error: 'Failed to fetch quiz.' });
     }
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch quiz.' });
-  }
 });
 
-// POST /quizzes - Create a quiz (teacher or admin)
-router.post('/', protect, authorize('TEACHER', 'SCHOOL_ADMIN', 'SUPER_ADMIN'), async (req, res) => {
-  const { 
-    title, 
-    description, 
-    duration, 
-    subject, 
-    difficulty, 
-    questions, 
-    isPublished, 
-    type 
-  } = req.body;
-  
-  if (!title || !description || !duration || !subject || !difficulty || !questions || questions.length === 0) {
-    return res.status(400).json({ 
-      error: 'Title, description, duration, subject, difficulty, and questions are required.' 
-    });
-  }
-  
-  try {
-    let quiz;
-    
-    // Use real database if available
-    if (process.env.DATABASE_URL && prisma) {
-      quiz = await prisma.quiz.create({
-        data: {
-          title,
-          description,
-          timeLimit: parseInt(duration),
-          questions,
-          isPublished: isPublished || false,
-          type: 'QUIZ',
-          schoolId: req.user!.schoolId,
-          teacherId: req.user!.id,
-        },
-      });
-    } else {
-      // Fallback to mock data for demo
-      quiz = {
-        id: `quiz-${Date.now()}`,
+// POST /quizzes - Create a quiz (only for teachers and admins)
+router.post('/', protect, async (req, res) => {
+    if (req.user!.role !== UserRole.TEACHER && req.user!.role !== UserRole.ADMIN) {
+        return res.status(403).json({ error: 'You are not authorized to create quizzes.' });
+    }
+
+    const {
         title,
         description,
-        type: 'QUIZ',
-        timeLimit: parseInt(duration),
-        maxAttempts: 1,
-        passingScore: 70.0,
-        subject,
+        type,
+        timeLimit,
+        maxAttempts,
+        passingScore,
+        isPublished,
+        subjectId,
         difficulty,
-        questions,
-        isPublished: isPublished || false,
-        schoolId: req.user!.schoolId,
-        teacherId: req.user!.id,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      
-      // Add to mock quizzes array for demo
-      mockQuizzes.unshift(quiz);
+        questions // Expects questions as array with options
+    } = req.body;
+
+    if (!title || !description || !subjectId || !questions) {
+        return res.status(400).json({ error: 'Title, description, subjectId, and questions are required.' });
     }
-    
-    res.status(201).json(quiz);
-  } catch (error) {
-    console.error('Quiz creation error:', error);
-    res.status(500).json({ error: 'Failed to create quiz.' });
-  }
+
+    try {
+        const newQuiz = await prisma.quiz.create({
+            data: {
+                title,
+                description,
+                type,
+                timeLimit: timeLimit ? parseInt(timeLimit) : null,
+                maxAttempts: maxAttempts ? parseInt(maxAttempts) : 1,
+                passingScore: passingScore ? parseFloat(passingScore) : null,
+                isPublished: isPublished || false,
+                difficulty,
+                schoolId: req.user!.schoolId,
+                teacherId: req.user!.id,
+                subjectId,
+                questions: {
+                    create: questions.map((q: any, index: number) => ({
+                        text: q.text,
+                        type: q.type,
+                        order: q.order || index,
+                        points: q.points || 1.0,
+                        options: q.options ? {
+                            create: q.options.map((opt: any) => ({
+                                text: opt.text,
+                                isCorrect: opt.isCorrect || false
+                            }))
+                        } : undefined
+                    }))
+                }
+            },
+            include: {
+                questions: {
+                    include: {
+                        options: true
+                    }
+                }
+            }
+        });
+        res.status(201).json(newQuiz);
+    } catch (error) {
+        console.error('Quiz creation error:', error);
+        res.status(500).json({ error: 'Failed to create quiz.' });
+    }
 });
+
+// PUT /quizzes/:id - Update a quiz
+router.put('/:id', protect, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const quiz = await prisma.quiz.findUnique({
+            where: { id, schoolId: req.user!.schoolId },
+        });
+
+        if (!quiz) {
+            return res.status(404).json({ error: 'Quiz not found' });
+        }
+
+        if (req.user!.role !== UserRole.ADMIN && quiz.teacherId !== req.user!.id) {
+            return res.status(403).json({ error: 'You are not authorized to update this quiz.' });
+        }
+
+        const updatedQuiz = await prisma.quiz.update({
+            where: { id },
+            data: { ...req.body, updatedAt: new Date() },
+        });
+        res.json(updatedQuiz);
+    } catch (error) {
+        console.error('Update quiz error:', error);
+        res.status(500).json({ error: 'Failed to update quiz.' });
+    }
+});
+
+// DELETE /quizzes/:id - Delete a quiz
+router.delete('/:id', protect, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const quiz = await prisma.quiz.findUnique({
+            where: { id, schoolId: req.user!.schoolId },
+        });
+
+        if (!quiz) {
+            return res.status(404).json({ error: 'Quiz not found' });
+        }
+
+        if (req.user!.role !== UserRole.ADMIN && quiz.teacherId !== req.user!.id) {
+            return res.status(403).json({ error: 'You are not authorized to delete this quiz.' });
+        }
+
+        await prisma.quiz.delete({ where: { id } });
+        res.status(204).send();
+    } catch (error) {
+        console.error('Delete quiz error:', error);
+        res.status(500).json({ error: 'Failed to delete quiz.' });
+    }
+});
+
 
 // POST /quizzes/:id/submit - Submit quiz answers
 router.post('/:id/submit', protect, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { answers, score, totalPoints, percentage, timeSpent, submittedAt } = req.body;
-    
-    // Create quiz submission record
-    const submission = {
-      id: `submission-${Date.now()}`,
-      quizId: id,
-      studentId: req.user!.id,
-      answers,
-      score,
-      totalPoints,
-      percentage,
-      timeSpent,
-      submittedAt,
-      createdAt: new Date().toISOString(),
-    };
-    
-    // In a real database, you would save this to a QuizSubmission table
-    // For now, just return success
-    res.status(201).json(submission);
-  } catch (error) {
-    console.error('Quiz submission error:', error);
-    res.status(500).json({ error: 'Failed to submit quiz.' });
-  }
+    if (req.user!.role !== UserRole.STUDENT) {
+        return res.status(403).json({ error: 'Only students can submit quizzes.' });
+    }
+
+    const { id: quizId } = req.params;
+    const { answers } = req.body; // Expects an array of { questionId: string, selectedId: string, textAnswer: string }
+
+    if (!answers || !Array.isArray(answers)) {
+        return res.status(400).json({ error: 'Invalid submission format.' });
+    }
+
+    try {
+        const quiz = await prisma.quiz.findUnique({
+            where: { id: quizId, schoolId: req.user!.schoolId },
+            include: {
+                questions: {
+                    include: {
+                        options: true
+                    },
+                    orderBy: {
+                        order: 'asc'
+                    }
+                }
+            }
+        });
+
+        if (!quiz || !quiz.isPublished) {
+            return res.status(404).json({ error: 'Quiz not found or is not available.' });
+        }
+        
+        // Ensure user is a student profile
+        const student = await prisma.student.findUnique({ where: { userId: req.user!.id }});
+        if (!student) {
+            return res.status(403).json({ error: 'User is not a student.' });
+        }
+
+        // TODO: Add logic to check maxAttempts
+
+        const quizQuestions = quiz.questions;
+        let score = 0;
+        let maxScore = 0;
+
+        const answerRecords = answers.map(answer => {
+            const question = quizQuestions.find(q => q.id === answer.questionId);
+            if (!question) return null; // Or handle error
+
+            let isCorrect = false;
+            maxScore += (question.points || 1.0);
+
+            if (question.type === 'MULTIPLE_CHOICE') {
+                const correctOption = question.options.find((opt: any) => opt.isCorrect);
+                if (correctOption && correctOption.id === answer.selectedId) {
+                    isCorrect = true;
+                    score += (question.points || 1.0);
+                }
+            }
+            // Add scoring for other question types (TRUE_FALSE, SHORT_ANSWER, etc.) here
+
+            return {
+                questionId: answer.questionId,
+                selectedId: answer.selectedId,
+                textAnswer: answer.textAnswer,
+                isCorrect,
+            };
+        }).filter(a => a !== null);
+
+
+        const quizAttempt = await prisma.quizAttempt.create({
+            data: {
+                score,
+                maxScore,
+                completedAt: new Date(),
+                studentId: student.id,
+                quizId: quizId,
+                userId: req.user!.id,
+                answers: {
+                    create: answerRecords as any[],
+                },
+            },
+            include: {
+                answers: true,
+            },
+        });
+
+        res.status(201).json(quizAttempt);
+    } catch (error) {
+        console.error('Quiz submission error:', error);
+        res.status(500).json({ error: 'Failed to submit quiz.' });
+    }
 });
+
 
 export default router;

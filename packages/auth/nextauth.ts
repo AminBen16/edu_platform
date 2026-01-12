@@ -27,13 +27,13 @@ export const authOptions: NextAuthOptions = {
           },
         });
 
-        if (!user || !user.passwordHash) {
+        if (!user || !user.password) {
           throw new Error('No user found with this email in the specified school.');
         }
 
         const isPasswordValid = await bcrypt.compare(
           credentials.password,
-          user.passwordHash
+          user.password
         );
 
         if (!isPasswordValid) {
@@ -60,12 +60,29 @@ export const authOptions: NextAuthOptions = {
   },
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       // Persist the user's role and schoolId in the JWT
       if (user) {
         token.role = user.role;
         token.schoolId = user.schoolId;
         token.id = user.id;
+      }
+      // Explicitly add the raw JWT token for API calls
+      if (account?.access_token) {
+        token.accessToken = account.access_token;
+      } else if (token) {
+          // If no access_token from account (e.g., Credentials provider)
+          // re-sign the token to get a string representation if needed by the client.
+          // IMPORTANT: This is a simplification. In a production app, the server-side API would validate the session cookie.
+          // For client-side direct API calls, we need a JWT.
+          const payload = {
+              id: token.id,
+              email: token.email,
+              role: token.role,
+              schoolId: token.schoolId,
+          };
+          // Sign the payload to get a new JWT token string.
+          token.accessToken = jwt.sign(payload, process.env.NEXTAUTH_SECRET!);
       }
       return token;
     },
@@ -76,6 +93,8 @@ export const authOptions: NextAuthOptions = {
         session.user.schoolId = token.schoolId as string;
         session.user.id = token.id as string;
       }
+      // Add the access token to the session object
+      session.accessToken = token.accessToken as string;
       return session;
     },
   },

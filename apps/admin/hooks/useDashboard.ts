@@ -1,59 +1,87 @@
 import { useState, useEffect } from 'react';
 import { api, Analytics, User, Lesson, Quiz, School } from '../lib/api';
+import { useRouter } from 'next/router';
 
-export function useDashboard() {
-  const [analytics, setAnalytics] = useState<Analytics | null>(null);
+interface DashboardData {
+  totalUsers: number;
+  studentCount: number;
+  teacherCount: number;
+  totalLessons: number;
+  totalQuizzes: number;
+  totalClasses: number;
+}
+
+export function useDashboard(token: string | undefined) {
+  const [dashboardStats, setDashboardStats] = useState<DashboardData | null>(null);
   const [recentUsers, setRecentUsers] = useState<User[]>([]);
   const [recentLessons, setRecentLessons] = useState<Lesson[]>([]);
   const [recentQuizzes, setRecentQuizzes] = useState<Quiz[]>([]);
   const [school, setSchool] = useState<School | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  const fetchDashboardData = async () => {
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch dashboard overview
+      const dashboardRes = await api.get('/dashboard');
+      setDashboardStats(dashboardRes.data.stats);
+      
+      // Fetch school details
+      const schoolDetailsRes = await api.get(`/schools/${dashboardRes.data.user.schoolId}`);
+      setSchool(schoolDetailsRes.data);
+
+      // Fetch recent users (adjusting for backend changes in /users endpoint)
+      // Assuming /users endpoint now returns all users for the school
+      const usersRes = await api.get('/users');
+      // Filter for latest 5 users, sorting by createdAt from newest to oldest
+      const sortedUsers = usersRes.data.sort((a: User, b: User) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setRecentUsers(sortedUsers.slice(0, 5));
+
+      // Fetch recent lessons (adjusting for backend changes in /lessons endpoint)
+      const lessonsRes = await api.get('/lessons');
+      // Filter for latest 5 lessons, sorting by createdAt from newest to oldest
+      const sortedLessons = lessonsRes.data.sort((a: Lesson, b: Lesson) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setRecentLessons(sortedLessons.slice(0, 5));
+
+      // Fetch recent quizzes (adjusting for backend changes in /quizzes endpoint)
+      const quizzesRes = await api.get('/quizzes');
+      // Filter for latest 5 quizzes, sorting by createdAt from newest to oldest
+      const sortedQuizzes = quizzesRes.data.sort((a: Quiz, b: Quiz) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setRecentQuizzes(sortedQuizzes.slice(0, 5));
+
+
+    } catch (err: any) {
+      console.error('Failed to fetch dashboard data:', err);
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        setError('Authentication failed. Please log in again.');
+        router.push('/auth/login'); // Redirect to login on auth failure
+      } else {
+        setError('Failed to load dashboard data.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Fetch analytics
-        const analyticsRes = await api.get('/dashboard/analytics');
-        setAnalytics(analyticsRes.data);
-
-        // Fetch recent users
-        const usersRes = await api.get('/users?limit=5&sort=lastLogin&order=desc');
-        setRecentUsers(usersRes.data);
-
-        // Fetch recent lessons
-        const lessonsRes = await api.get('/lessons?limit=5&sort=createdAt&order=desc');
-        setRecentLessons(lessonsRes.data);
-
-        // Fetch recent quizzes
-        const quizzesRes = await api.get('/quizzes?limit=5&sort=createdAt&order=desc');
-        setRecentQuizzes(quizzesRes.data);
-
-        // Fetch school info
-        const schoolRes = await api.get('/schools/current');
-        setSchool(schoolRes.data);
-      } catch (err) {
-        console.error('Failed to fetch dashboard data:', err);
-        setError('Failed to load dashboard data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchDashboardData();
-  }, []);
+  }, [token]); // Re-fetch data when token changes
 
   const refreshData = () => {
-    // Trigger a refresh of all dashboard data
-    setLoading(true);
-    // The useEffect will re-run when dependencies change
+    fetchDashboardData();
   };
 
   return {
-    analytics,
+    analytics: dashboardStats, // Renamed for clarity
     recentUsers,
     recentLessons,
     recentQuizzes,

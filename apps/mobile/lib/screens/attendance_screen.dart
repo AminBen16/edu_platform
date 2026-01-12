@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class AttendanceScreen extends ConsumerStatefulWidget {
   const AttendanceScreen({super.key});
@@ -22,10 +25,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
 
   Future<void> _loadAttendanceData() async {
     setState(() => _isLoading = true);
-    
+
     // Mock attendance data for development
     await Future.delayed(const Duration(seconds: 1));
-    
+
     setState(() {
       _isLoading = false;
       _attendance = [
@@ -95,17 +98,21 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
 
   List<Map<String, dynamic>> get _filteredAttendance {
     List<Map<String, dynamic>> filtered = _attendance;
-    
+
     if (_selectedClass != 'All') {
-      filtered = _attendance.where((record) => record['className'] == _selectedClass).toList();
+      filtered = _attendance
+          .where((record) => record['className'] == _selectedClass)
+          .toList();
     }
-    
+
     return filtered;
   }
 
   double get _attendancePercentage {
     if (_attendance.isEmpty) return 0.0;
-    final presentCount = _attendance.where((record) => record['status'] == 'present').length;
+    final presentCount = _attendance
+        .where((record) => record['status'] == 'present')
+        .length;
     return (presentCount / _attendance.length) * 100;
   }
 
@@ -122,6 +129,45 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     }
   }
 
+  Future<void> _exportAttendance() async {
+    if (_filteredAttendance.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No attendance records to export')),
+      );
+      return;
+    }
+
+    try {
+      final StringBuffer csvContent = StringBuffer();
+      csvContent.writeln(
+        'Student Name,Class,Date,Status,Check In,Check Out,Notes',
+      );
+
+      for (final record in _filteredAttendance) {
+        csvContent.writeln(
+          '"${record['studentName']}","${record['className']}","${record['date']}","${record['status']}","${record['checkInTime'] ?? ''}","${record['checkOutTime'] ?? ''}","${record['notes'] ?? ''}"',
+        );
+      }
+
+      final directory = await getTemporaryDirectory();
+      final file = File(
+        '${directory.path}/attendance_export_${DateTime.now().millisecondsSinceEpoch}.csv',
+      );
+      await file.writeAsString(csvContent.toString());
+
+      await Share.shareXFiles([XFile(file.path)], text: 'Exported Attendance');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error exporting attendance: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -132,15 +178,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.download),
-            onPressed: () {
-              // TODO: Implement export attendance
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Export attendance coming soon!'),
-                  backgroundColor: Colors.blue,
-                ),
-              );
-            },
+            onPressed: _exportAttendance,
           ),
         ],
       ),
@@ -156,27 +194,46 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                       children: [
                         Text(
                           'Attendance Overview',
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 16),
                         Row(
                           children: [
                             Expanded(
-                              child: _buildStatCard('Total Records', '${_attendance.length}', Icons.list_alt, Colors.blue),
+                              child: _buildStatCard(
+                                'Total Records',
+                                '${_attendance.length}',
+                                Icons.list_alt,
+                                Colors.blue,
+                              ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: _buildStatCard('Present', '${(_attendance.where((r) => r['status'] == 'present').length)}', Icons.check_circle, Colors.green),
+                              child: _buildStatCard(
+                                'Present',
+                                '${(_attendance.where((r) => r['status'] == 'present').length)}',
+                                Icons.check_circle,
+                                Colors.green,
+                              ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: _buildStatCard('Absent', '${(_attendance.where((r) => r['status'] == 'absent').length)}', Icons.cancel, Colors.red),
+                              child: _buildStatCard(
+                                'Absent',
+                                '${(_attendance.where((r) => r['status'] == 'absent').length)}',
+                                Icons.cancel,
+                                Colors.red,
+                              ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: _buildStatCard('Late', '${(_attendance.where((r) => r['status'] == 'late').length)}', Icons.schedule, Colors.orange),
+                              child: _buildStatCard(
+                                'Late',
+                                '${(_attendance.where((r) => r['status'] == 'late').length)}',
+                                Icons.schedule,
+                                Colors.orange,
+                              ),
                             ),
                           ],
                         ),
@@ -186,9 +243,13 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: _attendancePercentage >= 95 ? Colors.green :
-                                _attendancePercentage >= 90 ? Colors.blue :
-                                _attendancePercentage >= 80 ? Colors.orange : Colors.red,
+                            color: _attendancePercentage >= 95
+                                ? Colors.green
+                                : _attendancePercentage >= 90
+                                ? Colors.blue
+                                : _attendancePercentage >= 80
+                                ? Colors.orange
+                                : Colors.red,
                           ),
                         ),
                       ],
@@ -203,17 +264,29 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<String>(
-                          value: _selectedClass,
+                          initialValue: _selectedClass,
                           decoration: const InputDecoration(
                             labelText: 'Filter by Class',
                             border: OutlineInputBorder(),
                             prefixIcon: Icon(Icons.filter_list),
                           ),
                           items: const [
-                            DropdownMenuItem(value: 'All', child: Text('All Classes')),
-                            DropdownMenuItem(value: 'Mathematics 101', child: Text('Mathematics 101')),
-                            DropdownMenuItem(value: 'Science Fundamentals', child: Text('Science Fundamentals')),
-                            DropdownMenuItem(value: 'History Essay', child: Text('History Essay')),
+                            DropdownMenuItem(
+                              value: 'All',
+                              child: Text('All Classes'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Mathematics 101',
+                              child: Text('Mathematics 101'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Science Fundamentals',
+                              child: Text('Science Fundamentals'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'History Essay',
+                              child: Text('History Essay'),
+                            ),
                           ],
                           onChanged: (value) {
                             setState(() {
@@ -225,17 +298,29 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: DropdownButtonFormField<String>(
-                          value: _selectedPeriod,
+                          initialValue: _selectedPeriod,
                           decoration: const InputDecoration(
                             labelText: 'Period',
                             border: OutlineInputBorder(),
                             prefixIcon: Icon(Icons.date_range),
                           ),
                           items: const [
-                            DropdownMenuItem(value: 'today', child: Text('Today')),
-                            DropdownMenuItem(value: 'week', child: Text('This Week')),
-                            DropdownMenuItem(value: 'month', child: Text('This Month')),
-                            DropdownMenuItem(value: 'quarter', child: Text('This Quarter')),
+                            DropdownMenuItem(
+                              value: 'today',
+                              child: Text('Today'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'week',
+                              child: Text('This Week'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'month',
+                              child: Text('This Month'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'quarter',
+                              child: Text('This Quarter'),
+                            ),
                           ],
                           onChanged: (value) {
                             setState(() {
@@ -296,7 +381,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                       children: [
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 record['studentName'],
@@ -322,8 +408,12 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                             vertical: 6,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: _getStatusColor(record['status']),
-                                            borderRadius: BorderRadius.circular(20),
+                                            color: _getStatusColor(
+                                              record['status'],
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
                                           ),
                                           child: Text(
                                             record['status'].toUpperCase(),
@@ -357,7 +447,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                       ],
                                     ),
                                     const SizedBox(height: 8),
-                                    if (record['notes'] != null && record['notes']!.isNotEmpty) ...[
+                                    if (record['notes'] != null &&
+                                        record['notes']!.isNotEmpty) ...[
                                       Text(
                                         'Notes',
                                         style: TextStyle(
@@ -370,7 +461,9 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                         padding: const EdgeInsets.all(8),
                                         decoration: BoxDecoration(
                                           color: Colors.blue[50],
-                                          borderRadius: BorderRadius.circular(4),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                         ),
                                         child: Text(
                                           record['notes']!,
@@ -393,11 +486,16 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -405,13 +503,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         children: [
           Icon(icon, color: color, size: 24),
           const SizedBox(height: 8),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
-          ),
+          Text(title, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
           const SizedBox(height: 4),
           Text(
             value,

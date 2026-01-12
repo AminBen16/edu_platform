@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import '../services/api.dart';
 
 class RegistrationScreen extends ConsumerStatefulWidget {
   final String invitationCode;
@@ -41,29 +40,19 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
 
   Future<void> _validateInvitation() async {
     try {
-      final response = await http.post(
-        Uri.parse('http://localhost:3000/api/v1/auth/validate-invitation'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'invitationCode': widget.invitationCode}),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          _invitation = data;
-          _nameController.text = data['name'] ?? '';
-          _emailController.text = data['email'] ?? '';
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _error = 'Invalid or expired invitation link';
-          _isLoading = false;
-        });
-      }
+      final data = await ApiService.validateInvitation(widget.invitationCode);
+      setState(() {
+        _invitation = data['invitation']; // Access the 'invitation' key
+        _nameController.text = _invitation!['name'] ?? '';
+        _emailController.text = _invitation!['email'] ?? '';
+        _isLoading = false;
+      });
     } catch (e) {
       setState(() {
-        _error = 'Failed to validate invitation';
+        _error = e.toString().replaceFirst(
+          'Exception: ',
+          '',
+        ); // Clean up error message
         _isLoading = false;
       });
     }
@@ -83,28 +72,23 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
     });
 
     try {
-      final response = await http.post(
-        Uri.parse('http://localhost:3000/api/v1/auth/register'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'invitationCode': widget.invitationCode,
-          'name': _nameController.text,
-          'email': _emailController.text,
-          'password': _passwordController.text,
-        }),
+      await ApiService.register(
+        _emailController.text,
+        _passwordController.text,
+        _nameController.text,
+        widget.invitationCode,
       );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        // Store token and navigate to home
-        // In a real app, you'd use a proper auth state management
-        Navigator.of(context).pushReplacementNamed('/home');
-      } else {
-        setState(() => _error = 'Registration failed');
-      }
+      if (!mounted) return;
+      // After successful registration, navigate to the main screen or dashboard
+      Navigator.of(context).pushReplacementNamed('/home');
     } catch (e) {
-      setState(() => _error = 'Registration failed');
+      if (!mounted) return;
+      setState(
+        () => _error = e.toString().replaceFirst('Exception: ', ''),
+      ); // Clean up error message
     } finally {
+      if (!mounted) return;
       setState(() => _isRegistering = false);
     }
   }
@@ -112,13 +96,13 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Scaffold(
+      return const Scaffold(
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
               Text('Validating invitation...'),
             ],
           ),
@@ -134,7 +118,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.error, size: 64, color: Colors.red),
+                const Icon(Icons.error, size: 64, color: Colors.red),
                 const SizedBox(height: 16),
                 const Text(
                   'Invalid Invitation',
@@ -142,13 +126,14 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'This invitation link is invalid or has expired.',
+                  _error!, // Display specific error message
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: () => Navigator.of(context).pushReplacementNamed('/login'),
+                  onPressed: () =>
+                      Navigator.of(context).pushReplacementNamed('/login'),
                   child: const Text('Go to Login'),
                 ),
               ],
@@ -175,12 +160,12 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.indigo.withOpacity(0.1),
+                    color: Colors.indigo.withAlpha((255 * 0.1).round()),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
                     children: [
-                      Icon(Icons.mail, size: 32, color: Colors.indigo),
+                      const Icon(Icons.mail, size: 32, color: Colors.indigo),
                       const SizedBox(height: 8),
                       Text(
                         'You\'ve been invited to join as ${_invitation!['role']}',
@@ -195,7 +180,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                 ),
                 const SizedBox(height: 24),
               ],
-              
+
               TextFormField(
                 controller: _nameController,
                 enabled: _invitation?['name'] == null,
@@ -212,7 +197,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                 },
               ),
               const SizedBox(height: 16),
-              
+
               TextFormField(
                 controller: _emailController,
                 enabled: _invitation?['email'] == null,
@@ -233,7 +218,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                 },
               ),
               const SizedBox(height: 16),
-              
+
               TextFormField(
                 controller: _passwordController,
                 decoration: const InputDecoration(
@@ -253,7 +238,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                 },
               ),
               const SizedBox(height: 16),
-              
+
               TextFormField(
                 controller: _confirmPasswordController,
                 decoration: const InputDecoration(
@@ -270,18 +255,18 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                 },
               ),
               const SizedBox(height: 24),
-              
+
               if (_error != null) ...[
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
+                    color: Colors.red.withAlpha((255 * 0.1).round()),
                     border: Border.all(color: Colors.red),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.error, color: Colors.red, size: 20),
+                      const Icon(Icons.error, color: Colors.red, size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -294,7 +279,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                 ),
                 const SizedBox(height: 16),
               ],
-              
+
               ElevatedButton(
                 onPressed: _isRegistering ? null : _register,
                 style: ElevatedButton.styleFrom(
@@ -314,7 +299,9 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           ),
                           SizedBox(width: 8),
@@ -324,9 +311,10 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                     : const Text('Create Account'),
               ),
               const SizedBox(height: 16),
-              
+
               TextButton(
-                onPressed: () => Navigator.of(context).pushReplacementNamed('/login'),
+                onPressed: () =>
+                    Navigator.of(context).pushReplacementNamed('/login'),
                 child: Text(
                   'Already have an account? Sign in',
                   style: TextStyle(color: Colors.indigo[600]),

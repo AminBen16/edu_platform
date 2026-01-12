@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../services/api.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SchoolSettingsScreen extends ConsumerStatefulWidget {
   const SchoolSettingsScreen({super.key});
 
   @override
-  ConsumerState<SchoolSettingsScreen> createState() => _SchoolSettingsScreenState();
+  ConsumerState<SchoolSettingsScreen> createState() =>
+      _SchoolSettingsScreenState();
 }
 
 class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
@@ -21,54 +25,242 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
 
   Future<void> _loadSettings() async {
     setState(() => _isLoading = true);
-    
-    final prefs = await SharedPreferences.getInstance();
-    await Future.delayed(const Duration(milliseconds: 300));
-    
-    setState(() {
-      _isLoading = false;
-      _settings = {
-        'schoolName': prefs.getString('schoolName') ?? 'Lincoln High School',
-        'schoolCode': prefs.getString('schoolCode') ?? 'LHS2024',
-        'address': prefs.getString('address') ?? '123 Education Street, Lincoln, NE 68501',
-        'phone': prefs.getString('phone') ?? '(555) 123-4567',
-        'email': prefs.getString('email') ?? 'admin@lincolnhs.edu',
-        'principal': prefs.getString('principal') ?? 'Dr. Sarah Johnson',
-        'vicePrincipal': prefs.getString('vicePrincipal') ?? 'Mr. Michael Chen',
-        'totalStudents': prefs.getInt('totalStudents') ?? 245,
-        'totalTeachers': prefs.getInt('totalTeachers') ?? 18,
-        'totalClasses': prefs.getInt('totalClasses') ?? 45,
-        'academicYear': prefs.getString('academicYear') ?? '2023-2024',
-        'semester': prefs.getString('semester') ?? 'Spring 2024',
-        'timezone': prefs.getString('timezone') ?? 'America/Chicago',
-        'gradingScale': prefs.getString('gradingScale') ?? '4.0 GPA Scale',
-        'attendancePolicy': prefs.getString('attendancePolicy') ?? 'Students must maintain 90% attendance',
-        'bellSchedule': {
-          'start': prefs.getString('bellStart') ?? '8:00 AM',
-          'lunch': prefs.getString('bellLunch') ?? '12:00 PM',
-          'end': prefs.getString('bellEnd') ?? '3:30 PM',
-        },
-        'features': {
-          'onlineGrading': prefs.getBool('onlineGrading') ?? true,
-          'digitalLibrary': prefs.getBool('digitalLibrary') ?? true,
-          'parentPortal': prefs.getBool('parentPortal') ?? true,
-          'studentEmail': prefs.getBool('studentEmail') ?? true,
-          'emergencyAlerts': prefs.getBool('emergencyAlerts') ?? true,
-        },
-      };
-    });
+    try {
+      final token = await ApiService.getToken();
+      if (token != null) {
+        final response = await http.get(
+          Uri.parse('${ApiService.baseUrl}/api/v1/school-settings'),
+          headers: <String, String>{
+            'Content-Type': 'application/json; charset=UTF-8',
+            'Authorization': 'Bearer $token',
+          },
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          setState(() {
+            _settings = {
+              'academicYear': data['academicYear'] ?? '2024-2025',
+              'semester': data['semester'] ?? 'Fall',
+              'gradingScale': _formatGradingScale(data['gradingScale']),
+              'timezone': data['timezone'] ?? 'UTC',
+              'features': {
+                'onlineGrading': data['onlineGrading'] ?? false,
+                'digitalLibrary': data['digitalLibrary'] ?? false,
+                'parentPortal': data['parentPortal'] ?? false,
+              },
+              'email': data['schoolEmail'] ?? 'admin@school.edu',
+              'phone': data['schoolPhone'] ?? '+1 (555) 123-4567',
+              'emergencyContact':
+                  data['emergencyContact'] ?? '+1 (555) 987-6543',
+            };
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading settings: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
-  Future<void> _showEditDialog(String key, String label) async {
-    final controller = TextEditingController(text: _settings[key].toString());
-    
-    await showDialog(
+  String _formatGradingScale(Map<String, dynamic>? scale) {
+    if (scale == null) return 'A: 90%, B: 80%, C: 70%, D: 60%';
+    final entries = scale.entries
+        .map((e) => '${e.key}: ${e.value}%')
+        .join(', ');
+    return entries;
+  }
+
+  Future<void> _updateSetting(String key, dynamic value) async {
+    try {
+      final token = await ApiService.getToken();
+      if (token != null) {
+        final response = await http.patch(
+          Uri.parse('${ApiService.baseUrl}/api/v1/school-settings/$key'),
+          headers: <String, String>{
+            'Content-Type': 'application/json; charset=UTF-8',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({key: value}),
+        );
+
+        if (response.statusCode == 200) {
+          setState(() {
+            _settings[key] = value;
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Setting updated successfully'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating setting: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _updateFeature(String feature, bool value) async {
+    try {
+      final token = await ApiService.getToken();
+      if (token != null) {
+        final response = await http.patch(
+          Uri.parse('${ApiService.baseUrl}/api/v1/school-settings/features'),
+          headers: <String, String>{
+            'Content-Type': 'application/json; charset=UTF-8',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({feature: value}),
+        );
+
+        if (response.statusCode == 200) {
+          setState(() {
+            _settings['features'][feature] = value;
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Feature updated successfully'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating feature: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _updateContactSetting(String key, dynamic value) async {
+    try {
+      final token = await ApiService.getToken();
+      if (token != null) {
+        final response = await http.patch(
+          Uri.parse('${ApiService.baseUrl}/api/v1/school-settings/contact'),
+          headers: <String, String>{
+            'Content-Type': 'application/json; charset=UTF-8',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({key: value}),
+        );
+
+        if (response.statusCode == 200) {
+          setState(() {
+            if (key == 'schoolEmail') {
+              _settings['email'] = value;
+            } else if (key == 'schoolPhone') {
+              _settings['phone'] = value;
+            } else {
+              _settings['emergencyContact'] = value;
+            }
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Contact information updated successfully'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating contact: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<dynamic> _showEditDialog(
+    BuildContext context,
+    String title,
+    String initialValue,
+    String type, {
+    List<String>? options,
+  }) async {
+    final controller = TextEditingController(text: initialValue);
+
+    if (type == 'dropdown' && options != null) {
+      return await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(title),
+          content: DropdownButtonFormField<String>(
+            initialValue: initialValue,
+            decoration: InputDecoration(
+              labelText: title,
+              border: const OutlineInputBorder(),
+            ),
+            items: options.map((option) {
+              return DropdownMenuItem<String>(
+                value: option,
+                child: Text(option),
+              );
+            }).toList(),
+            onChanged: (value) {
+              controller.text = value ?? initialValue;
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, controller.text),
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Edit $label'),
+        title: Text(title),
         content: TextField(
           controller: controller,
-          decoration: InputDecoration(labelText: label),
+          decoration: InputDecoration(
+            labelText: title,
+            border: const OutlineInputBorder(),
+          ),
+          keyboardType: type == 'email'
+              ? TextInputType.emailAddress
+              : type == 'phone'
+              ? TextInputType.phone
+              : TextInputType.text,
         ),
         actions: [
           TextButton(
@@ -76,14 +268,123 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _settings[key] = controller.text;
-              });
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showGradingScaleDialog(BuildContext context) async {
+    final aController = TextEditingController(text: '90');
+    final bController = TextEditingController(text: '80');
+    final cController = TextEditingController(text: '70');
+    final dController = TextEditingController(text: '60');
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Grading Scale'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: aController,
+              decoration: const InputDecoration(
+                labelText: 'A Grade (%)',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: bController,
+              decoration: const InputDecoration(
+                labelText: 'B Grade (%)',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: cController,
+              decoration: const InputDecoration(
+                labelText: 'C Grade (%)',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: dController,
+              decoration: const InputDecoration(
+                labelText: 'D Grade (%)',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.number,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final gradingScale = {
+                'A': int.tryParse(aController.text) ?? 90,
+                'B': int.tryParse(bController.text) ?? 80,
+                'C': int.tryParse(cController.text) ?? 70,
+                'D': int.tryParse(dController.text) ?? 60,
+                'F': 0,
+              };
+
+              try {
+                final token = await ApiService.getToken();
+                if (token != null) {
+                  final response = await http.patch(
+                    Uri.parse(
+                      '${ApiService.baseUrl}/api/v1/school-settings/grading-scale',
+                    ),
+                    headers: <String, String>{
+                      'Content-Type': 'application/json; charset=UTF-8',
+                      'Authorization': 'Bearer $token',
+                    },
+                    body: jsonEncode({'gradingScale': gradingScale}),
+                  );
+
+                  if (response.statusCode == 200) {
+                    setState(() {
+                      _settings['gradingScale'] = _formatGradingScale(
+                        gradingScale,
+                      );
+                    });
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Grading scale updated successfully'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  }
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Error updating grading scale: ${e.toString()}',
+                      ),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('$label updated')),
-              );
             },
             child: const Text('Save'),
           ),
@@ -104,9 +405,8 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
               ? const Center(child: Text('No items to display'))
               : ListView.builder(
                   itemCount: items.length,
-                  itemBuilder: (context, index) => ListTile(
-                    title: Text(items[index]),
-                  ),
+                  itemBuilder: (context, index) =>
+                      ListTile(title: Text(items[index])),
                 ),
         ),
         actions: [
@@ -139,11 +439,20 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
     await prefs.setString('bellStart', _settings['bellSchedule']['start']);
     await prefs.setString('bellLunch', _settings['bellSchedule']['lunch']);
     await prefs.setString('bellEnd', _settings['bellSchedule']['end']);
-    await prefs.setBool('onlineGrading', _settings['features']['onlineGrading']);
-    await prefs.setBool('digitalLibrary', _settings['features']['digitalLibrary']);
+    await prefs.setBool(
+      'onlineGrading',
+      _settings['features']['onlineGrading'],
+    );
+    await prefs.setBool(
+      'digitalLibrary',
+      _settings['features']['digitalLibrary'],
+    );
     await prefs.setBool('parentPortal', _settings['features']['parentPortal']);
     await prefs.setBool('studentEmail', _settings['features']['studentEmail']);
-    await prefs.setBool('emergencyAlerts', _settings['features']['emergencyAlerts']);
+    await prefs.setBool(
+      'emergencyAlerts',
+      _settings['features']['emergencyAlerts'],
+    );
   }
 
   @override
@@ -191,8 +500,17 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                             'School Name',
                             _settings['schoolName'],
                             Icons.school,
-                            () {
-                              _showEditDialog('schoolName', 'School Name');
+                            () async {
+                              final result = await _showEditDialog(
+                                context,
+                                'Edit School Name',
+                                _settings['schoolName'],
+                                'text',
+                              );
+                              if (!context.mounted) return;
+                              if (result != null) {
+                                await _updateSetting('schoolName', result);
+                              }
                             },
                           ),
                           const Divider(),
@@ -200,8 +518,17 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                             'School Code',
                             _settings['schoolCode'],
                             Icons.code,
-                            () {
-                              _showEditDialog('schoolCode', 'School Code');
+                            () async {
+                              final result = await _showEditDialog(
+                                context,
+                                'Edit School Code',
+                                _settings['schoolCode'],
+                                'text',
+                              );
+                              if (!context.mounted) return;
+                              if (result != null) {
+                                await _updateSetting('schoolCode', result);
+                              }
                             },
                           ),
                           const Divider(),
@@ -209,8 +536,17 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                             'Principal',
                             _settings['principal'],
                             Icons.person,
-                            () {
-                              _showEditDialog('principal', 'Principal');
+                            () async {
+                              final result = await _showEditDialog(
+                                context,
+                                'Edit Principal',
+                                _settings['principal'],
+                                'text',
+                              );
+                              if (!context.mounted) return;
+                              if (result != null) {
+                                await _updateSetting('principal', result);
+                              }
                             },
                           ),
                           const Divider(),
@@ -218,8 +554,16 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                             'Vice Principal',
                             _settings['vicePrincipal'],
                             Icons.person_outline,
-                            () {
-                              _showEditDialog('vicePrincipal', 'Vice Principal');
+                            () async {
+                              final result = await _showEditDialog(
+                                context,
+                                'Edit Vice Principal',
+                                _settings['vicePrincipal'],
+                                'text',
+                              );
+                              if (result != null) {
+                                await _updateSetting('vicePrincipal', result);
+                              }
                             },
                           ),
                         ],
@@ -244,7 +588,11 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                             '${_settings['totalStudents']}',
                             Icons.people,
                             () {
-                              _showViewDialog('Students', ['Student 1', 'Student 2', 'Student 3']);
+                              _showViewDialog('Students', [
+                                'Student 1',
+                                'Student 2',
+                                'Student 3',
+                              ]);
                             },
                           ),
                           const Divider(),
@@ -253,7 +601,11 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                             '${_settings['totalTeachers']}',
                             Icons.person_pin,
                             () {
-                              _showViewDialog('Teachers', ['Teacher 1', 'Teacher 2', 'Teacher 3']);
+                              _showViewDialog('Teachers', [
+                                'Teacher 1',
+                                'Teacher 2',
+                                'Teacher 3',
+                              ]);
                             },
                           ),
                           const Divider(),
@@ -262,7 +614,11 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                             '${_settings['totalClasses']}',
                             Icons.class_,
                             () {
-                              _showViewDialog('Classes', ['Class A', 'Class B', 'Class C']);
+                              _showViewDialog('Classes', [
+                                'Class A',
+                                'Class B',
+                                'Class C',
+                              ]);
                             },
                           ),
                           const Divider(),
@@ -270,14 +626,16 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                             'Academic Year',
                             _settings['academicYear'],
                             Icons.calendar_today,
-                            () {
-                              // TODO: Implement edit academic year
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Edit academic year coming soon!'),
-                                  backgroundColor: Colors.indigo,
-                                ),
+                            () async {
+                              final result = await _showEditDialog(
+                                context,
+                                'Edit Academic Year',
+                                _settings['academicYear'],
+                                'text',
                               );
+                              if (result != null) {
+                                await _updateSetting('academicYear', result);
+                              }
                             },
                           ),
                           const Divider(),
@@ -285,14 +643,18 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                             'Current Semester',
                             _settings['semester'],
                             Icons.date_range,
-                            () {
-                              // TODO: Implement edit semester
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Edit semester coming soon!'),
-                                  backgroundColor: Colors.indigo,
-                                ),
+                            () async {
+                              final result = await _showEditDialog(
+                                context,
+                                'Edit Semester',
+                                _settings['semester'],
+                                'dropdown',
+                                options: ['Fall', 'Spring', 'Summer', 'Winter'],
                               );
+                              if (!context.mounted) return;
+                              if (result != null) {
+                                await _updateSetting('semester', result);
+                              }
                             },
                           ),
                         ],
@@ -316,14 +678,8 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                             'Grading Scale',
                             _settings['gradingScale'],
                             Icons.grade,
-                            () {
-                              // TODO: Implement edit grading scale
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Edit grading scale coming soon!'),
-                                  backgroundColor: Colors.indigo,
-                                ),
-                              );
+                            () async {
+                              await _showGradingScaleDialog(context);
                             },
                           ),
                           const Divider(),
@@ -331,54 +687,48 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                             'Timezone',
                             _settings['timezone'],
                             Icons.access_time,
-                            () {
-                              // TODO: Implement edit timezone
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Edit timezone coming soon!'),
-                                  backgroundColor: Colors.indigo,
-                                ),
+                            () async {
+                              final result = await _showEditDialog(
+                                context,
+                                'Edit Timezone',
+                                _settings['timezone'],
+                                'dropdown',
+                                options: [
+                                  'UTC',
+                                  'EST',
+                                  'PST',
+                                  'CST',
+                                  'MST',
+                                  'GMT',
+                                  'CET',
+                                  'JST',
+                                ],
                               );
+                              if (result != null) {
+                                await _updateSetting('timezone', result);
+                              }
                             },
                           ),
                           const Divider(),
                           SwitchListTile(
                             title: const Text('Online Grading'),
                             value: _settings['features']['onlineGrading'],
-                            onChanged: (bool value) {
-                              // TODO: Implement toggle online grading
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Online grading toggle coming soon!'),
-                                  backgroundColor: Colors.indigo,
-                                ),
-                              );
+                            onChanged: (bool value) async {
+                              await _updateFeature('onlineGrading', value);
                             },
                           ),
                           SwitchListTile(
                             title: const Text('Digital Library'),
                             value: _settings['features']['digitalLibrary'],
-                            onChanged: (bool value) {
-                              // TODO: Implement toggle digital library
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Digital library toggle coming soon!'),
-                                  backgroundColor: Colors.indigo,
-                                ),
-                              );
+                            onChanged: (bool value) async {
+                              await _updateFeature('digitalLibrary', value);
                             },
                           ),
                           SwitchListTile(
                             title: const Text('Parent Portal'),
                             value: _settings['features']['parentPortal'],
-                            onChanged: (bool value) {
-                              // TODO: Implement toggle parent portal
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Parent portal toggle coming soon!'),
-                                  backgroundColor: Colors.indigo,
-                                ),
-                              );
+                            onChanged: (bool value) async {
+                              await _updateFeature('parentPortal', value);
                             },
                           ),
                         ],
@@ -402,14 +752,19 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                             'School Email',
                             _settings['email'],
                             Icons.email,
-                            () {
-                              // TODO: Implement edit school email
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Edit school email coming soon!'),
-                                  backgroundColor: Colors.indigo,
-                                ),
+                            () async {
+                              final result = await _showEditDialog(
+                                context,
+                                'Edit School Email',
+                                _settings['email'],
+                                'email',
                               );
+                              if (result != null) {
+                                await _updateContactSetting(
+                                  'schoolEmail',
+                                  result,
+                                );
+                              }
                             },
                           ),
                           const Divider(),
@@ -417,14 +772,19 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                             'School Phone',
                             _settings['phone'],
                             Icons.phone,
-                            () {
-                              // TODO: Implement edit school phone
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Edit school phone coming soon!'),
-                                  backgroundColor: Colors.indigo,
-                                ),
+                            () async {
+                              final result = await _showEditDialog(
+                                context,
+                                'Edit School Phone',
+                                _settings['phone'],
+                                'phone',
                               );
+                              if (result != null) {
+                                await _updateContactSetting(
+                                  'schoolPhone',
+                                  result,
+                                );
+                              }
                             },
                           ),
                           const Divider(),
@@ -432,14 +792,19 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                             'Emergency Contact',
                             _settings['phone'],
                             Icons.contact_phone,
-                            () {
-                              // TODO: Implement edit emergency contact
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Edit emergency contact coming soon!'),
-                                  backgroundColor: Colors.indigo,
-                                ),
+                            () async {
+                              final result = await _showEditDialog(
+                                context,
+                                'Edit Emergency Contact',
+                                _settings['phone'],
+                                'text',
                               );
+                              if (result != null) {
+                                await _updateContactSetting(
+                                  'emergencyContact',
+                                  result,
+                                );
+                              }
                             },
                           ),
                         ],
@@ -452,22 +817,21 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
     );
   }
 
-  Widget _buildSettingItem(String title, String value, IconData icon, VoidCallback onTap) {
+  Widget _buildSettingItem(
+    String title,
+    String value,
+    IconData icon,
+    VoidCallback onTap,
+  ) {
     return ListTile(
       leading: Icon(icon, color: Colors.indigo),
       title: Text(
         title,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-        ),
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
       ),
       subtitle: Text(
         value,
-        style: TextStyle(
-          fontSize: 14,
-          color: Colors.grey[600],
-        ),
+        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
       ),
       trailing: const Icon(Icons.chevron_right),
       onTap: onTap,

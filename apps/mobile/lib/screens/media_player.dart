@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
@@ -35,9 +34,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     _initializePlayer();
   }
 
-  static void _initializePlayerCallback(_VideoPlayerScreenState state) {
-    state._initializePlayer();
-  }
 
   Future<void> _initializePlayer() async {
     try {
@@ -107,7 +103,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         _downloadedPath = savePath;
       });
 
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Video downloaded successfully!'),
@@ -317,7 +313,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
         _downloadedPath = savePath;
       });
 
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Audio downloaded successfully!'),
@@ -391,7 +387,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                     width: double.infinity,
                     height: 200,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(

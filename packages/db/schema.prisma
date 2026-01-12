@@ -218,8 +218,6 @@ model Lesson {
   duration    Int? // Duration in minutes
   order       Int? // For lesson sequencing
   isPublished Boolean    @default(false) @map("is_published")
-  subject     String? // Subject name (string field)
-  class       String? // Class/Grade name (string field)
   difficulty  String? // Difficulty level (string field)
   tags        String[]   // Array of tags
   schoolId    String     @map("school_id")
@@ -264,9 +262,7 @@ model Quiz {
   maxAttempts  Int      @default(1) @map("max_attempts") // Max attempts
   passingScore Float?   @map("passing_score") // Percentage
   isPublished  Boolean  @default(false) @map("is_published")
-  subject      String? // Subject name (string field)
   difficulty   String? // Difficulty level (string field)
-  questions    Json     // Quiz questions as JSON
   schoolId     String   @map("school_id")
   subjectId    String?  @map("subject_id")
   teacherId    String?  @map("teacher_id")
@@ -278,6 +274,7 @@ model Quiz {
   subject   Subject?      @relation(fields: [subjectId], references: [id], onDelete: SetNull)
   teacher   Teacher?      @relation(fields: [teacherId], references: [id], onDelete: SetNull)
   attempts  QuizAttempt[]
+  questions Question[]
 }
 
 // Quiz questions

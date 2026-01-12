@@ -15,12 +15,14 @@ import classRoutes from './routes/classes';
 import assignmentRoutes from './routes/assignments';
 import messageRoutes from './routes/messages';
 import liveSessionRoutes from './routes/live-sessions';
-import analyticsRoutes from './routes/analytics';
+import analyticsRoutes from './routes/analyticsRoutes';
 import dashboardRoutes from './routes/dashboard';
 import uploadRoutes from './routes/upload';
 import downloadRoutes from './routes/download';
 import contentRoutes from './routes/content';
 import notificationRoutes from './routes/notifications';
+import schoolSettingsRoutes from './routes/school-settings';
+import reportsRoutes from './routes/reports';
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN || '',
@@ -84,6 +86,8 @@ app.use('/api/v1/upload', uploadRoutes);
 app.use('/api/v1/download', downloadRoutes);
 app.use('/api/v1/content', contentRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/school-settings', schoolSettingsRoutes);
+app.use('/api/v1/reports', reportsRoutes);
 
 // Error handling
 app.use(Sentry.Handlers.errorHandler());
@@ -104,8 +108,13 @@ app.use('*', (req: Request, res: Response) => {
       '/api/v1/messages',
       '/api/v1/live-sessions',
       '/api/v1/analytics',
+      '/api/v1/dashboard',
       '/api/v1/upload',
-      '/api/v1/download'
+      '/api/v1/download',
+      '/api/v1/content',
+      '/api/v1/notifications',
+      '/api/v1/school-settings',
+      '/api/v1/reports'
     ]
   });
 });
@@ -122,17 +131,17 @@ if (process.env.NODE_ENV !== 'production') {
   });
 
   // Socket.IO for real-time features (local dev only)
-  io.on('connection', (socket) => {
+  io.on('connection', (socket: any) => {
     console.log('User connected:', socket.id);
     
     // Join class rooms
-    socket.on('join-class', (classId) => {
+    socket.on('join-class', (classId: any) => {
       socket.join(classId);
       socket.emit('joined-class', { classId, userId: socket.id });
     });
     
     // Real-time chat
-    socket.on('send-message', (data) => {
+    socket.on('send-message', (data: any) => {
       io.to(data.classId).emit('new-message', {
         ...data,
         timestamp: new Date().toISOString(),
@@ -141,12 +150,12 @@ if (process.env.NODE_ENV !== 'production') {
     });
     
     // Live class WebRTC signaling
-    socket.on('join-live-session', (roomCode) => {
+    socket.on('join-live-session', (roomCode: any) => {
       socket.join(roomCode);
       socket.emit('joined-session', { roomCode, userId: socket.id });
     });
     
-    socket.on('webrtc-signal', (data) => {
+    socket.on('webrtc-signal', (data: any) => {
       socket.to(data.roomCode).emit('webrtc-signal', {
         ...data,
         senderId: socket.id

@@ -1,17 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import '../services/api.dart';
-import 'create_lesson_screen_simple.dart';
+import 'create_lesson_screen.dart';
 import 'create_quiz_screen.dart';
 
-enum ContentType {
-  lesson,
-  quiz,
-  assignment,
-  announcement,
-}
+enum ContentType { lesson, quiz, assignment, announcement }
 
 class ContentCreationHub extends ConsumerStatefulWidget {
   const ContentCreationHub({super.key});
@@ -23,12 +16,10 @@ class ContentCreationHub extends ConsumerStatefulWidget {
 class _ContentCreationHubState extends ConsumerState<ContentCreationHub>
     with TickerProviderStateMixin {
   late TabController _tabController;
-  ContentType _selectedType = ContentType.lesson;
-  bool _isCreating = false;
   List<Map<String, dynamic>> _recentContent = [];
   List<Map<String, dynamic>> _drafts = [];
-  List<Map<String, dynamic>> _scheduled = [];
-  
+  final List<Map<String, dynamic>> _scheduled = [];
+
   @override
   void initState() {
     super.initState();
@@ -44,68 +35,17 @@ class _ContentCreationHubState extends ConsumerState<ContentCreationHub>
 
   Future<void> _loadContentData() async {
     try {
-      final token = await ApiService.getToken();
-      if (token == null) return;
-
-      // Load recent content, drafts, and scheduled content
-      final responses = await Future.wait([
-        http.get(
-          Uri.parse('${ApiService.baseUrl}/content/recent'),
-          headers: {'Authorization': 'Bearer $token'},
-        ),
-        http.get(
-          Uri.parse('${ApiService.baseUrl}/content/drafts'),
-          headers: {'Authorization': 'Bearer $token'},
-        ),
-        http.get(
-          Uri.parse('${ApiService.baseUrl}/content/scheduled'),
-          headers: {'Authorization': 'Bearer $token'},
-        ),
-      ]);
+      final recentContent = await ApiService.fetchRecentContent();
+      final drafts = await ApiService.fetchDrafts();
+      // final scheduled = await ApiService.fetchScheduledContent(); // Scheduled content is not implemented yet in API
 
       setState(() {
-        if (responses[0].statusCode == 200) {
-          _recentContent = jsonDecode(responses[0].body);
-        }
-        if (responses[1].statusCode == 200) {
-          _drafts = jsonDecode(responses[1].body);
-        }
-        if (responses[2].statusCode == 200) {
-          _scheduled = jsonDecode(responses[2].body);
-        }
+        _recentContent = recentContent;
+        _drafts = drafts;
+        // _scheduled = scheduled;
       });
     } catch (e) {
-      print('Error loading content data: $e');
-    }
-  }
-
-  Future<void> _sendNotifications(String contentType, String contentTitle, String contentId) async {
-    try {
-      final token = await ApiService.getToken();
-      if (token == null) return;
-
-      final notificationData = {
-        'type': 'content_created',
-        'contentType': contentType,
-        'contentTitle': contentTitle,
-        'contentId': contentId,
-        'message': 'New $contentType created: $contentTitle',
-        'recipients': ['students', 'parents', 'admin'],
-        'channels': ['in_app', 'email', 'push'],
-        'priority': 'high',
-        'sendImmediately': true,
-      };
-
-      await http.post(
-        Uri.parse('${ApiService.baseUrl}/notifications/send'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(notificationData),
-      );
-    } catch (e) {
-      print('Error sending notifications: $e');
+      // Optionally show an error message to the user
     }
   }
 
@@ -132,11 +72,9 @@ class _ContentCreationHubState extends ConsumerState<ContentCreationHub>
         break;
     }
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => screen,
-      ),
-    ).then((result) {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => screen)).then((result) {
       if (result == true) {
         // Content was created successfully
         _loadContentData();
@@ -153,13 +91,11 @@ class _ContentCreationHubState extends ConsumerState<ContentCreationHub>
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.check_circle,
-              color: Colors.green,
-              size: 48,
-            ),
+            const Icon(Icons.check_circle, color: Colors.green, size: 48),
             const SizedBox(height: 16),
-            Text('Your $contentType has been created and is now available to students.'),
+            Text(
+              'Your $contentType has been created and is now available to students.',
+            ),
             const SizedBox(height: 8),
             const Text('Notifications have been sent to all relevant users.'),
           ],
@@ -245,12 +181,12 @@ class _ContentCreationHubState extends ConsumerState<ContentCreationHub>
           const SizedBox(height: 8),
           Text(
             'Choose the type of content you want to create. Your content will be instantly available to all students and relevant users.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[600],
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
           ),
           const SizedBox(height: 24),
-          
+
           GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -289,9 +225,9 @@ class _ContentCreationHubState extends ConsumerState<ContentCreationHub>
               ),
             ],
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -313,10 +249,22 @@ class _ContentCreationHubState extends ConsumerState<ContentCreationHub>
                     ],
                   ),
                   const SizedBox(height: 12),
-                  _buildFeatureItem('Instant Notifications', 'All users get notified immediately'),
-                  _buildFeatureItem('Live Updates', 'Content appears in real-time on all devices'),
-                  _buildFeatureItem('Analytics Tracking', 'Monitor engagement and performance'),
-                  _buildFeatureItem('Multi-channel Delivery', 'In-app, email, and push notifications'),
+                  _buildFeatureItem(
+                    'Instant Notifications',
+                    'All users get notified immediately',
+                  ),
+                  _buildFeatureItem(
+                    'Live Updates',
+                    'Content appears in real-time on all devices',
+                  ),
+                  _buildFeatureItem(
+                    'Analytics Tracking',
+                    'Monitor engagement and performance',
+                  ),
+                  _buildFeatureItem(
+                    'Multi-channel Delivery',
+                    'In-app, email, and push notifications',
+                  ),
                 ],
               ),
             ),
@@ -343,11 +291,7 @@ class _ContentCreationHubState extends ConsumerState<ContentCreationHub>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                icon,
-                size: 48,
-                color: color,
-              ),
+              Icon(icon, size: 48, color: color),
               const SizedBox(height: 12),
               Text(
                 title,
@@ -359,10 +303,7 @@ class _ContentCreationHubState extends ConsumerState<ContentCreationHub>
               const SizedBox(height: 8),
               Text(
                 description,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -378,11 +319,7 @@ class _ContentCreationHubState extends ConsumerState<ContentCreationHub>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.check_circle,
-            size: 20,
-            color: Colors.green[600],
-          ),
+          const Icon(Icons.check_circle, size: 20, color: Colors.green),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -390,16 +327,11 @@ class _ContentCreationHubState extends ConsumerState<ContentCreationHub>
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 Text(
                   description,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),
@@ -428,29 +360,27 @@ class _ContentCreationHubState extends ConsumerState<ContentCreationHub>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              title == 'Drafts' ? Icons.drafts : 
-              title == 'Scheduled' ? Icons.schedule : 
-              Icons.history,
+              title == 'Drafts'
+                  ? Icons.drafts
+                  : title == 'Scheduled'
+                  ? Icons.schedule
+                  : Icons.history,
               size: 64,
               color: Colors.grey[400],
             ),
             const SizedBox(height: 16),
             Text(
               'No $title yet',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 18, color: Colors.grey[600]),
             ),
             const SizedBox(height: 8),
             Text(
-              title == 'Drafts' ? 'Your drafts will appear here' :
-              title == 'Scheduled' ? 'Your scheduled content will appear here' :
-              'Your recently created content will appear here',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[500],
-              ),
+              title == 'Drafts'
+                  ? 'Your drafts will appear here'
+                  : title == 'Scheduled'
+                  ? 'Your scheduled content will appear here'
+                  : 'Your recently created content will appear here',
+              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
             ),
           ],
         ),
@@ -470,7 +400,9 @@ class _ContentCreationHubState extends ConsumerState<ContentCreationHub>
               color: _getContentTypeColor(item['type']),
             ),
             title: Text(item['title']),
-            subtitle: Text('${item['type']} • ${_formatDate(item['createdAt'])}'),
+            subtitle: Text(
+              '${item['type']} • ${_formatDate(item['createdAt'])}',
+            ),
             trailing: PopupMenuButton(
               itemBuilder: (context) => [
                 const PopupMenuItem(
@@ -503,7 +435,7 @@ class _ContentCreationHubState extends ConsumerState<ContentCreationHub>
                     ],
                   ),
                 ),
-                PopupMenuItem(
+                const PopupMenuItem(
                   value: 'delete',
                   child: Row(
                     children: [
@@ -579,7 +511,9 @@ class _ContentCreationHubState extends ConsumerState<ContentCreationHub>
             SizedBox(height: 16),
             Text('Real-time notifications are active'),
             SizedBox(height: 8),
-            Text('All users will receive instant notifications when you create content.'),
+            Text(
+              'All users will receive instant notifications when you create content.',
+            ),
           ],
         ),
         actions: [
@@ -593,9 +527,19 @@ class _ContentCreationHubState extends ConsumerState<ContentCreationHub>
   }
 }
 
-// Placeholder screens for other content types
-class CreateAssignmentScreen extends StatelessWidget {
+class CreateAssignmentScreen extends StatefulWidget {
   const CreateAssignmentScreen({super.key});
+
+  @override
+  State<CreateAssignmentScreen> createState() => _CreateAssignmentScreenState();
+}
+
+class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _dueDateController = TextEditingController();
+  bool _isSubmitting = false;
 
   @override
   Widget build(BuildContext context) {
@@ -605,15 +549,139 @@ class CreateAssignmentScreen extends StatelessWidget {
         backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
       ),
-      body: const Center(
-        child: Text('Assignment creation coming soon!'),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Title',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a title';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 4,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a description';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _dueDateController,
+                decoration: const InputDecoration(
+                  labelText: 'Due Date',
+                  border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.calendar_today),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a due date';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _isSubmitting
+                    ? null
+                    : () {
+                        if (_formKey.currentState!.validate()) {
+                          setState(() => _isSubmitting = true);
+                          _createAssignment();
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      )
+                    : const Text('Create Assignment'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
+
+  void _createAssignment() async {
+    try {
+      final assignmentData = {
+        'title': _titleController.text.trim(),
+        'description': _descriptionController.text.trim(),
+        'dueDate': _dueDateController.text.trim().isNotEmpty ? DateTime.parse(_dueDateController.text.trim()).toIso8601String() : null,
+        // Add other fields as per your backend schema for assignments, e.g., lessonId, maxScore
+      };
+      await ApiService.createAssignment(assignmentData);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Assignment created successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error creating assignment: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
 }
 
-class CreateAnnouncementScreen extends StatelessWidget {
+class CreateAnnouncementScreen extends StatefulWidget {
   const CreateAnnouncementScreen({super.key});
+
+  @override
+  State<CreateAnnouncementScreen> createState() =>
+      _CreateAnnouncementScreenState();
+}
+
+class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  bool _isSubmitting = false;
 
   @override
   Widget build(BuildContext context) {
@@ -623,9 +691,105 @@ class CreateAnnouncementScreen extends StatelessWidget {
         backgroundColor: Colors.purple,
         foregroundColor: Colors.white,
       ),
-      body: const Center(
-        child: Text('Announcement creation coming soon!'),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Title',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a title';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 4,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a description';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _isSubmitting
+                    ? null
+                    : () {
+                        if (_formKey.currentState!.validate()) {
+                          setState(() => _isSubmitting = true);
+                          _createAnnouncement();
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.purple,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      )
+                    : const Text('Create Announcement'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
+  }
+
+  void _createAnnouncement() async {
+    try {
+      final announcementData = {
+        'title': _titleController.text.trim(),
+        'description': _descriptionController.text.trim(),
+      };
+      await ApiService.createAnnouncement(announcementData);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Announcement created successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error creating announcement: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
   }
 }

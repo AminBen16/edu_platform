@@ -1,10 +1,12 @@
 # This file controls Flutter-level build steps. It should not be edited.
 cmake_minimum_required(VERSION 3.14)
 
-set(EPHEMERAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ephemeral")
+set(EPHEMERAL_DIR "${CMAKE_CURRENT_BINARY_DIR}/flutter_windows/ephemeral") # Original line
 
 # Configuration provided via flutter tool.
-include(${EPHEMERAL_DIR}/generated_config.cmake)
+if(EXISTS "${EPHEMERAL_DIR}/generated_config.cmake") # Added check for file existence
+  include("${EPHEMERAL_DIR}/generated_config.cmake")
+endif()
 
 # NOTE: Move the rest of this into files in ephemeral. See
 # https://github.com/flutter/flutter/issues/57146.

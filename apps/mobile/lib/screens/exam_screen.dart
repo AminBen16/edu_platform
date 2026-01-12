@@ -50,11 +50,13 @@ class _ExamState extends State<ExamScreen> {
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                     value: i,
+                    // ignore: deprecated_member_use
                     groupValue:
                         answers.length > currentQ ? answers[currentQ] : null,
                     activeColor: Theme.of(context).colorScheme.primary,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8)),
+                    // ignore: deprecated_member_use
                     onChanged: (v) {
                       setState(() {
                         if (answers.length > currentQ) {

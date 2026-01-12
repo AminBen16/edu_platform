@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import '../services/api.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -21,104 +27,43 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
   Future<void> _loadReports() async {
     setState(() => _isLoading = true);
-    
-    // Mock reports data for development
-    await Future.delayed(const Duration(seconds: 1));
-    
-    setState(() {
-      _isLoading = false;
-      _reports = [
-        {
-          'id': '1',
-          'title': 'Monthly Performance Report',
-          'type': 'Performance',
-          'date': '2024-01-31',
-          'status': 'completed',
-          'description': 'Comprehensive analysis of student performance across all classes',
-          'generatedBy': 'System',
-          'data': {
-            'totalStudents': 245,
-            'avgGrade': 85.3,
-            'attendanceRate': 92.1,
-            'completionRate': 87.8,
-          'topPerformers': ['Emma Johnson', 'Michael Chen', 'Sarah Williams'],
-            'improvementAreas': ['Mathematics', 'Science'],
+    try {
+      final token = await ApiService.getToken();
+      if (token != null) {
+        final response = await http.get(
+          Uri.parse('${ApiService.baseUrl}/api/v1/reports'),
+          headers: <String, String>{
+            'Content-Type': 'application/json; charset=UTF-8',
+            'Authorization': 'Bearer $token',
           },
-        },
-        {
-          'id': '2',
-          'title': 'User Engagement Analysis',
-          'type': 'Engagement',
-          'date': '2024-01-30',
-          'status': 'completed',
-          'description': 'Analysis of user engagement and platform usage patterns',
-          'generatedBy': 'System',
-          'data': {
-            'activeUsers': 156,
-            'dailyLogins': 89,
-            'avgSessionDuration': '45 minutes',
-            'featureUsage': {
-              'assignments': '78%',
-              'quizzes': '65%',
-              'courses': '92%',
-              'messages': '43%',
-            },
-            'peakHours': '2:00 PM - 4:00 PM',
-          },
-        },
-        {
-          'id': '3',
-          'title': 'Attendance Summary',
-          'type': 'Attendance',
-          'date': '2024-01-29',
-          'status': 'completed',
-          'description': 'Weekly attendance statistics and trends',
-          'generatedBy': 'System',
-          'data': {
-            'totalStudents': 245,
-            'avgAttendance': 94.2,
-            'perfectAttendance': 67,
-            'improvement': '+2.3% from last month',
-            'byGrade': {
-              '9th': 96.1,
-              '10th': 94.5,
-              '11th': 92.8,
-              '12th': 93.4,
-            },
-          },
-        },
-        {
-          'id': '4',
-          'title': 'Grade Distribution Report',
-          'type': 'Grades',
-          'date': '2024-01-28',
-          'status': 'completed',
-          'description': 'Distribution of grades across all classes and subjects',
-          'generatedBy': 'System',
-          'data': {
-            'gradeDistribution': {
-              'A': 23.5,
-              'B': 34.2,
-              'C': 28.9,
-              'D': 10.3,
-              'F': 3.1,
-            },
-            'gpa': 3.2,
-            'honorRoll': 15,
-            'subjectBreakdown': {
-              'Mathematics': {'A': 18.2, 'B': 29.1, 'C': 24.5, 'D': 8.7, 'F': 2.8},
-              'Science': {'A': 25.1, 'B': 31.2, 'C': 27.3, 'D': 9.8, 'F': 3.1},
-              'English': {'A': 26.8, 'B': 35.3, 'C': 29.8, 'D': 11.2, 'F': 3.1},
-            },
-          },
-        },
-      ];
-    });
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          setState(() {
+            _reports = List<Map<String, dynamic>>.from(data);
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading reports: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   List<Map<String, dynamic>> get _filteredReports {
     if (_selectedReport == 'All') return _reports;
-    return _reports.where((report) => report['type'] == _selectedReport).toList();
+    return _reports
+        .where((report) => report['type'] == _selectedReport)
+        .toList();
   }
 
   @override
@@ -131,26 +76,14 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.download),
-            onPressed: () {
-              // TODO: Implement export functionality
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Export reports coming soon!'),
-                  backgroundColor: Colors.purple,
-                ),
-              );
+            onPressed: () async {
+              await _exportAllReports();
             },
           ),
           IconButton(
             icon: const Icon(Icons.schedule),
             onPressed: () {
-              // TODO: Implement scheduled reports
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Scheduled reports coming soon!'),
-                  backgroundColor: Colors.purple,
-                ),
-              );
+              _showScheduleReportsDialog();
             },
           ),
         ],
@@ -170,7 +103,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                           selected: _selectedReport == 'All',
                           onSelected: (bool selected) {
                             setState(() {
-                              _selectedReport = selected ? 'All' : _selectedReport;
+                              _selectedReport = selected
+                                  ? 'All'
+                                  : _selectedReport;
                             });
                           },
                           backgroundColor: Colors.purple[100],
@@ -178,48 +113,56 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                       ),
                       const SizedBox(width: 8),
                       FilterChip(
-                          label: const Text('Performance'),
-                          selected: _selectedReport == 'Performance',
-                          onSelected: (bool selected) {
-                            setState(() {
-                              _selectedReport = selected ? 'All' : _selectedReport;
-                            });
-                          },
-                          backgroundColor: Colors.purple[100],
-                        ),
+                        label: const Text('Performance'),
+                        selected: _selectedReport == 'Performance',
+                        onSelected: (bool selected) {
+                          setState(() {
+                            _selectedReport = selected
+                                ? 'All'
+                                : _selectedReport;
+                          });
+                        },
+                        backgroundColor: Colors.purple[100],
+                      ),
                       const SizedBox(width: 8),
                       FilterChip(
-                          label: const Text('Engagement'),
-                          selected: _selectedReport == 'Engagement',
-                          onSelected: (bool selected) {
-                            setState(() {
-                              _selectedReport = selected ? 'All' : _selectedReport;
-                            });
-                          },
-                          backgroundColor: Colors.purple[100],
-                        ),
+                        label: const Text('Engagement'),
+                        selected: _selectedReport == 'Engagement',
+                        onSelected: (bool selected) {
+                          setState(() {
+                            _selectedReport = selected
+                                ? 'All'
+                                : _selectedReport;
+                          });
+                        },
+                        backgroundColor: Colors.purple[100],
+                      ),
                       const SizedBox(width: 8),
                       FilterChip(
-                          label: const Text('Attendance'),
-                          selected: _selectedReport == 'Attendance',
-                          onSelected: (bool selected) {
-                            setState(() {
-                              _selectedReport = selected ? 'All' : _selectedReport;
-                            });
-                          },
-                          backgroundColor: Colors.purple[100],
-                        ),
+                        label: const Text('Attendance'),
+                        selected: _selectedReport == 'Attendance',
+                        onSelected: (bool selected) {
+                          setState(() {
+                            _selectedReport = selected
+                                ? 'All'
+                                : _selectedReport;
+                          });
+                        },
+                        backgroundColor: Colors.purple[100],
+                      ),
                       const SizedBox(width: 8),
                       FilterChip(
-                          label: const Text('Grades'),
-                          selected: _selectedReport == 'Grades',
-                          onSelected: (bool selected) {
-                            setState(() {
-                              _selectedReport = selected ? 'All' : _selectedReport;
-                            });
-                          },
-                          backgroundColor: Colors.purple[100],
-                        ),
+                        label: const Text('Grades'),
+                        selected: _selectedReport == 'Grades',
+                        onSelected: (bool selected) {
+                          setState(() {
+                            _selectedReport = selected
+                                ? 'All'
+                                : _selectedReport;
+                          });
+                        },
+                        backgroundColor: Colors.purple[100],
+                      ),
                     ],
                   ),
                 ),
@@ -272,7 +215,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                       children: [
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 report['title'],
@@ -298,8 +242,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                             vertical: 6,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: _getReportTypeColor(report['type']),
-                                            borderRadius: BorderRadius.circular(20),
+                                            color: _getReportTypeColor(
+                                              report['type'],
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
                                           ),
                                           child: Text(
                                             report['status'].toUpperCase(),
@@ -348,41 +296,34 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                       children: [
                                         Expanded(
                                           child: ElevatedButton(
-                                            onPressed: () {
-                                              // TODO: Implement report viewing
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(
-                                                  content: Text('Report viewer coming soon!'),
-                                                  backgroundColor: Colors.purple,
-                                                ),
-                                              );
+                                            onPressed: () async {
+                                              await _viewReport(report);
                                             },
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor: Colors.purple,
                                               foregroundColor: Colors.white,
-                                              padding: const EdgeInsets.symmetric(vertical: 8),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 8,
+                                                  ),
                                             ),
                                             child: const Text('View Report'),
                                           ),
                                         ),
                                         const SizedBox(width: 12),
                                         ElevatedButton(
-                                          onPressed: () {
-                                              // TODO: Implement report export
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(
-                                                  content: Text('Report export coming soon!'),
-                                                  backgroundColor: Colors.blue,
-                                                ),
-                                              );
-                                            },
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.blue,
-                                              foregroundColor: Colors.white,
-                                              padding: const EdgeInsets.symmetric(vertical: 8),
+                                          onPressed: () async {
+                                            await _exportSingleReport(report);
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.blue,
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 8,
                                             ),
-                                            child: const Text('Export'),
                                           ),
+                                          child: const Text('Export'),
+                                        ),
                                       ],
                                     ),
                                   ],
@@ -409,6 +350,173 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         return Colors.purple;
       default:
         return Colors.grey;
+    }
+  }
+
+  Future<void> _exportAllReports() async {
+    if (_filteredReports.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('No reports to export')));
+      }
+      return;
+    }
+
+    try {
+      final StringBuffer csvContent = StringBuffer();
+      csvContent.writeln('Title,Type,Status,Date,Generated By,Description');
+
+      for (final report in _filteredReports) {
+        csvContent.writeln(
+          '"${report['title']}","${report['type']}","${report['status']}","${report['date']}","${report['generatedBy']}","${report['description']}"',
+        );
+      }
+
+      final directory = await getTemporaryDirectory();
+      final file = File(
+        '${directory.path}/reports_export_${DateTime.now().millisecondsSinceEpoch}.csv',
+      );
+      await file.writeAsString(csvContent.toString());
+
+      await Share.shareXFiles([XFile(file.path)], text: 'Exported Reports');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error exporting reports: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showScheduleReportsDialog() {
+    String frequency = 'Weekly';
+    final emailController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Schedule Reports'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: frequency,
+                decoration: const InputDecoration(
+                  labelText: 'Frequency',
+                  border: OutlineInputBorder(),
+                ),
+                items: ['Daily', 'Weekly', 'Monthly']
+                    .map((f) => DropdownMenuItem(value: f, child: Text(f)))
+                    .toList(),
+                onChanged: (val) => setState(() => frequency = val!),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Recipient Email',
+                  border: OutlineInputBorder(),
+                  hintText: 'admin@school.edu',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                // Simulate API call
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Report scheduled $frequency to ${emailController.text.isNotEmpty ? emailController.text : "default email"}',
+                    ),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              child: const Text('Schedule'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _viewReport(Map<String, dynamic> report) async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(report['title']),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Type: ${report['type']}'),
+              const SizedBox(height: 8),
+              Text('Status: ${report['status']}'),
+              const SizedBox(height: 8),
+              Text('Generated: ${report['date']}'),
+              const SizedBox(height: 8),
+              Text('By: ${report['generatedBy']}'),
+              const SizedBox(height: 16),
+              const Text('Description:'),
+              const SizedBox(height: 4),
+              Text(report['description']),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _exportSingleReport(Map<String, dynamic> report) async {
+    try {
+      final StringBuffer content = StringBuffer();
+      content.writeln('Report Details');
+      content.writeln('--------------');
+      content.writeln('Title: ${report['title']}');
+      content.writeln('Type: ${report['type']}');
+      content.writeln('Status: ${report['status']}');
+      content.writeln('Date: ${report['date']}');
+      content.writeln('Generated By: ${report['generatedBy']}');
+      content.writeln('Description: ${report['description']}');
+
+      final directory = await getTemporaryDirectory();
+      final fileName =
+          'report_${report['title'].toString().replaceAll(RegExp(r'[^\w\s]+'), '').replaceAll(' ', '_')}.txt';
+      final file = File('${directory.path}/$fileName');
+      await file.writeAsString(content.toString());
+
+      await Share.shareXFiles([
+        XFile(file.path),
+      ], text: 'Report: ${report['title']}');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error exporting report: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 }

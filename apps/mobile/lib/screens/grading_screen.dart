@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'grading_details_screen.dart';
 
 class GradingScreen extends ConsumerStatefulWidget {
   const GradingScreen({super.key});
@@ -317,10 +318,12 @@ class _GradingScreenState extends ConsumerState<GradingScreen> {
                                             width: 120,
                                             child: ElevatedButton(
                                               onPressed: () {
-                                                // TODO: Implement detailed grading view
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text('Detailed grading coming soon!'),
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        GradingDetailsScreen(
+                                                            submission: submission),
                                                   ),
                                                 );
                                               },
@@ -387,22 +390,35 @@ class _GradingScreenState extends ConsumerState<GradingScreen> {
                                         const Spacer(),
                                         ElevatedButton(
                                           onPressed: () {
-                                            // TODO: Implement quick grade action
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(
-                                                content: Text('Quick grading coming soon!'),
-                                              ),
-                                            );
+                                            if (submission['status'] == 'needs_review' || submission['status'] == 'pending') {
+                                               Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        GradingDetailsScreen(
+                                                            submission: submission),
+                                                  ),
+                                                );
+                                            } else {
+                                               ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text('Submission approved! (not really)'),
+                                                  backgroundColor: Colors.green,
+                                                ),
+                                              );
+                                            }
                                           },
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: submission['status'] == 'needs_review'
+                                            backgroundColor: submission['status'] == 'needs_review' || submission['status'] == 'pending'
                                                 ? Colors.red
                                                 : Colors.green,
                                             foregroundColor: Colors.white,
                                             padding: const EdgeInsets.symmetric(vertical: 8),
                                           ),
                                           child: Text(
-                                            submission['status'] == 'needs_review' ? 'Review' : 'Approve',
+                                            submission['status'] == 'needs_review' || submission['status'] == 'pending'
+                                             ? 'Review' 
+                                             : 'Approve',
                                           ),
                                         ),
                                       ],

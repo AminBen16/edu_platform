@@ -356,13 +356,13 @@ class _MyClassesScreenState extends ConsumerState<MyClassesScreen> {
                                           child: LinearProgressIndicator(
                                             value: class_['progress'] / 100.0,
                                             backgroundColor: Colors.grey[300]!,
-                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
                                           ),
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
                                           '${class_['progress'].toInt()}%',
-                                          style: TextStyle(
+                                          style: const TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w600,
                                             color: Colors.green,
@@ -384,7 +384,7 @@ class _MyClassesScreenState extends ConsumerState<MyClassesScreen> {
                                         Expanded(
                                           child: Text(
                                             class_['nextClass'],
-                                            style: TextStyle(
+                                            style: const TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w600,
                                               color: Colors.blue,

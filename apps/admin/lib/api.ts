@@ -9,13 +9,16 @@ export const api = axios.create({
   },
 });
 
+let authToken: string | null = null;
+
+export const setAuthToken = (token: string | null) => {
+  authToken = token;
+};
+
 // Add request interceptor to include auth token
 api.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+  if (authToken) {
+    config.headers.Authorization = `Bearer ${authToken}`;
   }
   return config;
 });
@@ -27,10 +30,13 @@ export interface User {
   email: string;
   role: string;
   schoolId: string;
-  status: string;
-  lastLogin?: string;
-  joinDate: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
   avatarUrl?: string;
+  teacherProfile?: { // Add this
+    id: string;
+  };
 }
 
 export interface Lesson {

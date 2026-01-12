@@ -1,231 +1,207 @@
-// Assignment management system
-import { Router, Response, Request } from 'express';
-import { protect, authorize, requirePermission } from '../middleware/auth';
+// apps/api/src/routes/assignments.ts
+import { Router } from 'express';
 import { prisma } from '../config/database';
-import NotificationService from '../services/notificationService';
+import { protect } from '../middleware/auth';
+import { Role } from '../lib/database';
 
 const router = Router();
 
-// GET /assignments - Get assignments for user
+// GET /assignments - Get all assignments based on user role
 router.get('/', protect, async (req, res) => {
-  const { role, id: userId, schoolId } = req.user!;
+    const { id: userId, role, schoolId } = req.user!;
 
-  try {
-    let assignments = [];
+    try {
+        let assignments;
+        if (role === Role.STUDENT) {
+            const student = await prisma.student.findUnique({ where: { userId } });
+            if (!student) return res.status(404).json({ error: 'Student profile not found.' });
 
-    switch (role) {
-      case 'STUDENT':
-        assignments = await getStudentAssignments(userId);
-        break;
-      case 'TEACHER':
-        assignments = await getTeacherAssignments(userId);
-        break;
-      case 'ADMIN':
-      case 'SCHOOL_ADMIN':
-        assignments = await getAdminAssignments(schoolId);
-        break;
-      default:
-        return res.status(403).json({ error: 'Invalid user role for assignments' });
-    }
+            // Find all classes the student is enrolled in
+            const enrollments = await prisma.enrollment.findMany({
+                where: { studentId: student.id },
+                select: { classId: true }
+            });
+            const classIds = enrollments.map(e => e.classId).filter(id => id !== null);
 
-    res.json({
-      assignments,
-      userRole: role,
-      total: assignments.length
-    });
-  } catch (error) {
-    console.error('Assignments error:', error);
-    res.status(500).json({ error: 'Failed to load assignments' });
-  }
-});
+            // Get all lessons assigned to those classes, then get assignments for those lessons
+            assignments = await prisma.assignment.findMany({
+                where: {
+                    lesson: {
+                        classId: { in: classIds as string[] }
+                    }
+                },
+                include: { lesson: { select: { title: true, class: { select: { name: true } } } } },
+                orderBy: { dueDate: 'asc' }
+            });
 
-// POST /assignments - Create new assignment
-router.post('/', protect, authorize('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), requirePermission('assignments.write'), async (req, res) => {
-  try {
-    const { title, description, lessonId, dueDate, maxScore } = req.body;
-
-    const assignment = await prisma.assignment.create({
-      data: {
-        title,
-        description,
-        lessonId,
-        dueDate: dueDate ? new Date(dueDate) : null,
-        maxScore: maxScore || 100,
-        teacherId: req.user!.id
-      }
-    });
-
-    // Get students enrolled in the lesson
-    const enrollments = await prisma.enrollment.findMany({
-      where: { lessonId, status: 'ACTIVE' },
-      include: {
-        student: {
-          include: {
-            user: {
-              select: { id: true, name: true, email: true }
-            }
-          }
+        } else if (role === Role.TEACHER) {
+            const teacher = await prisma.teacher.findUnique({ where: { userId } });
+            if (!teacher) return res.status(404).json({ error: 'Teacher profile not found.' });
+            
+            assignments = await prisma.assignment.findMany({
+                where: { teacherId: teacher.id },
+                include: { lesson: { select: { title: true } }, _count: { select: { submissions: true } } },
+                orderBy: { createdAt: 'desc' }
+            });
+        } else { // ADMIN or other higher roles
+            assignments = await prisma.assignment.findMany({
+                where: { lesson: { schoolId } },
+                include: { lesson: { select: { title: true } }, teacher: { select: { user: { select: { name: true } } } } },
+                orderBy: { createdAt: 'desc' }
+            });
         }
-      }
-    });
-
-    // Send real notifications to enrolled students
-    const studentIds = enrollments.map(e => e.studentId);
-    
-    if (studentIds.length > 0) {
-      const notificationsSent = await NotificationService.sendBulkNotifications(studentIds, {
-        type: 'ASSIGNMENT',
-        title: `New Assignment: ${title}`,
-        message: `A new assignment "${title}" has been created for your class. Due date: ${dueDate ? new Date(dueDate).toLocaleDateString() : 'No due date'}`,
-        data: {
-          assignmentId: assignment.id,
-          title: assignment.title,
-          description: assignment.description,
-          dueDate: assignment.dueDate,
-          maxScore: assignment.maxScore
-        }
-      });
-      
-      console.log(`Notifications sent to ${notificationsSent} students`);
+        res.json(assignments);
+    } catch (error) {
+        console.error('Failed to fetch assignments:', error);
+        res.status(500).json({ error: 'Failed to fetch assignments.' });
     }
-
-    res.status(201).json(assignment);
-  } catch (error) {
-    console.error('Create assignment error:', error);
-    res.status(500).json({ error: 'Failed to create assignment' });
-  }
 });
 
-// PUT /assignments/:id - Update assignment
-router.put('/:id', protect, authorize('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), async (req, res) => {
-  const { id } = req.params;
-  const { title, description, dueDate, maxScore } = req.body;
-
-  try {
-    const assignment = await prisma.assignment.update({
-      where: { id },
-      data: {
-        title,
-        description,
-        dueDate: dueDate ? new Date(dueDate) : null,
-        maxScore,
-        updatedAt: new Date()
-      }
-    });
-
-    res.json(assignment);
-  } catch (error) {
-    console.error('Update assignment error:', error);
-    res.status(500).json({ error: 'Failed to update assignment' });
-  }
-});
-
-// DELETE /assignments/:id - Delete assignment
-router.delete('/:id', protect, authorize('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    await prisma.assignment.delete({
-      where: { id }
-    });
-
-    res.json({ message: 'Assignment deleted successfully' });
-  } catch (error) {
-    console.error('Delete assignment error:', error);
-    res.status(500).json({ error: 'Failed to delete assignment' });
-  }
-});
-
-// GET /assignments/:id - Get single assignment
+// GET /assignments/:id - Get a single assignment with details
 router.get('/:id', protect, async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const assignment = await prisma.assignment.findUnique({
-      where: { id },
-      include: {
-        lesson: {
-          select: { id: true, title: true }
-        },
-        teacher: {
-          select: { id: true, user: { select: { name: true, email: true } } }
-        },
-        submissions: {
-          include: {
-            student: {
-              include: {
-                user: { select: { name: true, email: true } }
-              }
+    const { id } = req.params;
+    try {
+        const assignment = await prisma.assignment.findFirst({
+            where: { id, lesson: { schoolId: req.user!.schoolId } },
+            include: {
+                lesson: true,
+                teacher: { select: { user: { select: { name: true, email: true } } } },
             }
-          }
+        });
+
+        if (!assignment) {
+            return res.status(404).json({ error: 'Assignment not found' });
         }
-      }
-    });
-
-    if (!assignment) {
-      return res.status(404).json({ error: 'Assignment not found' });
+        res.json(assignment);
+    } catch (error) {
+        console.error('Get assignment error:', error);
+        res.status(500).json({ error: 'Failed to load assignment' });
     }
-
-    res.json(assignment);
-  } catch (error) {
-    console.error('Get assignment error:', error);
-    res.status(500).json({ error: 'Failed to load assignment' });
-  }
 });
 
-// Helper functions
-async function getStudentAssignments(studentId: string) {
-  const enrollments = await prisma.enrollment.findMany({
-    where: { studentId, status: 'ACTIVE' },
-    include: {
-      Lesson: {
-        include: {
-          assignments: true
+
+// POST /assignments - Create a new assignment (Teachers and Admins)
+router.post('/', protect, async (req, res) => {
+    if (req.user!.role !== Role.TEACHER && req.user!.role !== Role.ADMIN) {
+        return res.status(403).json({ error: 'You are not authorized to create assignments.' });
+    }
+
+    const { title, description, lessonId, dueDate, maxScore } = req.body;
+    if (!title || !lessonId) {
+        return res.status(400).json({ error: 'Title and lessonId are required.' });
+    }
+
+    try {
+        const teacher = await prisma.teacher.findUnique({ where: { userId: req.user!.id }});
+        if (!teacher && req.user!.role === Role.TEACHER) {
+            return res.status(404).json({ error: 'Teacher profile not found.' });
         }
-      }
+
+        const newAssignment = await prisma.assignment.create({
+            data: {
+                title,
+                description,
+                dueDate: dueDate ? new Date(dueDate) : undefined,
+                maxScore: maxScore ? parseFloat(maxScore) : 100,
+                lessonId,
+                teacherId: teacher?.id, // Can be null if admin creates it
+            }
+        });
+
+        // TODO: Add notification logic here
+
+        res.status(201).json(newAssignment);
+    } catch (error) {
+        console.error('Create assignment error:', error);
+        res.status(500).json({ error: 'Failed to create assignment.' });
     }
-  });
+});
 
-  return enrollments.flatMap(enrollment => 
-    enrollment.Lesson?.assignments || []
-  );
-}
-
-async function getTeacherAssignments(teacherId: string) {
-  const assignments = await prisma.assignment.findMany({
-    where: { teacherId },
-    include: {
-      lesson: {
-        select: { id: true, title: true }
-      },
-      submissions: {
-        select: { id: true, studentId: true, score: true, submittedAt: true }
-      }
+// POST /assignments/:id/submit - Submit an assignment (Students only)
+router.post('/:id/submit', protect, async (req, res) => {
+    if (req.user!.role !== Role.STUDENT) {
+        return res.status(403).json({ error: 'Only students can submit assignments.' });
     }
-  });
+    const { id: assignmentId } = req.params;
+    const { content, fileUrl } = req.body;
 
-  return assignments;
-}
+    try {
+        const student = await prisma.student.findUnique({ where: { userId: req.user!.id }});
+        if (!student) {
+            return res.status(404).json({ error: 'Student profile not found.' });
+        }
 
-async function getAdminAssignments(schoolId: string) {
-  return await prisma.assignment.findMany({
-    where: {
-      lesson: {
-        schoolId
-      }
-    },
-    include: {
-      lesson: {
-        select: { id: true, title: true }
-      },
-      teacher: {
-        select: { id: true, user: { select: { name: true, email: true } } }
-      },
-      submissions: {
-        select: { id: true, studentId: true, score: true, submittedAt: true }
-      }
+        // TODO: Check if student is enrolled in the lesson/class for this assignment
+
+        const submission = await prisma.submission.create({
+            data: {
+                content,
+                fileUrl,
+                studentId: student.id,
+                assignmentId
+            }
+        });
+        res.status(201).json(submission);
+    } catch (error) {
+        console.error('Assignment submission error:', error);
+        res.status(500).json({ error: 'Failed to submit assignment.' });
     }
-  });
-}
+});
+
+// GET /assignments/:id/submissions - Get all submissions for an assignment (Teachers and Admins)
+router.get('/:id/submissions', protect, async (req, res) => {
+     if (req.user!.role !== Role.TEACHER && req.user!.role !== Role.ADMIN) {
+        return res.status(403).json({ error: 'You are not authorized to view submissions.' });
+    }
+    const { id: assignmentId } = req.params;
+
+    try {
+        const submissions = await prisma.submission.findMany({
+            where: {
+                assignmentId,
+                assignment: {
+                    lesson: { schoolId: req.user!.schoolId }
+                }
+            },
+            include: {
+                student: {
+                    select: { user: { select: { id: true, name: true, avatarUrl: true } } }
+                }
+            },
+            orderBy: { submittedAt: 'desc' }
+        });
+        res.json(submissions);
+    } catch (error) {
+        console.error('Failed to get submissions:', error);
+        res.status(500).json({ error: 'Failed to get submissions.' });
+    }
+});
+
+// PUT /submissions/:submissionId/grade - Grade a submission (Teachers and Admins)
+router.put('/submissions/:submissionId/grade', protect, async (req, res) => {
+    if (req.user!.role !== Role.TEACHER && req.user!.role !== Role.ADMIN) {
+        return res.status(403).json({ error: 'You are not authorized to grade submissions.' });
+    }
+    const { submissionId } = req.params;
+    const { score } = req.body;
+
+    if (score === undefined) {
+        return res.status(400).json({ error: 'Score is required.' });
+    }
+
+    try {
+        const updatedSubmission = await prisma.submission.update({
+            where: { id: submissionId },
+            data: { score: parseFloat(score) }
+        });
+
+        // TODO: Notify student about the grade
+
+        res.json(updatedSubmission);
+    } catch (error) {
+        console.error('Failed to grade submission:', error);
+        res.status(500).json({ error: 'Failed to grade submission.' });
+    }
+});
 
 export default router;

@@ -25,8 +25,6 @@ import 'screens/attendance_screen.dart';
 import 'screens/messages_screen.dart';
 import 'screens/schedule_screen.dart';
 
-
-
 void main() {
   runApp(const ProviderScope(child: EduApp()));
 }
@@ -43,12 +41,22 @@ class EduApp extends StatelessWidget {
       initialRoute: '/login',
       routes: {
         '/login': (context) => const LoginScreen(),
-        '/dashboard': (context) => const DashboardScreen(),
+        '/dashboard': (context) => Scaffold(
+          body: const DashboardScreen(),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () => Navigator.pushNamed(context, '/messages', arguments: 'clx010203000008l48h3g8j9k'), // Hardcoded classId for now
+            child: const Badge(label: Text('3'), child: Icon(Icons.message)),
+          ),
+        ),
         '/notifications': (context) => const NotificationsScreen(),
+        // '/messages': (context) => const MessagesScreen(), // Removed
         '/profile': (context) => const ProfileScreen(),
         '/settings': (context) => const SettingsScreen(),
-        '/course-details': (context) => const CourseDetailsScreen(courseId: ''),
-        '/live-class': (context) => const LiveClassScreen(classId: ''),
+        // '/course-details': (context) => const CourseDetailsScreen(courseId: ''), // Removed
+        '/live-class': (context) => LiveClassScreen(
+          lessonTitle: 'Live Class',
+          teacherName: 'Instructor',
+        ),
         '/account-settings': (context) => const AccountSettingsScreen(),
         // Student routes
         '/assignments': (context) => const AssignmentsScreen(),
@@ -66,7 +74,6 @@ class EduApp extends StatelessWidget {
         // Parent routes
         '/progress-reports': (context) => const ProgressReportsScreen(),
         '/attendance': (context) => const AttendanceScreen(),
-        '/messages': (context) => const MessagesScreen(),
         '/schedule': (context) => const ScheduleScreen(),
       },
       onGenerateRoute: (settings) {
@@ -74,7 +81,8 @@ class EduApp extends StatelessWidget {
         if (settings.name == '/register') {
           final invitationCode = settings.arguments as String? ?? '';
           return MaterialPageRoute(
-            builder: (context) => RegistrationScreen(invitationCode: invitationCode),
+            builder: (context) =>
+                RegistrationScreen(invitationCode: invitationCode),
           );
         }
         if (settings.name == '/course-details') {
@@ -83,10 +91,19 @@ class EduApp extends StatelessWidget {
             builder: (context) => CourseDetailsScreen(courseId: courseId),
           );
         }
-        if (settings.name == '/live-class') {
+        if (settings.name == '/messages') {
           final classId = settings.arguments as String? ?? '';
           return MaterialPageRoute(
-            builder: (context) => LiveClassScreen(classId: classId),
+            builder: (context) => MessagesScreen(classId: classId),
+          );
+        }
+        if (settings.name == '/live-class') {
+          final args = settings.arguments as Map<String, dynamic>? ?? {};
+          return MaterialPageRoute(
+            builder: (context) => LiveClassScreen(
+              lessonTitle: args['lessonTitle'] ?? 'Live Class',
+              teacherName: args['teacherName'] ?? 'Instructor',
+            ),
           );
         }
         return null;

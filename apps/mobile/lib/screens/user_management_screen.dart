@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 class UserManagementScreen extends ConsumerStatefulWidget {
   const UserManagementScreen({super.key});
@@ -67,6 +70,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
         },
       ];
       await prefs.setStringList('users', defaultUsers.map((u) => _encodeUser(u)).toList());
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         _users = defaultUsers;
@@ -75,6 +79,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
       });
     } else {
       final loadedUsers = usersJson.map((u) => _decodeUser(u)).toList();
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         _users = loadedUsers;
@@ -110,16 +115,19 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   Future<void> _handleUserAction(String action, Map<String, dynamic> user) async {
     switch (action) {
       case 'view':
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Viewing ${user['name']}')),
         );
         break;
       case 'edit':
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Editing ${user['name']}')),
         );
         break;
       case 'reset_password':
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Password reset sent to ${user['email']}')),
         );
@@ -129,6 +137,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
           user['status'] = user['status'] == 'active' ? 'inactive' : 'active';
         });
         await _saveUsers();
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Status updated for ${user['name']}')),
         );
@@ -139,6 +148,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
           _filterUsers();
         });
         await _saveUsers();
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${user['name']} deleted')),
         );
@@ -153,14 +163,12 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
         '${u['id']},${u['name']},${u['email']},${u['role']},${u['status']},${u['lastLogin']},${u['school']},${u['joinDate']}'
       ),
     ].join('\n');
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Export completed (CSV format)'),
-        backgroundColor: Colors.deepPurple,
-      ),
-    );
-    // In a real app, you would save/share the CSV here
+
+    final tempDir = await getTemporaryDirectory();
+    final file = File('${tempDir.path}/users.csv');
+    await file.writeAsString(csv);
+
+    await Share.shareXFiles([XFile(file.path)], text: 'Users Export');
   }
 
   Future<void> _showAddUserDialog() async {
@@ -218,7 +226,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                   _filterUsers();
                 });
                 await _saveUsers();
+                if (!mounted) return;
                 Navigator.pop(context);
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('User added successfully')),
                 );
@@ -299,7 +309,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
           ),
         ],
       ),
-      body: Column(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
         children: [
           // Search and Filter Bar
           Container(
@@ -522,7 +534,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                                   child: Row(
                                     children: [
                                       Icon(Icons.visibility),
-                                      const SizedBox(width: 8),
+                                      SizedBox(width: 8),
                                       Text('View Profile'),
                                     ],
                                   ),
@@ -532,7 +544,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                                   child: Row(
                                     children: [
                                       Icon(Icons.edit),
-                                      const SizedBox(width: 8),
+                                      SizedBox(width: 8),
                                       Text('Edit User'),
                                     ],
                                   ),
@@ -542,7 +554,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                                   child: Row(
                                     children: [
                                       Icon(Icons.lock_reset),
-                                      const SizedBox(width: 8),
+                                      SizedBox(width: 8),
                                       Text('Reset Password'),
                                     ],
                                   ),
@@ -552,7 +564,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                                   child: Row(
                                     children: [
                                       Icon(Icons.toggle_on),
-                                      const SizedBox(width: 8),
+                                      SizedBox(width: 8),
                                       Text('Toggle Status'),
                                     ],
                                   ),
@@ -562,7 +574,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                                   child: Row(
                                     children: [
                                       Icon(Icons.delete, color: Colors.red),
-                                      const SizedBox(width: 8),
+                                      SizedBox(width: 8),
                                       Text('Delete User'),
                                     ],
                                   ),

@@ -1,266 +1,139 @@
 // apps/api/src/routes/dashboard.ts
-// Dashboard data aggregation for different user roles
-import { Router, Response } from 'express';
-import { protect, authorize, requirePermission } from '../middleware/auth';
-import { RequestWithUser } from '../types/auth';
+import { Router } from 'express';
+import { protect } from '../middleware/auth';
 import { prisma } from '../config/database';
+import { Role } from '../lib/database';
 
 const router = Router();
 
-// GET /dashboard - Role-based dashboard data
-router.get('/', protect, async (req: RequestWithUser, res: Response) => {
-  const { role, id: userId, schoolId, email, name } = req.user!;
+// GET /dashboard - Role-based dashboard data aggregation
+router.get('/', protect, async (req, res) => {
+    const { role, id: userId, schoolId } = req.user!;
 
-  try {
-    let dashboardData = {};
+    try {
+        let dashboardData = {};
 
-    switch (role) {
-      case 'STUDENT':
-        dashboardData = getStudentDashboardMock(userId, schoolId);
-        break;
-      case 'TEACHER':
-        dashboardData = getTeacherDashboardMock(userId, schoolId);
-        break;
-      case 'ADMIN':
-      case 'SCHOOL_ADMIN':
-        dashboardData = getAdminDashboardMock(userId, schoolId);
-        break;
-      case 'PARENT':
-        dashboardData = getParentDashboardMock(userId, schoolId);
-        break;
-      case 'SUPER_ADMIN':
-        dashboardData = getSuperAdminDashboardMock(userId, schoolId);
-        break;
-      default:
-        return res.status(403).json({ error: 'Invalid user role' });
+        if (role === Role.STUDENT) {
+            dashboardData = await getStudentDashboard(userId, schoolId);
+        } else if (role === Role.TEACHER) {
+            dashboardData = await getTeacherDashboard(userId, schoolId);
+        } else if (role === Role.ADMIN) {
+            dashboardData = await getAdminDashboard(schoolId);
+        } else if (role === Role.SUPER_ADMIN) {
+            dashboardData = await getSuperAdminDashboard();
+        } else {
+             return res.status(403).json({ error: 'Invalid user role for dashboard access.' });
+        }
+
+        res.json({
+            user: { id: userId, role, schoolId },
+            ...dashboardData,
+        });
+
+    } catch (error) {
+        console.error(`Dashboard error for role ${role}:`, error);
+        res.status(500).json({ error: 'Failed to load dashboard data.' });
     }
+});
 
-    // Include user information in response
-    res.json({
-      user: {
-        id: userId,
-        email,
-        name,
-        role,
-        schoolId
-      },
-      ...dashboardData
+async function getStudentDashboard(userId: string, schoolId: string) {
+    const student = await prisma.student.findUnique({ where: { userId } });
+    if (!student) throw new Error('Student profile not found.');
+
+    const enrollments = await prisma.enrollment.findMany({
+        where: { studentId: student.id },
+        select: { classId: true }
     });
-  } catch (error) {
-    console.error('Dashboard error:', error);
-    res.status(500).json({ error: 'Failed to load dashboard data' });
-  }
-});
+    const classIds = enrollments.map(e => e.classId).filter(Boolean) as string[];
+    
+    const assignments = await prisma.assignment.findMany({
+        where: { lesson: { classId: { in: classIds } } },
+        include: { submissions: { where: { studentId: student.id } } } 
+    });
 
-// Mock dashboard data for development
-function getStudentDashboardMock(studentId: string, schoolId: string) {
-  return {
-    userRole: 'STUDENT',
-    stats: {
-      enrolledCourses: 2,
-      averageProgress: 68,
-      upcomingClasses: 1,
-      completedAssignments: 12,
-      averageGrade: 85
-    },
-    courses: [
-      {
-        id: '1',
-        title: 'Mathematics 101',
-        description: 'Introduction to Algebra and Geometry',
-        thumbnail: 'https://via.placeholder.com/150x100?text=Math',
-        progress: 75,
-        instructor: 'Dr. Smith',
-        duration: '8 weeks',
-        enrolled: true
-      },
-      {
-        id: '2',
-        title: 'Science Fundamentals',
-        description: 'Basic Physics and Chemistry',
-        thumbnail: 'https://via.placeholder.com/150x100?text=Science',
-        progress: 60,
-        instructor: 'Prof. Johnson',
-        duration: '10 weeks',
-        enrolled: true
-      }
-    ],
-    upcomingClasses: [
-      {
-        id: '1',
-        title: 'Live Math Session',
-        time: '2024-01-15 14:00',
-        instructor: 'Dr. Smith',
-        joinUrl: '/live-class/1'
-      }
-    ]
-  };
-}
+    const quizAttempts = await prisma.quizAttempt.findMany({
+        where: { studentId: student.id },
+    });
 
-function getTeacherDashboardMock(teacherId: string, schoolId: string) {
-  return {
-    userRole: 'TEACHER',
-    stats: {
-      myClasses: 4,
-      totalStudents: 45,
-      pendingGrades: 8,
-      avgProgress: 72
-    },
-    courses: [
-      {
-        id: '1',
-        title: 'Advanced Mathematics',
-        description: 'Calculus and beyond',
-        thumbnail: 'https://via.placeholder.com/150x100?text=Calc',
-        students: 12,
-        instructor: 'Dr. Smith',
-        duration: '12 weeks'
-      }
-    ],
-    upcomingClasses: []
-  };
-}
+    const completedAssignments = assignments.filter(a => a.submissions.length > 0).length;
+    const totalAssignments = assignments.length;
+    
+    const averageGrade = quizAttempts.length > 0 
+        ? quizAttempts.reduce((sum, attempt) => sum + (attempt.score || 0), 0) / quizAttempts.length
+        : 0;
 
-function getAdminDashboardMock(adminId: string, schoolId: string) {
-  return {
-    userRole: 'ADMIN',
-    stats: {
-      totalUsers: 234,
-      activeSchools: 12,
-      systemHealth: 98,
-      pendingApprovals: 5
-    },
-    courses: [],
-    upcomingClasses: []
-  };
-}
-
-function getSuperAdminDashboardMock(adminId: string, schoolId: string) {
-  return {
-    userRole: 'SUPER_ADMIN',
-    stats: {
-      totalUsers: 234,
-      activeSchools: 12,
-      systemHealth: 98,
-      pendingApprovals: 5
-    },
-    courses: [],
-    upcomingClasses: []
-  };
-}
-
-function getParentDashboardMock(parentId: string, schoolId: string) {
-  return {
-    userRole: 'PARENT',
-    stats: {
-      children: 2,
-      avgGrade: 85,
-      attendance: 92,
-      messages: 3
-    },
-    courses: [],
-    upcomingClasses: []
-  };
-}
-
-// GET /dashboard/analytics - Platform analytics for admin dashboard
-router.get('/analytics', protect, authorize('ADMIN', 'SCHOOL_ADMIN', 'SUPER_ADMIN'), async (req: RequestWithUser, res: Response) => {
-  try {
-    // In a real implementation, these would be actual database queries
-    const analytics = {
-      totalUsers: 1247,
-      activeUsers: 892,
-      totalLessons: 45,
-      publishedLessons: 38,
-      totalQuizzes: 67,
-      publishedQuizzes: 52,
-      recentActivity: [
-        {
-          id: '1',
-          type: 'user_login',
-          description: 'John Doe logged in',
-          timestamp: new Date().toISOString(),
-          userId: 'user1',
-          userName: 'John Doe'
+    return {
+        stats: {
+            enrolledCourses: classIds.length,
+            completedAssignments,
+            totalAssignments,
+            averageGrade: parseFloat(averageGrade.toFixed(2)),
         },
-        {
-          id: '2',
-          type: 'lesson_created',
-          description: 'New lesson "Advanced Math" created',
-          timestamp: new Date(Date.now() - 3600000).toISOString(),
-          userId: 'teacher1',
-          userName: 'Dr. Smith'
+        recentActivity: quizAttempts.slice(0, 5) // Last 5 quiz attempts
+    };
+}
+
+async function getTeacherDashboard(userId: string, schoolId: string) {
+    const teacher = await prisma.teacher.findUnique({ where: { userId } });
+    if (!teacher) throw new Error('Teacher profile not found.');
+    
+    const classes = await prisma.class.findMany({
+        where: { teacherId: teacher.id },
+        select: { id: true, _count: { select: { enrollments: true } } }
+    });
+
+    const totalStudents = classes.reduce((sum, c) => sum + c._count.enrollments, 0);
+    
+    const assignments = await prisma.assignment.findMany({
+        where: { teacherId: teacher.id },
+        select: { _count: { select: { submissions: true } } }
+    });
+
+    const submissions = assignments.reduce((sum, a) => sum + a._count.submissions, 0);
+
+    return {
+        stats: {
+            classCount: classes.length,
+            totalStudents,
+            totalSubmissions: submissions,
+        },
+    };
+}
+
+async function getAdminDashboard(schoolId: string) {
+    const [userCount, teacherCount, studentCount, classCount] = await prisma.$transaction([
+        prisma.user.count({ where: { schoolId } }),
+        prisma.user.count({ where: { schoolId, role: Role.TEACHER } }),
+        prisma.user.count({ where: { schoolId, role: Role.STUDENT } }),
+        prisma.class.count({ where: { schoolId } })
+    ]);
+
+    return {
+        stats: {
+            totalUsers: userCount,
+            teacherCount,
+            studentCount,
+            classCount
         }
-      ]
     };
+}
 
-    res.json(analytics);
-  } catch (error) {
-    console.error('Analytics error:', error);
-    res.status(500).json({ error: 'Failed to load analytics data' });
-  }
-});
+async function getSuperAdminDashboard() {
+    const [schoolCount, userCount, lessonCount, quizCount] = await prisma.$transaction([
+        prisma.school.count(),
+        prisma.user.count(),
+        prisma.lesson.count(),
+        prisma.quiz.count()
+    ]);
 
-// GET /dashboard/live-sessions - Active live sessions
-router.get('/live-sessions', protect, authorize('ADMIN', 'SCHOOL_ADMIN', 'SUPER_ADMIN', 'TEACHER'), async (req: RequestWithUser, res: Response) => {
-  try {
-    // Mock data - in production, this would query actual live sessions
-    const liveSessions = {
-      activeSessions: 3,
-      totalParticipants: 45,
-      sessions: [
-        {
-          id: 'session1',
-          title: 'Mathematics Live Class',
-          instructor: 'Dr. Smith',
-          participants: 15,
-          startTime: new Date(Date.now() - 1800000).toISOString(),
-          roomCode: 'MATH123'
-        },
-        {
-          id: 'session2',
-          title: 'Physics Tutorial',
-          instructor: 'Prof. Johnson',
-          participants: 20,
-          startTime: new Date(Date.now() - 900000).toISOString(),
-          roomCode: 'PHYS456'
-        },
-        {
-          id: 'session3',
-          title: 'Chemistry Lab Session',
-          instructor: 'Dr. Williams',
-          participants: 10,
-          startTime: new Date(Date.now() - 600000).toISOString(),
-          roomCode: 'CHEM789'
+    return {
+        stats: {
+            totalSchools: schoolCount,
+            totalUsers: userCount,
+            totalLessons: lessonCount,
+            totalQuizzes: quizCount,
         }
-      ]
     };
-
-    res.json(liveSessions);
-  } catch (error) {
-    console.error('Live sessions error:', error);
-    res.status(500).json({ error: 'Failed to load live sessions data' });
-  }
-});
-
-// GET /dashboard/chat-status - Chat system status
-router.get('/chat-status', protect, async (req: RequestWithUser, res: Response) => {
-  try {
-    // Mock data - in production, this would check actual chat service status
-    const chatStatus = {
-      isOnline: true,
-      totalMessages: 15678,
-      activeChats: 23,
-      onlineUsers: 89,
-      systemStatus: 'healthy',
-      lastMessageTime: new Date(Date.now() - 120000).toISOString()
-    };
-
-    res.json(chatStatus);
-  } catch (error) {
-    console.error('Chat status error:', error);
-    res.status(500).json({ error: 'Failed to load chat status' });
-  }
-});
+}
 
 export default router;

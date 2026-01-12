@@ -6,10 +6,10 @@ import 'dart:async';
 import '../services/api.dart';
 
 enum NotificationType {
-  content_created,
-  content_updated,
-  assignment_due,
-  quiz_available,
+  contentCreated,
+  contentUpdated,
+  assignmentDue,
+  quizAvailable,
   announcement,
   system,
 }
@@ -89,7 +89,6 @@ class NotificationService {
       // Start real-time connection (WebSocket simulation)
       _startRealtimeConnection(token);
     } catch (e) {
-      print('Error initializing notifications: $e');
     }
   }
 
@@ -148,7 +147,6 @@ class NotificationService {
         _notificationsStream.add(_notifications);
       }
     } catch (e) {
-      print('Error marking notification as read: $e');
     }
   }
 
@@ -176,7 +174,6 @@ class NotificationService {
       )).toList();
       _notificationsStream.add(_notifications);
     } catch (e) {
-      print('Error marking all notifications as read: $e');
     }
   }
 
@@ -214,7 +211,6 @@ class NotificationService {
         body: jsonEncode(notificationData),
       );
     } catch (e) {
-      print('Error sending notification: $e');
     }
   }
 
@@ -353,13 +349,13 @@ class _NotificationCenterState extends ConsumerState<NotificationCenter> {
 
   Color _getNotificationTypeColor(NotificationType type) {
     switch (type) {
-      case NotificationType.content_created:
+      case NotificationType.contentCreated:
         return Colors.green;
-      case NotificationType.content_updated:
+      case NotificationType.contentUpdated:
         return Colors.blue;
-      case NotificationType.assignment_due:
+      case NotificationType.assignmentDue:
         return Colors.orange;
-      case NotificationType.quiz_available:
+      case NotificationType.quizAvailable:
         return Colors.purple;
       case NotificationType.announcement:
         return Colors.red;
@@ -370,13 +366,13 @@ class _NotificationCenterState extends ConsumerState<NotificationCenter> {
 
   IconData _getNotificationTypeIcon(NotificationType type) {
     switch (type) {
-      case NotificationType.content_created:
+      case NotificationType.contentCreated:
         return Icons.add_circle;
-      case NotificationType.content_updated:
+      case NotificationType.contentUpdated:
         return Icons.update;
-      case NotificationType.assignment_due:
+      case NotificationType.assignmentDue:
         return Icons.assignment;
-      case NotificationType.quiz_available:
+      case NotificationType.quizAvailable:
         return Icons.quiz;
       case NotificationType.announcement:
         return Icons.campaign;

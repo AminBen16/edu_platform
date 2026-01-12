@@ -11,6 +11,12 @@ export enum Role {
   SCHOOL_ADMIN = 'SCHOOL_ADMIN',
 }
 
+export enum AuditLogAction {
+  USER_LOGIN = 'USER_LOGIN',
+  LESSON_VIEWED = 'LESSON_VIEWED',
+  QUIZ_ATTEMPTED = 'QUIZ_ATTEMPTED',
+}
+
 export interface DatabaseUser {
   id: string;
   email: string;

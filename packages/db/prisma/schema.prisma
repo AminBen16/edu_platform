@@ -31,6 +31,12 @@ enum MediaType {
   SCREEN_RECORDING
 }
 
+enum AuditLogAction {
+  USER_LOGIN
+  LESSON_VIEWED
+  QUIZ_ATTEMPTED
+}
+
 // =======================
 // MODELS
 // =======================
@@ -42,32 +48,37 @@ model School {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users         User[]
-  subjects      Subject[]
-  levels        Level[]
-  topics        Topic[]
-  lessons       Lesson[]
-  media         Media[]
-  quizzes       Quiz[]
-  questions     Question[]
-  attempts      QuizAttempt[]
-  comments      Comment[]
-  announcements Announcement[]
-  chats         Chat[]
-  messages      ChatMessage[]
+  users          User[]
+  subjects       Subject[]
+  levels         Level[]
+  topics         Topic[]
+  lessons        Lesson[]
+  media          Media[]
+  quizzes        Quiz[]
+  questions      Question[]
+  attempts       QuizAttempt[]
+  comments       Comment[]
+  announcements  Announcement[]
+  chats          Chat[]
+  messages       ChatMessage[]
+  settings       SchoolSettings?
+  classes        Class[]
+  auditLogs      AuditLog[]
 }
 
 model User {
-  id            String    @id @default(cuid())
-  schoolId      String
-  role          Role
-  name          String
-  email         String
-  passwordHash  String?
-  avatarUrl     String?
-  emailVerified DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  schoolId       String
+  role           Role
+  name           String
+  email          String
+  passwordHash   String?
+  avatarUrl      String?
+  emailVerified  DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  lastLoginAt    DateTime?
+  studentProfile StudentProfile?
 
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
@@ -78,14 +89,31 @@ model User {
   createdMedia     Media[]
   createdQuizzes   Quiz[]
   createdQuestions Question[]
-  quizAttempts     QuizAttempt[]
   comments         Comment[]
   sentMessages     ChatMessage[]
   chats            Chat[]         @relation("ChatUsers")
   announcements    Announcement[]
+  auditLogs        AuditLog[]
+  taughtClasses    Class[]        @relation("ClassTeacher")
+  attendedClasses  Class[]        @relation("ClassStudents")
 
   @@unique([email, schoolId])
   @@index([schoolId])
+}
+
+model StudentProfile {
+  id           String        @id @default(cuid())
+  userId       String        @unique
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollments  Enrollment[]
+  quizAttempts QuizAttempt[]
+}
+
+model Enrollment {
+  id               String         @id @default(cuid())
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  Lesson           Lesson[]
 }
 
 model Subject {
@@ -143,23 +171,26 @@ model Topic {
 }
 
 model Lesson {
-  id          String   @id @default(cuid())
-  title       String
-  description String?
-  order       Int      @default(0)
-  schoolId    String
-  topicId     String
-  authorId    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String    @id @default(cuid())
+  title        String
+  description  String?
+  order        Int       @default(0)
+  schoolId     String
+  topicId      String
+  authorId     String
+  isPublished  Boolean   @default(false)
+  publishedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   topic  Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
   author User   @relation(fields: [authorId], references: [id], onDelete: Restrict)
 
-  media    Media[]
-  comments Comment[]
-  quizzes  Quiz[]
+  media      Media[]
+  comments   Comment[]
+  quizzes    Quiz[]
+  Enrollment Enrollment[]
 
   @@index([schoolId])
   @@index([topicId])
@@ -191,25 +222,30 @@ model Comment {
   schoolId  String
   lessonId  String
   authorId  String
+  parentId  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   author User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent Comment? @relation("Replies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children Comment[] @relation("Replies")
 
   @@index([schoolId])
   @@index([lessonId])
+  @@index([parentId])
 }
 
 model Quiz {
-  id        String   @id @default(cuid())
-  title     String
-  schoolId  String
-  lessonId  String
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  title       String
+  schoolId    String
+  lessonId    String
+  authorId    String
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   school    School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   lesson    Lesson        @relation(fields: [lessonId], references: [id], onDelete: Cascade)
@@ -239,22 +275,22 @@ model Question {
 }
 
 model QuizAttempt {
-  id        String   @id @default(cuid())
-  score     Float
-  answers   Json
-  schoolId  String
-  quizId    String
-  userId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(cuid())
+  score            Float
+  answers          Json
+  schoolId         String
+  quizId           String
+  studentProfileId String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school         School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  quiz           Quiz           @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
 
   @@index([schoolId])
   @@index([quizId])
-  @@index([userId])
+  @@index([studentProfileId])
 }
 
 model Announcement {
@@ -300,3 +336,56 @@ model ChatMessage {
   @@index([schoolId])
   @@index([chatId])
 }
+
+model SchoolSettings {
+  id               String   @id @default(cuid())
+  schoolId         String   @unique
+  academicYear     String   @default("2024-2025")
+  semester         String   @default("Fall")
+  gradingScale     Json     @default("{\"A\": 90, \"B\": 80, \"C\": 70, \"D\": 60, \"F\": 0}")
+  timezone         String   @default("UTC")
+  onlineGrading    Boolean  @default(false)
+  digitalLibrary   Boolean  @default(false)
+  parentPortal     Boolean  @default(false)
+  schoolEmail      String?
+  schoolPhone      String?
+  emergencyContact String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+}
+
+model AuditLog {
+  id        String         @id @default(cuid())
+  schoolId  String
+  userId    String
+  action    AuditLogAction
+  details   Json?
+  createdAt DateTime       @default(now())
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@index([userId])
+}
+
+model Class {
+  id        String   @id @default(cuid())
+  name      String
+  schoolId  String
+  teacherId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacher  User   @relation("ClassTeacher", fields: [teacherId], references: [id], onDelete: Restrict)
+  students User[] @relation("ClassStudents")
+
+  @@index([schoolId])
+  @@index([teacherId])
+}
+

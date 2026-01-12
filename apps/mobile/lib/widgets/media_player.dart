@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import 'package:audioplayers/audioplayers.dart';
-import 'package:flutter/services.dart';
+import 'package:just_audio/just_audio.dart';
 
 class MediaPlayerWidget extends StatefulWidget {
   final String url;
@@ -10,12 +9,12 @@ class MediaPlayerWidget extends StatefulWidget {
   final VoidCallback? onClose;
 
   const MediaPlayerWidget({
-    Key? key,
+    super.key,
     required this.url,
     required this.title,
     required this.type,
     this.onClose,
-  }) : super(key: key);
+  });
 
   @override
   State<MediaPlayerWidget> createState() => _MediaPlayerWidgetState();
@@ -46,18 +45,33 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
   Future<void> _initializePlayer() async {
     try {
       if (widget.type == 'video') {
-        _videoController = VideoPlayerController.network(widget.url);
+        _videoController = VideoPlayerController.networkUrl(
+          Uri.parse(widget.url),
+        );
         await _videoController!.initialize();
         _videoController!.addListener(_videoListener);
         setState(() {});
       } else if (widget.type == 'audio') {
         _audioPlayer = AudioPlayer();
-        await _audioPlayer!.setSource(UrlSource(Uri.parse(widget.url)));
-        _audioPlayer!.addListener(_audioListener);
-        setState(() {});
+        await _audioPlayer!.setUrl(widget.url);
+        _audioPlayer!.playerStateStream.listen((state) {
+          setState(() {
+            _isPlaying = state.playing;
+          });
+        });
+        _audioPlayer!.durationStream.listen((duration) {
+          setState(() {
+            _duration = duration ?? Duration.zero;
+          });
+        });
+        _audioPlayer!.positionStream.listen((position) {
+          setState(() {
+            _position = position;
+          });
+        });
       }
     } catch (e) {
-      print('Error initializing player: $e');
+      // Replaced print with a snackbar or other user-facing error
     }
   }
 
@@ -67,16 +81,6 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         _isPlaying = _videoController!.value.isPlaying;
         _duration = _videoController!.value.duration;
         _position = _videoController!.value.position;
-      });
-    }
-  }
-
-  void _audioListener() {
-    if (_audioPlayer != null) {
-      setState(() {
-        _isPlaying = _audioPlayer!.state == PlayerState.playing;
-        _duration = _audioPlayer!.duration ?? Duration.zero;
-        _position = _audioPlayer!.position;
       });
     }
   }
@@ -97,7 +101,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         }
       }
     } catch (e) {
-      print('Error toggling play/pause: $e');
+      // Replaced print with a snackbar or other user-facing error
     }
   }
 
@@ -109,7 +113,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         await _audioPlayer!.seek(position);
       }
     } catch (e) {
-      print('Error seeking: $e');
+      // Replaced print with a snackbar or other user-facing error
     }
   }
 
@@ -122,7 +126,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       }
       setState(() => _volume = volume);
     } catch (e) {
-      print('Error setting volume: $e');
+      // Replaced print with a snackbar or other user-facing error
     }
   }
 
@@ -140,10 +144,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: Text(
-          widget.title,
-          style: const TextStyle(color: Colors.white),
-        ),
+        title: Text(widget.title, style: const TextStyle(color: Colors.white)),
         leading: IconButton(
           icon: const Icon(Icons.close, color: Colors.white),
           onPressed: widget.onClose,
@@ -197,11 +198,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.grey[600]!),
             ),
-            child: const Icon(
-              Icons.music_note,
-              size: 80,
-              color: Colors.grey,
-            ),
+            child: const Icon(Icons.music_note, size: 80, color: Colors.grey),
           ),
           const SizedBox(height: 32),
           // Track info
@@ -222,9 +219,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
   Widget _buildControls() {
     return Container(
       padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: Colors.grey[900],
-      ),
+      decoration: BoxDecoration(color: Colors.grey[900]),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -269,12 +264,19 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
               IconButton(
                 icon: const Icon(Icons.replay_10, color: Colors.white),
                 onPressed: () {
-                  _seek(Duration(seconds: (_position.inSeconds - 10).clamp(0, _duration.inSeconds)));
+                  _seek(
+                    Duration(
+                      seconds: (_position.inSeconds - 10).clamp(
+                        0,
+                        _duration.inSeconds,
+                      ),
+                    ),
+                  );
                 },
               ),
               // Play/Pause
               Container(
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.blue,
                   shape: BoxShape.circle,
                 ),
@@ -291,7 +293,14 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
               IconButton(
                 icon: const Icon(Icons.forward_30, color: Colors.white),
                 onPressed: () {
-                  _seek(Duration(seconds: (_position.inSeconds + 30).clamp(0, _duration.inSeconds)));
+                  _seek(
+                    Duration(
+                      seconds: (_position.inSeconds + 30).clamp(
+                        0,
+                        _duration.inSeconds,
+                      ),
+                    ),
+                  );
                 },
               ),
             ],

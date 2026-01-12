@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { api } from '../lib/api';
+import { api, User } from '../lib/api'; // Import User from lib/api
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
 
@@ -11,10 +11,10 @@ interface Class {
   grade?: string;
   capacity?: number;
   schoolId: string;
-  teacherId?: string;
-  teacher?: {
+  teacher?: { // Updated teacher relation
+    id: string; // Teacher profile ID
     user: {
-      id: string;
+      id: string; // User ID
       name: string;
       email: string;
     };
@@ -26,17 +26,10 @@ interface Class {
   updatedAt: string;
 }
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
-
 export default function ClassesPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, token } = useAuth(); // Get token from useAuth
   const [classes, setClasses] = useState<Class[]>([]);
-  const [teachers, setTeachers] = useState<User[]>([]);
+  const [teachers, setTeachers] = useState<User[]>([]); // Use imported User interface
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -47,28 +40,31 @@ export default function ClassesPage() {
     code: '',
     grade: '',
     capacity: 30,
-    teacherId: '',
+    teacherId: '', // This will be teacherProfile.id
   });
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && token) { // Ensure token is available
       loadData();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, token]); // Add token to dependency array
 
   const loadData = async () => {
     try {
       setLoading(true);
+      setError(null);
       
       const [classesResponse, usersResponse] = await Promise.all([
         api.get('/classes'),
-        api.get('/users')
+        api.get('/users') // Assuming /users endpoint returns users with teacherProfile included
       ]);
       
       setClasses(classesResponse.data);
-      setTeachers(usersResponse.data.filter((user: User) => user.role === 'TEACHER'));
-    } catch (err) {
-      setError('Failed to load data');
+      // Filter for users who have a teacherProfile and are active
+      setTeachers(usersResponse.data.filter((u: User) => u.teacherProfile && u.isActive));
+    } catch (err: any) {
+      console.error('Failed to load data:', err);
+      setError(err.response?.data?.error || 'Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -76,32 +72,41 @@ export default function ClassesPage() {
 
   const handleCreateClass = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newClass.name || !newClass.grade) return;
+    if (!newClass.name || !newClass.grade) {
+        setError('Class name and grade are required.');
+        return;
+    }
 
     try {
       setCreating(true);
-      setError('');
+      setError(null);
       
-      await api.post('/classes', newClass);
+      await api.post('/classes', {
+          ...newClass,
+          capacity: parseInt(newClass.capacity as any), // Ensure capacity is number
+      });
 
       setShowAddModal(false);
       setNewClass({ name: '', code: '', grade: '', capacity: 30, teacherId: '' });
       await loadData();
-    } catch (err) {
-      setError('Failed to create class');
+    } catch (err: any) {
+      console.error('Failed to create class:', err);
+      setError(err.response?.data?.error || 'Failed to create class');
     } finally {
       setCreating(false);
     }
   };
 
   const handleDeleteClass = async (classId: string) => {
-    if (!confirm('Are you sure you want to delete this class?')) return;
+    if (!confirm('Are you sure you want to delete this class? This action cannot be undone.')) return;
 
     try {
+      setError(null);
       await api.delete(`/classes/${classId}`);
       await loadData();
-    } catch (err) {
-      setError('Failed to delete class');
+    } catch (err: any) {
+      console.error('Failed to delete class:', err);
+      setError(err.response?.data?.error || 'Failed to delete class');
     }
   };
 
@@ -352,7 +357,7 @@ export default function ClassesPage() {
                   >
                     <option value="">Select Teacher</option>
                     {teachers.map((teacher) => (
-                      <option key={teacher.id} value={teacher.id}>
+                      <option key={teacher.teacherProfile?.id} value={teacher.teacherProfile?.id}>
                         {teacher.name}
                       </option>
                     ))}

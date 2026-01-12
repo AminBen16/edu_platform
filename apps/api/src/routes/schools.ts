@@ -1,199 +1,123 @@
 // apps/api/src/routes/schools.ts
-import { Router, Response } from 'express';
+import { Router } from 'express';
 import { prisma } from '../config/database';
-import { authorize, protect } from '../middleware/auth';
-import { RequestWithUser } from '../types/auth';
+import { protect } from '../middleware/auth';
+import { UserRole } from '@prisma/client';
 
 const router = Router();
 
-// GET /schools - Fetches all schools (for SUPER_ADMIN) or the user's school
-router.get('/', protect, async (req: RequestWithUser, res: Response) => {
-  try {
-    const user = req.user!;
-    let schools;
+// GET /schools - Fetches all schools (SUPER_ADMIN) or the user's school.
+router.get('/', protect, async (req, res) => {
+    try {
+        const { role, schoolId } = req.user!;
+        const schools = await prisma.school.findMany({
+            where: role === UserRole.SUPER_ADMIN ? undefined : { id: schoolId },
+            orderBy: { name: 'asc' },
+        });
 
-    if (user.role === 'SUPER_ADMIN') {
-      schools = await prisma.school.findMany({
-        orderBy: { createdAt: 'desc' },
-      });
-    } else {
-      // Other roles can only see their own school
-      schools = await prisma.school.findMany({
-        where: { id: user.schoolId },
-      });
+        res.json(schools);
+    } catch (error) {
+        console.error('Failed to fetch schools:', error);
+        res.status(500).json({ error: 'Failed to fetch schools.' });
     }
-    
-    res.status(200).json(schools);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'An error occurred while fetching schools.' });
-  }
 });
 
-// GET /schools/current - Get current user's school with full details
-router.get('/current', protect, async (req: RequestWithUser, res: Response) => {
-  try {
-    const user = req.user!;
-    
-    const school = await prisma.school.findUnique({
-      where: { id: user.schoolId },
-      include: {
-        classes: true
-      }
-    });
+// GET /schools/:id - Get a specific school's public details
+router.get('/:id', protect, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const school = await prisma.school.findUnique({
+            where: { id },
+            select: { id: true, name: true, logoUrl: true, domain: true }
+        });
 
-    if (!school) {
-      return res.status(404).json({ error: 'School not found' });
+        if (!school) {
+            return res.status(404).json({ error: 'School not found' });
+        }
+        res.json(school);
+    } catch (error) {
+        console.error(`Failed to fetch school ${id}:`, error);
+        res.status(500).json({ error: 'Failed to fetch school.' });
     }
-
-    res.status(200).json(school);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'An error occurred while fetching school details.' });
-  }
 });
+
 
 // POST /schools - Creates a new school (SUPER_ADMIN only)
-router.post('/', protect, authorize('SUPER_ADMIN'), async (req: RequestWithUser, res: Response) => {
-    const { name, code, address, phone, email, principal, vicePrincipal, academicYear, semester, timezone, gradingScale, attendancePolicy, features } = req.body;
+router.post('/', protect, async (req, res) => {
+    if (req.user!.role !== UserRole.SUPER_ADMIN) {
+        return res.status(403).json({ error: 'You are not authorized to create schools.' });
+    }
 
+    const { name, domain, logoUrl, settings } = req.body;
     if (!name) {
         return res.status(400).json({ error: 'School name is required.' });
     }
 
     try {
         const newSchool = await prisma.school.create({
-            data: {
-                name,
-                logoUrl: code || null,
-                settings: {
-                    address: address || '',
-                    phone: phone || '',
-                    email: email || '',
-                    principal: principal || '',
-                    vicePrincipal: vicePrincipal || '',
-                    academicYear: academicYear || '2023-2024',
-                    semester: semester || 'Fall',
-                    timezone: timezone || 'UTC',
-                    gradingScale: gradingScale || '4.0 GPA Scale',
-                    attendancePolicy: attendancePolicy || 'Standard attendance policy',
-                    features: features || {
-                      onlineGrading: true,
-                      digitalLibrary: true,
-                      parentPortal: true,
-                      studentEmail: true,
-                      emergencyAlerts: true,
-                    },
-                },
-            },
+            data: { name, domain, logoUrl, settings: settings || {} },
         });
         res.status(201).json(newSchool);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'An error occurred while creating the school.' });
-    }
-});
-
-// PUT /schools/:id - Update school details (ADMIN/SCHOOL_ADMIN/SUPER_ADMIN)
-router.put('/:id', protect, authorize('ADMIN', 'SCHOOL_ADMIN', 'SUPER_ADMIN'), async (req: RequestWithUser, res: Response) => {
-  const { id } = req.params;
-  const updates = req.body;
-
-  try {
-    const user = req.user!;
-    
-    // Check permissions
-    if (user.role !== 'SUPER_ADMIN' && user.schoolId !== id) {
-      return res.status(403).json({ error: 'Not authorized to update this school' });
-    }
-
-    const updatedSchool = await prisma.school.update({
-      where: { id },
-      data: {
-        settings: updates
-      }
-    });
-
-    res.status(200).json(updatedSchool);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'An error occurred while updating the school.' });
-  }
-});
-
-// POST /schools/:id/subjects - Add subjects to school
-router.post('/:id/subjects', protect, authorize('ADMIN', 'SCHOOL_ADMIN', 'SUPER_ADMIN'), async (req: RequestWithUser, res: Response) => {
-  const { id } = req.params;
-  const { subjects } = req.body;
-
-  try {
-    const user = req.user!;
-    
-    // Check permissions
-    if (user.role !== 'SUPER_ADMIN' && user.schoolId !== id) {
-      return res.status(403).json({ error: 'Not authorized to manage this school' });
-    }
-
-    const school = await prisma.school.findUnique({ where: { id } });
-    if (!school) {
-      return res.status(404).json({ error: 'School not found' });
-    }
-
-    // Create subjects
-    const subjectPromises = subjects.map((subject: any) => 
-      prisma.subject.create({
-        data: {
-          name: subject.name,
-          code: subject.code,
-          description: subject.description,
-          color: subject.color,
-          schoolId: id,
+        console.error('Failed to create school:', error);
+        // @ts-ignore
+        if (error.code === 'P2002') { // Prisma unique constraint violation for domain
+            return res.status(409).json({ error: 'A school with this domain already exists.' });
         }
-      })
-    );
-
-    await Promise.all(subjectPromises);
-
-    res.status(200).json({ message: 'Subjects added successfully' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'An error occurred while adding subjects.' });
-  }
+        res.status(500).json({ error: 'Failed to create school.' });
+    }
 });
 
-// POST /schools/:id/levels - Add grade levels to school settings
-router.post('/:id/levels', protect, authorize('ADMIN', 'SCHOOL_ADMIN', 'SUPER_ADMIN'), async (req: RequestWithUser, res: Response) => {
-  const { id } = req.params;
-  const { levels } = req.body;
+// PUT /schools/:id - Update school details (School ADMIN or SUPER_ADMIN)
+router.put('/:id', protect, async (req, res) => {
+    const { id } = req.params;
+    const { name, domain, logoUrl, settings } = req.body;
+    const { role, schoolId } = req.user!;
 
-  try {
-    const user = req.user!;
-    
-    // Check permissions
-    if (user.role !== 'SUPER_ADMIN' && user.schoolId !== id) {
-      return res.status(403).json({ error: 'Not authorized to manage this school' });
+    if (role !== UserRole.SUPER_ADMIN && (role !== UserRole.ADMIN || schoolId !== id)) {
+        return res.status(403).json({ error: 'You are not authorized to update this school.' });
     }
 
-    const school = await prisma.school.findUnique({ where: { id } });
-    if (!school) {
-      return res.status(404).json({ error: 'School not found' });
-    }
-
-    const updatedSchool = await prisma.school.update({
-      where: { id },
-      data: {
-        settings: {
-          ...(school.settings as any || {}),
-          levels: levels || []
+    try {
+        const school = await prisma.school.findUnique({ where: { id } });
+        if (!school) {
+            return res.status(404).json({ error: 'School not found' });
         }
-      }
-    });
+        
+        // Merge settings to avoid overwriting existing ones
+        const currentSettings = (school.settings || {}) as object;
+        const newSettings = { ...currentSettings, ...settings };
 
-    res.status(200).json(updatedSchool);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'An error occurred while updating levels.' });
-  }
+        const updatedSchool = await prisma.school.update({
+            where: { id },
+            data: {
+                name: name || undefined,
+                domain: domain || undefined,
+                logoUrl: logoUrl || undefined,
+                settings: newSettings
+            },
+        });
+        res.json(updatedSchool);
+    } catch (error) {
+        console.error(`Failed to update school ${id}:`, error);
+        res.status(500).json({ error: 'Failed to update school.' });
+    }
+});
+
+// DELETE /schools/:id - Delete a school (SUPER_ADMIN only)
+router.delete('/:id', protect, async (req, res) => {
+    if (req.user!.role !== UserRole.SUPER_ADMIN) {
+        return res.status(403).json({ error: 'You are not authorized to delete schools.' });
+    }
+    const { id } = req.params;
+
+    try {
+        await prisma.school.delete({ where: { id } });
+        res.status(204).send();
+    } catch (error) {
+        console.error(`Failed to delete school ${id}:`, error);
+        res.status(500).json({ error: 'Failed to delete school.' });
+    }
 });
 
 export default router;

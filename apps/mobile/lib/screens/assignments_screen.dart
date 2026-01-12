@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'assignment_details_screen.dart';
 
 class AssignmentsScreen extends ConsumerStatefulWidget {
   const AssignmentsScreen({super.key});
@@ -248,7 +249,7 @@ class _AssignmentsScreenState extends ConsumerState<AssignmentsScreen> {
                                 if (assignment['grade'] != null) ...[
                                   Row(
                                     children: [
-                                      Icon(
+                                      const Icon(
                                         Icons.grade,
                                         size: 16,
                                         color: Colors.green,
@@ -287,10 +288,12 @@ class _AssignmentsScreenState extends ConsumerState<AssignmentsScreen> {
                                     Expanded(
                                       child: ElevatedButton(
                                         onPressed: () {
-                                          // TODO: Navigate to assignment details
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Assignment details coming soon!'),
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  AssignmentDetailsScreen(
+                                                      assignment: assignment),
                                             ),
                                           );
                                         },
@@ -302,14 +305,16 @@ class _AssignmentsScreenState extends ConsumerState<AssignmentsScreen> {
                                         child: const Text('View Details'),
                                       ),
                                     ),
-                                    if (assignment['status'] == 'pending') ...[
+                                    if (assignment['status'] == 'pending' || assignment['status'] == 'in_progress') ...[
                                       const SizedBox(width: 12),
                                       ElevatedButton(
                                         onPressed: () {
-                                          // TODO: Start assignment
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Assignment submission coming soon!'),
+                                           Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  AssignmentDetailsScreen(
+                                                      assignment: assignment),
                                             ),
                                           );
                                         },
@@ -318,7 +323,7 @@ class _AssignmentsScreenState extends ConsumerState<AssignmentsScreen> {
                                           foregroundColor: Colors.white,
                                           padding: const EdgeInsets.symmetric(vertical: 12),
                                         ),
-                                        child: const Text('Start Assignment'),
+                                        child: Text(assignment['status'] == 'in_progress' ? 'Continue Assignment' : 'Start Assignment'),
                                       ),
                                     ],
                                   ],

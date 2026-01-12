@@ -8,11 +8,13 @@ import '../services/api.dart';
 class QuizScreen extends ConsumerStatefulWidget {
   final String quizId;
   final String quizTitle;
+  final List<dynamic>? questions;
 
   const QuizScreen({
     super.key,
     required this.quizId,
     required this.quizTitle,
+    this.questions,
   });
 
   @override
@@ -30,6 +32,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   Timer? _timer;
   bool _quizStarted = false;
   bool _quizCompleted = false;
+  DateTime? _quizEndTime;
 
   @override
   void initState() {
@@ -46,22 +49,44 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   void _startTimer() {
     setState(() {
       _quizStarted = true;
-      _timeRemaining = (quiz?['timeLimit'] ?? 30) * 60; // Convert minutes to seconds
+      final int minutes = (quiz?['timeLimit'] as int?) ?? 30;
+      _timeRemaining = minutes * 60;
+      _quizEndTime = DateTime.now().add(Duration(seconds: _timeRemaining));
     });
-    
+
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_timeRemaining > 0) {
+      if (_quizEndTime == null) return;
+      final int remaining = _quizEndTime!.difference(DateTime.now()).inSeconds;
+
+      if (remaining > 0) {
         setState(() {
-          _timeRemaining--;
+          _timeRemaining = remaining;
         });
       } else {
         _timer?.cancel();
+        setState(() => _timeRemaining = 0);
         _submitQuiz();
       }
     });
   }
 
   Future<void> _loadQuiz() async {
+    if (widget.questions != null && widget.questions!.isNotEmpty) {
+      setState(() {
+        questions = widget.questions!;
+        quiz = {
+          'id': widget.quizId,
+          'title': widget.quizTitle,
+          'questions': questions,
+          'timeLimit': 30,
+          'subject': 'General',
+          'difficulty': 'Medium',
+        };
+        _isLoading = false;
+      });
+      return;
+    }
+
     try {
       final token = await ApiService.getToken();
       if (token == null) {
@@ -70,9 +95,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
 
       final response = await http.get(
         Uri.parse('${ApiService.baseUrl}/quizzes/${widget.quizId}'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
@@ -103,7 +126,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
               'options': ['3', '4', '5', '6'],
               'correctAnswer': 1,
               'points': 10,
-              'explanation': '2 + 2 equals 4, which is the second option.'
+              'explanation': '2 + 2 equals 4, which is the second option.',
             },
             {
               'id': '2',
@@ -112,7 +135,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
               'options': ['London', 'Berlin', 'Paris', 'Madrid'],
               'correctAnswer': 2,
               'points': 10,
-              'explanation': 'Paris is the capital and largest city of France.'
+              'explanation': 'Paris is the capital and largest city of France.',
             },
             {
               'id': '3',
@@ -121,7 +144,8 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
               'options': ['Venus', 'Mars', 'Jupiter', 'Saturn'],
               'correctAnswer': 1,
               'points': 10,
-              'explanation': 'Mars is often called the "Red Planet" due to its reddish appearance.'
+              'explanation':
+                  'Mars is often called the "Red Planet" due to its reddish appearance.',
             },
             {
               'id': '4',
@@ -130,7 +154,8 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
               'options': ['Atlantic', 'Indian', 'Arctic', 'Pacific'],
               'correctAnswer': 3,
               'points': 10,
-              'explanation': 'The Pacific Ocean is the largest and deepest ocean on Earth.'
+              'explanation':
+                  'The Pacific Ocean is the largest and deepest ocean on Earth.',
             },
             {
               'id': '5',
@@ -139,9 +164,10 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
               'options': ['Van Gogh', 'Picasso', 'Da Vinci', 'Rembrandt'],
               'correctAnswer': 2,
               'points': 10,
-              'explanation': 'Leonardo da Vinci painted the Mona Lisa in the early 16th century.'
-            }
-          ]
+              'explanation':
+                  'Leonardo da Vinci painted the Mona Lisa in the early 16th century.',
+            },
+          ],
         };
         questions = quiz?['questions'] ?? [];
         _isLoading = false;
@@ -173,11 +199,11 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
       for (int i = 0; i < questions.length; i++) {
         final question = questions[i];
         totalPoints += (question['points'] as int?) ?? 10;
-        
+
         final userAnswer = selectedAnswers[i];
         final correctAnswer = question['correctAnswer'];
         final isCorrect = userAnswer == correctAnswer;
-        
+
         if (isCorrect) {
           score += (question['points'] as int?) ?? 10;
         }
@@ -193,7 +219,9 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
         });
       }
 
-      final percentage = totalPoints > 0 ? ((score / totalPoints) * 100).round() : 0;
+      final percentage = totalPoints > 0
+          ? ((score / totalPoints) * 100).round()
+          : 0;
 
       // Submit to API
       try {
@@ -205,7 +233,8 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
             'score': score,
             'totalPoints': totalPoints,
             'percentage': percentage,
-            'timeSpent': (quiz?['timeLimit'] ?? 30) * 60 - _timeRemaining,
+            'timeSpent':
+                ((quiz?['timeLimit'] as int?) ?? 30) * 60 - _timeRemaining,
             'submittedAt': DateTime.now().toIso8601String(),
           };
 
@@ -219,25 +248,38 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
           );
         }
       } catch (e) {
-        // Continue even if API submission fails
-        print('Quiz submission error: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error submitting quiz: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
 
       if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/quiz-result', arguments: {
-          'score': score,
-          'totalPoints': totalPoints,
-          'percentage': percentage.toString(),
-          'totalQuestions': questions.length,
-          'correctAnswers': selectedAnswers.entries
-              .where((entry) =>
-                  entry.value != null &&
-                  questions[entry.key]['correctAnswer'] == entry.value)
-              .length,
-          'results': results,
-          'quizTitle': quiz?['title'] ?? widget.quizTitle,
-          'timeSpent': (quiz?['timeLimit'] ?? 30) * 60 - _timeRemaining,
-        });
+        Navigator.of(context).pushReplacementNamed(
+          '/quiz-result',
+          arguments: {
+            'score': score.toDouble(),
+            'totalPoints': totalPoints.toDouble(),
+            'percentage': percentage.toDouble(),
+            'totalQuestions': questions.length.toDouble(),
+            'correctAnswers': selectedAnswers.entries
+                .where(
+                  (entry) =>
+                      entry.value != null &&
+                      questions[entry.key]['correctAnswer'] == entry.value,
+                )
+                .length
+                .toDouble(),
+            'results': results,
+            'quizTitle': quiz?['title'] ?? widget.quizTitle,
+            'timeSpent': ((quiz?['timeLimit'] ?? 30) * 60 - _timeRemaining)
+                .toDouble(),
+          },
+        );
       }
     } catch (e) {
       setState(() {
@@ -303,11 +345,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.quiz,
-                size: 80,
-                color: Colors.blue[800],
-              ),
+              Icon(Icons.quiz, size: 80, color: Colors.blue[800]),
               const SizedBox(height: 24),
               Text(
                 quiz?['title'] ?? widget.quizTitle,
@@ -320,10 +358,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
               const SizedBox(height: 16),
               Text(
                 quiz?['description'] ?? 'Test your knowledge on this topic',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
@@ -343,10 +378,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                   ),
                   child: const Text(
                     'Start Quiz',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -357,11 +389,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     }
 
     if (currentQuestionIndex >= questions.length) {
-      return const Scaffold(
-        body: Center(
-          child: Text('Quiz completed!'),
-        ),
-      );
+      return const Scaffold(body: Center(child: Text('Quiz completed!')));
     }
 
     final currentQuestion = questions[currentQuestionIndex];
@@ -380,7 +408,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              '${_timeRemaining ~/ 60}:${_timeRemaining % 60.toString().padLeft(2, '0')}',
+              '${_timeRemaining ~/ 60}:${(_timeRemaining % 60).toString().padLeft(2, '0')}',
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
@@ -425,70 +453,80 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                 ),
                 const SizedBox(height: 20),
                 if (currentQuestion['type'] == 'multiple_choice')
-                  ...((currentQuestion['options'] as List<dynamic>).asMap().entries).map((entry) {
-                    final optionIndex = entry.key;
-                    final option = entry.value;
-                    final isSelected = selectedAnswers[currentQuestionIndex] == optionIndex;
+                  ...((currentQuestion['options'] as List<dynamic>)
+                          .asMap()
+                          .entries)
+                      .map((entry) {
+                        final optionIndex = entry.key;
+                        final option = entry.value;
+                        final isSelected =
+                            selectedAnswers[currentQuestionIndex] ==
+                            optionIndex;
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: InkWell(
-                        onTap: () => _selectAnswer(currentQuestionIndex, optionIndex),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: isSelected 
-                                ? Colors.blue[800]! 
-                                : Colors.grey[300]!,
-                              width: 2,
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: InkWell(
+                            onTap: () => _selectAnswer(
+                              currentQuestionIndex,
+                              optionIndex,
                             ),
-                            borderRadius: BorderRadius.circular(8),
-                            color: isSelected 
-                              ? Colors.blue[50]
-                              : Colors.transparent,
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                                color: isSelected 
-                                  ? Colors.blue[800] 
-                                  : Colors.grey[600],
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  option.toString(),
-                                  style: TextStyle(
-                                    color: isSelected 
-                                      ? Colors.blue[800] 
-                                      : Colors.black87,
-                                    fontWeight: isSelected 
-                                      ? FontWeight.bold 
-                                      : FontWeight.normal,
-                                  ),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: isSelected
+                                      ? Colors.blue[800]!
+                                      : Colors.grey[300]!,
+                                  width: 2,
                                 ),
+                                borderRadius: BorderRadius.circular(8),
+                                color: isSelected
+                                    ? Colors.blue[50]
+                                    : Colors.transparent,
                               ),
-                            ],
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    isSelected
+                                        ? Icons.radio_button_checked
+                                        : Icons.radio_button_unchecked,
+                                    color: isSelected
+                                        ? Colors.blue[800]
+                                        : Colors.grey[600],
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      option.toString(),
+                                      style: TextStyle(
+                                        color: isSelected
+                                            ? Colors.blue[800]
+                                            : Colors.black87,
+                                        fontWeight: isSelected
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
+                        );
+                      }),
                 const Spacer(),
                 Row(
                   children: [
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: currentQuestionIndex > 0 
-                          ? () {
-                              setState(() {
-                                currentQuestionIndex--;
-                              });
-                            }
-                          : null,
+                        onPressed: currentQuestionIndex > 0
+                            ? () {
+                                setState(() {
+                                  currentQuestionIndex--;
+                                });
+                              }
+                            : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.grey[300],
                           foregroundColor: Colors.black87,
@@ -500,22 +538,25 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: selectedAnswers[currentQuestionIndex] != null
-                          ? () {
-                              if (currentQuestionIndex < questions.length - 1) {
-                                setState(() {
-                                  currentQuestionIndex++;
-                                });
-                              } else {
-                                _submitQuiz();
+                            ? () {
+                                if (currentQuestionIndex <
+                                    questions.length - 1) {
+                                  setState(() {
+                                    currentQuestionIndex++;
+                                  });
+                                } else {
+                                  _submitQuiz();
+                                }
                               }
-                            }
-                          : null,
+                            : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blue[800],
                           foregroundColor: Colors.white,
                         ),
                         child: Text(
-                          currentQuestionIndex < questions.length - 1 ? 'Next' : 'Submit',
+                          currentQuestionIndex < questions.length - 1
+                              ? 'Next'
+                              : 'Submit',
                         ),
                       ),
                     ),
@@ -539,16 +580,13 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Duration:'),
-                Text('${quiz?['timeLimit'] ?? 30} minutes'),
+                Text('${(quiz?['timeLimit'] as int?) ?? 30} minutes'),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Questions:'),
-                Text('${questions.length}'),
-              ],
+              children: [const Text('Questions:'), Text('${questions.length}')],
             ),
             const SizedBox(height: 8),
             Row(

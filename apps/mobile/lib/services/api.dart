@@ -8,9 +8,10 @@ class ApiService {
   static String get baseUrl {
     // Check if running in debug mode (local development)
     // For Flutter web, check the debug flag more reliably
-    final bool isDebugMode = const bool.fromEnvironment('debug', defaultValue: false) ||
-                          const bool.fromEnvironment('dart.vm.product') == false;
-    
+    const bool isDebugMode =
+        bool.fromEnvironment('debug', defaultValue: false) ||
+        bool.fromEnvironment('dart.vm.product') == false;
+
     if (isDebugMode) {
       // Local development
       return "http://localhost:3000/api/v1";
@@ -38,21 +39,20 @@ class ApiService {
   }
 
   // Login method
-  static Future<Map<String, dynamic>> login(String email, String password) async {
-    print('Attempting login to: $_baseUrl/auth/login');
-    print('Environment debug mode: ${!const bool.fromEnvironment('dart.vm.product')}');
-    
+  static Future<Map<String, dynamic>> login(
+    String email,
+    String password,
+    String schoolId,
+  ) async {
     final response = await http.post(
       Uri.parse("$_baseUrl/auth/login"),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'email': email,
         'password': password,
+        'schoolId': schoolId,
       }),
     );
-
-    print('Response status: ${response.statusCode}');
-    print('Response body: ${response.body}');
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -68,6 +68,60 @@ class ApiService {
   // Logout method
   static Future<void> logout() async {
     await removeToken();
+  }
+
+  // Register method
+  static Future<Map<String, dynamic>> register(
+    String email,
+    String password,
+    String name,
+    String invitationCode,
+  ) async {
+    final response = await http.post(
+      Uri.parse("$_baseUrl/auth/register"),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email,
+        'password': password,
+        'name': name,
+        'invitationCode': invitationCode,
+      }),
+    );
+
+    if (response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      await saveToken(data['token']);
+      return data;
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Registration failed');
+    }
+  }
+
+  // Validate invitation
+  static Future<Map<String, dynamic>> validateInvitation(String code) async {
+    final response = await http.get(Uri.parse("$_baseUrl/auth/validate/$code"));
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Invalid invitation code');
+    }
+  }
+
+  // Request password reset
+  static Future<void> requestPasswordReset(String email) async {
+    final response = await http.post(
+      Uri.parse("$_baseUrl/auth/forgot-password"),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email}),
+    );
+
+    if (response.statusCode != 200) {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Failed to request password reset');
+    }
   }
 
   static Future<List> fetchLessons() async {
@@ -129,7 +183,7 @@ class ApiService {
         final directory = await getApplicationDocumentsDirectory();
         final filePath = '${directory.path}/$filename';
         final file = File(filePath);
-        
+
         // Write the file to disk
         await file.writeAsBytes(response.bodyBytes);
         return file;
@@ -156,7 +210,7 @@ class ApiService {
       final filename = '${title.replaceAll(RegExp(r'[^\w\s-]'), '_')}.pdf';
       final filePath = '${directory.path}/$filename';
       final file = File(filePath);
-      
+
       await file.writeAsBytes(response.bodyBytes);
       return file;
     } else {
@@ -179,7 +233,7 @@ class ApiService {
       final filename = '${title.replaceAll(RegExp(r'[^\w\s-]'), '_')}.pdf';
       final filePath = '${directory.path}/$filename';
       final file = File(filePath);
-      
+
       await file.writeAsBytes(response.bodyBytes);
       return file;
     } else {
@@ -188,7 +242,10 @@ class ApiService {
   }
 
   // Download assignment as PDF
-  static Future<File> downloadAssignment(String assignmentId, String title) async {
+  static Future<File> downloadAssignment(
+    String assignmentId,
+    String title,
+  ) async {
     final token = await getToken();
     if (token == null) throw Exception('Not authenticated');
 
@@ -202,11 +259,194 @@ class ApiService {
       final filename = '${title.replaceAll(RegExp(r'[^\w\s-]'), '_')}.pdf';
       final filePath = '${directory.path}/$filename';
       final file = File(filePath);
-      
+
       await file.writeAsBytes(response.bodyBytes);
       return file;
     } else {
       throw Exception('Failed to download assignment: ${response.statusCode}');
+    }
+  }
+
+  // Create a new quiz
+  static Future<Map<String, dynamic>> createQuiz(
+    Map<String, dynamic> quizData,
+  ) async {
+    final token = await getToken();
+    if (token == null) {
+      throw Exception('Not authenticated');
+    }
+
+    final response = await http.post(
+      Uri.parse('$_baseUrl/quizzes'),
+      headers: {
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(quizData),
+    );
+
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Failed to create quiz');
+    }
+  }
+
+  // Create a new assignment
+  static Future<Map<String, dynamic>> createAssignment(
+    Map<String, dynamic> assignmentData,
+  ) async {
+    final token = await getToken();
+    if (token == null) {
+      throw Exception('Not authenticated');
+    }
+
+    final response = await http.post(
+      Uri.parse('$_baseUrl/assignments'),
+      headers: {
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(assignmentData),
+    );
+
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Failed to create assignment');
+    }
+  }
+
+  // Create a new announcement
+  static Future<Map<String, dynamic>> createAnnouncement(
+    Map<String, dynamic> announcementData,
+  ) async {
+    final token = await getToken();
+    if (token == null) {
+      throw Exception('Not authenticated');
+    }
+
+    final response = await http.post(
+      Uri.parse('$_baseUrl/announcements'),
+      headers: {
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(announcementData),
+    );
+
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Failed to create announcement');
+    }
+  }
+
+  // Fetch recent content
+  static Future<List<Map<String, dynamic>>> fetchRecentContent() async {
+    final token = await getToken();
+    if (token == null) {
+      throw Exception('Not authenticated');
+    }
+
+    final response = await http.get(
+      Uri.parse('$_baseUrl/content/recent'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Failed to fetch recent content');
+    }
+  }
+
+  // Fetch draft content
+  static Future<List<Map<String, dynamic>>> fetchDrafts() async {
+    final token = await getToken();
+    if (token == null) {
+      throw Exception('Not authenticated');
+    }
+
+    final response = await http.get(
+      Uri.parse('$_baseUrl/content/drafts'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Failed to fetch drafts');
+    }
+  }
+
+  // Fetch scheduled content
+  static Future<List<Map<String, dynamic>>> fetchScheduledContent() async {
+    final token = await getToken();
+    if (token == null) {
+      throw Exception('Not authenticated');
+    }
+
+    final response = await http.get(
+      Uri.parse('$_baseUrl/content/scheduled'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(
+        errorData['error'] ?? 'Failed to fetch scheduled content',
+      );
+    }
+  }
+
+  // Fetch messages
+  static Future<List<dynamic>> fetchMessages(String classId) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await http.get(
+      Uri.parse('$_baseUrl/chat/messages/$classId'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Failed to load messages');
+    }
+  }
+
+  // Send message
+  static Future<Map<String, dynamic>> sendMessage(
+    String classId,
+    Map<String, dynamic> messageData,
+  ) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await http.post(
+      Uri.parse('$_baseUrl/chat/message'),
+      headers: {
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({...messageData, 'classId': classId}),
+    );
+
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Failed to send message');
     }
   }
 }

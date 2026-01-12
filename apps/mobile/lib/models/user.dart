@@ -11,6 +11,9 @@ class User {
   final String role;
   final String schoolId;
   final String? avatarUrl;
+  final bool isActive;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   User({
     required this.id,
@@ -19,6 +22,9 @@ class User {
     required this.role,
     required this.schoolId,
     this.avatarUrl,
+    required this.isActive,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
   factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);

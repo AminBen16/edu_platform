@@ -49,27 +49,6 @@ class _MediaContentViewerState extends ConsumerState<MediaContentViewer> {
     return ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].contains(type.toLowerCase());
   }
 
-  IconData _getMediaIcon(String? type) {
-    if (_isVideo(type)) return Icons.video_library;
-    if (_isAudio(type)) return Icons.audiotrack;
-    if (_isDocument(type)) return Icons.description;
-    return Icons.insert_drive_file;
-  }
-
-  Color _getMediaColor(String? type) {
-    if (_isVideo(type)) return Colors.red;
-    if (_isAudio(type)) return Colors.purple;
-    if (_isDocument(type)) return Colors.blue;
-    return Colors.grey;
-  }
-
-  String _formatFileSize(int? bytes) {
-    if (bytes == null) return 'Unknown size';
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-  }
-
   void _openMedia(dynamic resource) {
     final url = resource['url'] ?? '';
     final title = resource['title'] ?? 'Media';
@@ -175,14 +154,13 @@ class _MediaContentViewerState extends ConsumerState<MediaContentViewer> {
     try {
       final url = resource['url'] ?? '';
       final title = resource['title'] ?? 'Document';
-      final type = resource['type'] ?? '';
       
       // Use the API service to download the file
-      final file = await ApiService.downloadFile(url, '${title}_${DateTime.now().millisecondsSinceEpoch}');
+      await ApiService.downloadFile(url, '${title}_${DateTime.now().millisecondsSinceEpoch}');
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('Document downloaded successfully!'),
             backgroundColor: Colors.green,
           ),
@@ -363,7 +341,7 @@ class MediaCard extends StatelessWidget {
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withAlpha((255 * 0.1).round()),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                 ),
                 child: Icon(

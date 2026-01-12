@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useDashboard } from '../hooks/useDashboard';
 import { useAuth } from '../hooks/useAuth';
-import { api } from '../lib/api';
+import { api, setAuthToken, School } from '../lib/api'; // Import School and setAuthToken
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
 import StatsCard from '../components/StatsCard';
 
 export default function AdminDashboard() {
-  const { user, isAuthenticated, logout } = useAuth();
-  const { analytics, recentUsers, recentLessons, recentQuizzes, school, loading, error, refreshData } = useDashboard();
+  const { user, isAuthenticated, token, logout } = useAuth(); // Get token from useAuth
+  const { analytics, recentUsers, recentLessons, recentQuizzes, school, loading, error, refreshData } = useDashboard(token); // Pass token to useDashboard
   const [teachers, setTeachers] = useState([]);
 
   useEffect(() => {
-    if (isAuthenticated && school) {
+    setAuthToken(token || null); // Set the auth token in the API client
+  }, [token]);
+
+  useEffect(() => {
+    if (isAuthenticated && school && token) { // Ensure token is available
       // Load teachers for the stats card
       api.get('/users').then(response => {
         const teacherData = response.data.filter((user: any) => user.role === 'TEACHER');
@@ -21,7 +25,7 @@ export default function AdminDashboard() {
         console.error('Failed to load teachers:', err);
       });
     }
-  }, [isAuthenticated, school]);
+  }, [isAuthenticated, school, token]); // Add token to dependency array
 
   if (!isAuthenticated) {
     return (

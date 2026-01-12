@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'quiz_taking_screen.dart';
 
 class QuizzesScreen extends ConsumerStatefulWidget {
   const QuizzesScreen({super.key});
@@ -335,10 +336,11 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen> {
                                       child: ElevatedButton(
                                         onPressed: quiz['status'] == 'available' || quiz['status'] == 'in_progress'
                                             ? () {
-                                                // TODO: Navigate to quiz
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text('Quiz functionality coming soon!'),
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        QuizTakingScreen(quiz: quiz),
                                                   ),
                                                 );
                                               }

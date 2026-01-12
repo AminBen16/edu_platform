@@ -1,245 +1,229 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class LiveClassScreen extends ConsumerStatefulWidget {
-  final String classId;
-  
-  const LiveClassScreen({super.key, required this.classId});
+class LiveClassScreen extends StatefulWidget {
+  final String lessonTitle;
+  final String teacherName;
+
+  LiveClassScreen({
+    super.key,
+    required this.lessonTitle,
+    required this.teacherName,
+  });
 
   @override
-  ConsumerState<LiveClassScreen> createState() => _LiveClassScreenState();
+  State<LiveClassScreen> createState() => _LiveClassScreenState();
 }
 
-class _LiveClassScreenState extends ConsumerState<LiveClassScreen> {
-  bool _isJoined = false;
+class _LiveClassScreenState extends State<LiveClassScreen> {
   bool _isMuted = false;
   bool _isVideoOff = false;
-  int _participants = 0;
+  bool _isChatVisible = false;
+  bool _isFrontCamera = true;
+  final TextEditingController _chatController = TextEditingController();
+  final List<String> _messages = [
+    "Welcome to the class!",
+    "Please keep your mics muted.",
+  ];
+
+  @override
+  void dispose() {
+    _chatController.dispose();
+    super.dispose();
+  }
+
+  void _sendMessage() {
+    if (_chatController.text.isNotEmpty) {
+      setState(() {
+        _messages.add("You: ${_chatController.text}");
+        _chatController.clear();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text('Live Class'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.lessonTitle,
+              style: const TextStyle(fontSize: 16, color: Colors.white),
+            ),
+            Text(
+              'with ${widget.teacherName}',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.normal,
+                color: Colors.white70,
+              ),
+            ),
+          ],
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           IconButton(
-            icon: Icon(_isMuted ? Icons.mic_off : Icons.mic),
-            onPressed: _toggleMute,
-          ),
-          IconButton(
-            icon: Icon(_isVideoOff ? Icons.videocam_off : Icons.videocam),
-            onPressed: _toggleVideo,
+            icon: Icon(
+              _isChatVisible ? Icons.chat_bubble : Icons.chat_bubble_outline,
+              color: Colors.white,
+            ),
+            onPressed: () => setState(() => _isChatVisible = !_isChatVisible),
           ),
         ],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          // Video Area
-          Expanded(
-            flex: 3,
+          // Main Video Area
+          Container(
+            color: Colors.grey[900],
+            child: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.live_tv, size: 80, color: Colors.white24),
+                  SizedBox(height: 16),
+                  Text(
+                    'Live Stream Feed',
+                    style: TextStyle(color: Colors.white54, fontSize: 18),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Self View (PIP)
+          Positioned(
+            right: 16,
+            top: 16,
+            width: 100,
+            height: 150,
             child: Container(
-              width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.black,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white24),
               ),
-              margin: const EdgeInsets.all(16),
-              child: Stack(
-                children: [
-                  // Main Video
-                  Center(
-                    child: _isVideoOff
-                        ? const Icon(
-                            Icons.videocam_off,
-                            size: 64,
-                            color: Colors.white,
-                          )
-                        : Container(
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade800,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Center(
-                              child: Icon(
-                                Icons.person,
-                                size: 64,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                  ),
-                  
-                  // Participant Video (small)
-                  Positioned(
-                    top: 16,
-                    right: 16,
-                    child: Container(
-                      width: 100,
-                      height: 75,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade700,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.person,
-                          size: 24,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                  
-                  // Class Info Overlay
-                  Positioned(
-                    bottom: 16,
-                    left: 16,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Mathematics - Live',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            'Dr. Sarah Johnson',
-                            style: TextStyle(
-                              color: Colors.white70,
+              child: _isVideoOff
+                  ? const Center(
+                      child: Icon(Icons.videocam_off, color: Colors.white54),
+                    )
+                  : ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        color: Colors.grey[800],
+                        child: Center(
+                          child: Text(
+                            _isFrontCamera ? "Front\nCamera" : "Back\nCamera",
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.white54,
                               fontSize: 12,
                             ),
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
             ),
           ),
-          
-          // Controls and Chat
-          Expanded(
-            flex: 1,
-            child: Container(
-              margin: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  // Participants Info
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.people),
-                            const SizedBox(width: 8),
-                            Text('$_participants Participants'),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: _isJoined ? Colors.green : Colors.grey,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+
+          // Chat Overlay
+          if (_isChatVisible)
+            Positioned(
+              right: 0,
+              top: 0,
+              bottom: 100,
+              width: MediaQuery.of(context).size.width * 0.7,
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.7),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(8),
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
                           child: Text(
-                            _isJoined ? 'Joined' : 'Not Joined',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            _messages[index],
+                            style: const TextStyle(color: Colors.white),
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  
-                  // Control Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: _toggleJoin,
-                          icon: Icon(_isJoined ? Icons.call_end : Icons.call),
-                          label: Text(_isJoined ? 'Leave' : 'Join'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _isJoined ? Colors.red : Colors.green,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            // Open chat
-                          },
-                          icon: const Icon(Icons.chat),
-                          label: const Text('Chat'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  
-                  // Class Info
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
                         children: [
-                          Text(
-                            'About this class',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                          Expanded(
+                            child: TextField(
+                              controller: _chatController,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: const InputDecoration(
+                                hintText: 'Type a message...',
+                                hintStyle: TextStyle(color: Colors.white54),
+                                border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                              ),
+                              onSubmitted: (_) => _sendMessage(),
                             ),
                           ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Topic: Algebra Fundamentals\n'
-                            'Duration: 45 minutes\n'
-                            'Recording: Available after class',
-                            style: TextStyle(fontSize: 12),
+                          IconButton(
+                            icon: const Icon(Icons.send, color: Colors.blue),
+                            onPressed: _sendMessage,
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+            ),
+
+          // Controls
+          Positioned(
+            bottom: 30,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildControlBtn(
+                  icon: Icons.cameraswitch,
+                  color: Colors.white,
+                  bgColor: Colors.white24,
+                  onPressed: () =>
+                      setState(() => _isFrontCamera = !_isFrontCamera),
+                ),
+                _buildControlBtn(
+                  icon: _isMuted ? Icons.mic_off : Icons.mic,
+                  color: _isMuted ? Colors.black : Colors.white,
+                  bgColor: _isMuted ? Colors.white : Colors.white24,
+                  onPressed: () => setState(() => _isMuted = !_isMuted),
+                ),
+                _buildControlBtn(
+                  icon: Icons.call_end,
+                  color: Colors.white,
+                  bgColor: Colors.red,
+                  onPressed: () => Navigator.pop(context),
+                  size: 70,
+                ),
+                _buildControlBtn(
+                  icon: _isVideoOff ? Icons.videocam_off : Icons.videocam,
+                  color: _isVideoOff ? Colors.black : Colors.white,
+                  bgColor: _isVideoOff ? Colors.white : Colors.white24,
+                  onPressed: () => setState(() => _isVideoOff = !_isVideoOff),
+                ),
+              ],
             ),
           ),
         ],
@@ -247,38 +231,21 @@ class _LiveClassScreenState extends ConsumerState<LiveClassScreen> {
     );
   }
 
-  void _toggleJoin() {
-    setState(() {
-      _isJoined = !_isJoined;
-      _participants = _isJoined ? _participants + 1 : _participants - 1;
-    });
-    
-    if (_isJoined) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Joined the live class')),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Left the live class')),
-      );
-    }
-  }
-
-  void _toggleMute() {
-    setState(() {
-      _isMuted = !_isMuted;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_isMuted ? 'Microphone muted' : 'Microphone unmuted')),
-    );
-  }
-
-  void _toggleVideo() {
-    setState(() {
-      _isVideoOff = !_isVideoOff;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_isVideoOff ? 'Camera turned off' : 'Camera turned on')),
+  Widget _buildControlBtn({
+    required IconData icon,
+    required Color color,
+    required Color bgColor,
+    required VoidCallback onPressed,
+    double size = 50,
+  }) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: bgColor),
+        child: Icon(icon, color: color),
+      ),
     );
   }
 }

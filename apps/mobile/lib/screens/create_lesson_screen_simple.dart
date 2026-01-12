@@ -19,32 +19,60 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
   final _durationController = TextEditingController();
   final _videoUrlController = TextEditingController();
   final _documentUrlController = TextEditingController();
-  
+
   bool _isLoading = false;
   String? _selectedSubject;
   String? _selectedClass;
   String? _selectedDifficulty;
   bool _isPublished = false;
-  List<String> _selectedTags = [];
-  
+  final List<String> _selectedTags = [];
+
   final List<String> _subjects = [
-    'Mathematics', 'Science', 'English', 'History', 'Geography',
-    'Physics', 'Chemistry', 'Biology', 'Computer Science', 'Art'
+    'Mathematics',
+    'Science',
+    'English',
+    'History',
+    'Geography',
+    'Physics',
+    'Chemistry',
+    'Biology',
+    'Computer Science',
+    'Art',
   ];
-  
+
   final List<String> _classes = [
-    'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5',
-    'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10',
-    'Grade 11', 'Grade 12'
+    'Grade 1',
+    'Grade 2',
+    'Grade 3',
+    'Grade 4',
+    'Grade 5',
+    'Grade 6',
+    'Grade 7',
+    'Grade 8',
+    'Grade 9',
+    'Grade 10',
+    'Grade 11',
+    'Grade 12',
   ];
-  
+
   final List<String> _difficulties = [
-    'Beginner', 'Intermediate', 'Advanced', 'Expert'
+    'Beginner',
+    'Intermediate',
+    'Advanced',
+    'Expert',
   ];
-  
+
   final List<String> _availableTags = [
-    'Introduction', 'Theory', 'Practical', 'Assessment', 'Homework',
-    'Video', 'Reading', 'Interactive', 'Group Work', 'Individual'
+    'Introduction',
+    'Theory',
+    'Practical',
+    'Assessment',
+    'Homework',
+    'Video',
+    'Reading',
+    'Interactive',
+    'Group Work',
+    'Individual',
   ];
 
   @override
@@ -74,11 +102,11 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
         'title': _titleController.text.trim(),
         'description': _descriptionController.text.trim(),
         'duration': int.parse(_durationController.text.trim()),
-        'videoUrl': _videoUrlController.text.trim().isNotEmpty 
-            ? _videoUrlController.text.trim() 
+        'videoUrl': _videoUrlController.text.trim().isNotEmpty
+            ? _videoUrlController.text.trim()
             : null,
-        'documentUrl': _documentUrlController.text.trim().isNotEmpty 
-            ? _documentUrlController.text.trim() 
+        'documentUrl': _documentUrlController.text.trim().isNotEmpty
+            ? _documentUrlController.text.trim()
             : null,
         'subject': _selectedSubject,
         'class': _selectedClass,
@@ -101,14 +129,15 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
         // Send notifications
         await NotificationService().sendNotification(
           title: 'New Lesson Available',
-          message: 'A new lesson has been created: ${_titleController.text.trim()}',
-          type: NotificationType.content_created,
+          message:
+              'A new lesson has been created: ${_titleController.text.trim()}',
+          type: NotificationType.contentCreated,
           contentId: jsonDecode(response.body)['id'],
           contentType: 'lesson',
           recipients: ['students', 'parents', 'admin'],
           channels: ['in_app', 'push'],
         );
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -197,7 +226,7 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      
+
                       TextFormField(
                         controller: _titleController,
                         decoration: const InputDecoration(
@@ -213,7 +242,7 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
-                      
+
                       TextFormField(
                         controller: _descriptionController,
                         decoration: const InputDecoration(
@@ -230,7 +259,7 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
-                      
+
                       TextFormField(
                         controller: _durationController,
                         decoration: const InputDecoration(
@@ -254,9 +283,9 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Media Resources Section
               Card(
                 child: Padding(
@@ -272,7 +301,7 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      
+
                       TextFormField(
                         controller: _videoUrlController,
                         decoration: const InputDecoration(
@@ -283,7 +312,7 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      
+
                       TextFormField(
                         controller: _documentUrlController,
                         decoration: const InputDecoration(
@@ -297,9 +326,9 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Classification Section
               Card(
                 child: Padding(
@@ -315,9 +344,9 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      
+
                       DropdownButtonFormField<String>(
-                        value: _selectedSubject,
+                        initialValue: _selectedSubject,
                         decoration: const InputDecoration(
                           labelText: 'Subject *',
                           border: OutlineInputBorder(),
@@ -335,12 +364,13 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                           }
                           return null;
                         },
-                        onChanged: (value) => setState(() => _selectedSubject = value),
+                        onChanged: (value) =>
+                            setState(() => _selectedSubject = value),
                       ),
                       const SizedBox(height: 16),
-                      
+
                       DropdownButtonFormField<String>(
-                        value: _selectedClass,
+                        initialValue: _selectedClass,
                         decoration: const InputDecoration(
                           labelText: 'Class/Grade *',
                           border: OutlineInputBorder(),
@@ -358,12 +388,13 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                           }
                           return null;
                         },
-                        onChanged: (value) => setState(() => _selectedClass = value),
+                        onChanged: (value) =>
+                            setState(() => _selectedClass = value),
                       ),
                       const SizedBox(height: 16),
-                      
+
                       DropdownButtonFormField<String>(
-                        value: _selectedDifficulty,
+                        initialValue: _selectedDifficulty,
                         decoration: const InputDecoration(
                           labelText: 'Difficulty Level *',
                           border: OutlineInputBorder(),
@@ -381,15 +412,16 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                           }
                           return null;
                         },
-                        onChanged: (value) => setState(() => _selectedDifficulty = value),
+                        onChanged: (value) =>
+                            setState(() => _selectedDifficulty = value),
                       ),
                     ],
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Tags Section
               Card(
                 child: Padding(
@@ -412,7 +444,7 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      
+
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
@@ -425,7 +457,9 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                             backgroundColor: Colors.grey[200],
                             selectedColor: Colors.purple[100],
                             labelStyle: TextStyle(
-                              color: isSelected ? Colors.purple[800] : Colors.black,
+                              color: isSelected
+                                  ? Colors.purple[800]
+                                  : Colors.black,
                             ),
                           );
                         }).toList(),
@@ -434,9 +468,9 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Publishing Options
               Card(
                 child: Padding(
@@ -452,21 +486,24 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      
+
                       SwitchListTile(
                         title: const Text('Publish immediately'),
-                        subtitle: const Text('Make this lesson available to students'),
+                        subtitle: const Text(
+                          'Make this lesson available to students',
+                        ),
                         value: _isPublished,
-                        onChanged: (value) => setState(() => _isPublished = value),
-                        activeColor: Colors.purple,
+                        onChanged: (value) =>
+                            setState(() => _isPublished = value),
+                        activeThumbColor: Colors.purple,
                       ),
                     ],
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 32),
-              
+
               // Create Button
               SizedBox(
                 width: double.infinity,
@@ -489,7 +526,9 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             ),
                             SizedBox(width: 8),
@@ -498,7 +537,10 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                         )
                       : const Text(
                           'Create Lesson',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                 ),
               ),

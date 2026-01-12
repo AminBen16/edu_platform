@@ -16,20 +16,31 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _durationController = TextEditingController();
-  
+
   bool _isLoading = false;
   String? _selectedSubject;
   String? _selectedDifficulty;
   bool _isPublished = false;
-  List<Map<String, dynamic>> _questions = [];
-  
+  final List<Map<String, dynamic>> _questions = [];
+
   final List<String> _subjects = [
-    'Mathematics', 'Science', 'English', 'History', 'Geography',
-    'Physics', 'Chemistry', 'Biology', 'Computer Science', 'Art'
+    'Mathematics',
+    'Science',
+    'English',
+    'History',
+    'Geography',
+    'Physics',
+    'Chemistry',
+    'Biology',
+    'Computer Science',
+    'Art',
   ];
-  
+
   final List<String> _difficulties = [
-    'Beginner', 'Intermediate', 'Advanced', 'Expert'
+    'Beginner',
+    'Intermediate',
+    'Advanced',
+    'Expert',
   ];
 
   @override
@@ -91,7 +102,7 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
         );
         return;
       }
-      
+
       final options = question['options'] as List<String>;
       for (int j = 0; j < options.length; j++) {
         if (options[j].trim().isEmpty) {
@@ -120,15 +131,21 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
         'duration': int.parse(_durationController.text.trim()),
         'subject': _selectedSubject,
         'difficulty': _selectedDifficulty,
-        'questions': _questions.map((q) => {
-          'id': q['id'],
-          'question': q['question'].toString().trim(),
-          'type': q['type'],
-          'options': (q['options'] as List<String>).map((o) => o.trim()).toList(),
-          'correctAnswer': q['correctAnswer'],
-          'points': q['points'],
-          'explanation': q['explanation'].toString().trim(),
-        }).toList(),
+        'questions': _questions
+            .map(
+              (q) => {
+                'id': q['id'],
+                'question': q['question'].toString().trim(),
+                'type': q['type'],
+                'options': (q['options'] as List<String>)
+                    .map((o) => o.trim())
+                    .toList(),
+                'correctAnswer': q['correctAnswer'],
+                'points': q['points'],
+                'explanation': q['explanation'].toString().trim(),
+              },
+            )
+            .toList(),
         'isPublished': _isPublished,
         'type': 'quiz',
       };
@@ -136,7 +153,7 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
       final response = await http.post(
         Uri.parse('${ApiService.baseUrl}/quizzes'),
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json; charset=UTF-8',
           'Authorization': 'Bearer $token',
         },
         body: jsonEncode(quizData),
@@ -146,11 +163,11 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Quiz created successfully!'),
+              content: Text('Quiz created successfully'),
               backgroundColor: Colors.green,
             ),
           );
-          Navigator.pop(context, true); // Return true to indicate success
+          Navigator.pop(context, true);
         }
       } else {
         final errorData = jsonDecode(response.body);
@@ -160,13 +177,15 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: ${e.toString()}'),
+            content: Text('Error creating quiz: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
       }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -221,7 +240,7 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      
+
                       TextFormField(
                         controller: _titleController,
                         decoration: const InputDecoration(
@@ -237,7 +256,7 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
-                      
+
                       TextFormField(
                         controller: _descriptionController,
                         decoration: const InputDecoration(
@@ -254,7 +273,7 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
-                      
+
                       TextFormField(
                         controller: _durationController,
                         decoration: const InputDecoration(
@@ -278,9 +297,9 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Classification Section
               Card(
                 child: Padding(
@@ -296,9 +315,9 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      
+
                       DropdownButtonFormField<String>(
-                        value: _selectedSubject,
+                        initialValue: _selectedSubject,
                         decoration: const InputDecoration(
                           labelText: 'Subject *',
                           border: OutlineInputBorder(),
@@ -316,12 +335,13 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
                           }
                           return null;
                         },
-                        onChanged: (value) => setState(() => _selectedSubject = value),
+                        onChanged: (value) =>
+                            setState(() => _selectedSubject = value),
                       ),
                       const SizedBox(height: 16),
-                      
+
                       DropdownButtonFormField<String>(
-                        value: _selectedDifficulty,
+                        initialValue: _selectedDifficulty,
                         decoration: const InputDecoration(
                           labelText: 'Difficulty Level *',
                           border: OutlineInputBorder(),
@@ -339,15 +359,16 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
                           }
                           return null;
                         },
-                        onChanged: (value) => setState(() => _selectedDifficulty = value),
+                        onChanged: (value) =>
+                            setState(() => _selectedDifficulty = value),
                       ),
                     ],
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Publishing Options
               Card(
                 child: Padding(
@@ -363,21 +384,24 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      
+
                       SwitchListTile(
                         title: const Text('Publish immediately'),
-                        subtitle: const Text('Make this quiz available to students'),
+                        subtitle: const Text(
+                          'Make this quiz available to students',
+                        ),
                         value: _isPublished,
-                        onChanged: (value) => setState(() => _isPublished = value),
-                        activeColor: Colors.blue[800],
+                        onChanged: (value) =>
+                            setState(() => _isPublished = value),
+                        activeThumbColor: Colors.blue[800],
                       ),
                     ],
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Questions Section
               Card(
                 child: Padding(
@@ -390,10 +414,11 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
                         children: [
                           Text(
                             'Questions (${_questions.length})',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue[800],
-                            ),
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue[800],
+                                ),
                           ),
                           ElevatedButton.icon(
                             onPressed: _addQuestion,
@@ -407,7 +432,7 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      
+
                       if (_questions.isEmpty)
                         Container(
                           width: double.infinity,
@@ -447,14 +472,14 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
                           final index = entry.key;
                           final question = entry.value;
                           return _buildQuestionCard(index, question);
-                        }).toList(),
+                        }),
                     ],
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 32),
-              
+
               // Create Button
               SizedBox(
                 width: double.infinity,
@@ -477,7 +502,9 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             ),
                             SizedBox(width: 8),
@@ -486,7 +513,10 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
                         )
                       : const Text(
                           'Create Quiz',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                 ),
               ),
@@ -510,8 +540,8 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
               children: [
                 Text(
                   'Question ${index + 1}',
-                  style: const TextStyle(
-                    fontSize: 16,
+                  style: TextStyle(
+                    fontSize: 16, // Fixed: Removed const from TextStyle
                     fontWeight: FontWeight.bold,
                     color: Colors.blue[800],
                   ),
@@ -523,7 +553,7 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            
+
             TextFormField(
               initialValue: question['question'],
               decoration: const InputDecoration(
@@ -540,7 +570,7 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
               },
             ),
             const SizedBox(height: 16),
-            
+
             TextFormField(
               initialValue: question['explanation'],
               decoration: const InputDecoration(
@@ -548,10 +578,11 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
                 border: OutlineInputBorder(),
               ),
               maxLines: 2,
-              onChanged: (value) => _updateQuestion(index, 'explanation', value),
+              onChanged: (value) =>
+                  _updateQuestion(index, 'explanation', value),
             ),
             const SizedBox(height: 16),
-            
+
             Row(
               children: [
                 Expanded(
@@ -560,41 +591,56 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
                     decoration: const InputDecoration(
                       labelText: 'Points',
                       border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                     ),
                     keyboardType: TextInputType.number,
-                    onChanged: (value) => _updateQuestion(index, 'points', int.tryParse(value) ?? 10),
+                    onChanged: (value) => _updateQuestion(
+                      index,
+                      'points',
+                      int.tryParse(value) ?? 10,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: DropdownButtonFormField<int>(
-                    value: question['correctAnswer'],
+                    initialValue: question['correctAnswer'],
                     decoration: const InputDecoration(
                       labelText: 'Correct Answer',
                       border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                     ),
-                    items: [0, 1, 2, 3].map((i) {
-                      return DropdownMenuItem(
-                        value: i,
-                        child: Text('Option ${i + 1}'),
-                      );
-                    }).toList(),
-                    onChanged: (value) => _updateQuestion(index, 'correctAnswer', value),
+                    items: const [
+                      DropdownMenuItem(value: 0, child: Text('Option 1')),
+                      DropdownMenuItem(value: 1, child: Text('Option 2')),
+                      DropdownMenuItem(value: 2, child: Text('Option 3')),
+                      DropdownMenuItem(value: 3, child: Text('Option 4')),
+                    ].map((item) => item).toList(),
+                    onChanged: (value) =>
+                        _updateQuestion(index, 'correctAnswer', value),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            
-            const Text('Options *', style: TextStyle(fontWeight: FontWeight.bold)),
+
+            const Text(
+              'Options *',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
             ...[0, 1, 2, 3].map((optionIndex) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: TextFormField(
-                  initialValue: (question['options'] as List<String>)[optionIndex],
+                  initialValue:
+                      (question['options'] as List<String>)[optionIndex],
                   decoration: InputDecoration(
                     labelText: 'Option ${optionIndex + 1} *',
                     border: const OutlineInputBorder(),
@@ -612,7 +658,7 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
                   },
                 ),
               );
-            }).toList(),
+            }),
           ],
         ),
       ),

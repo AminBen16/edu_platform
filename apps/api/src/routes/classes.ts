@@ -1,250 +1,192 @@
-// Classes management routes
-import { Router, Response } from 'express';
+// apps/api/src/routes/classes.ts
+import { Router } from 'express';
 import { prisma } from '../config/database';
-import { protect, authorize } from '../middleware/auth';
-import { RequestWithUser } from '../types/auth';
+import { protect } from '../middleware/auth';
+import { Role } from '../lib/database';
 
 const router = Router();
 
 // GET /classes - Get all classes for a school
-router.get('/', protect, async (req: RequestWithUser, res: Response) => {
-  try {
-    const user = req.user!;
-    
-    const classes = await prisma.class.findMany({
-      where: { schoolId: user.schoolId },
-      include: {
-        teacher: {
-          include: {
-            user: {
-              select: { id: true, name: true, email: true }
-            }
-          }
-        },
-        _count: { select: { enrollments: true } }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    res.json(classes);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to fetch classes' });
-  }
+router.get('/', protect, async (req, res) => {
+    try {
+        const classes = await prisma.class.findMany({
+            where: { schoolId: req.user!.schoolId },
+            include: {
+                teacher: {
+                    select: { user: { select: { id: true, name: true, email: true } } }
+                },
+                _count: { select: { enrollments: true } }
+            },
+            orderBy: { name: 'asc' }
+        });
+        res.json(classes);
+    } catch (error) {
+        console.error('Failed to fetch classes:', error);
+        res.status(500).json({ error: 'Failed to fetch classes' });
+    }
 });
 
 // GET /classes/:id - Get specific class with details
-router.get('/:id', protect, async (req: RequestWithUser, res: Response) => {
-  try {
-    const user = req.user!;
+router.get('/:id', protect, async (req, res) => {
     const { id } = req.params;
-
-    const classData = await prisma.class.findFirst({
-      where: { 
-        id,
-        schoolId: user.schoolId 
-      },
-      include: {
-        teacher: {
-          include: {
-            user: {
-              select: { id: true, name: true, email: true }
-            }
-          }
-        },
-        enrollments: {
-          include: {
-            student: {
-              include: {
-                user: {
-                  select: { id: true, name: true, email: true, role: true }
+    try {
+        const classData = await prisma.class.findFirst({
+            where: { id, schoolId: req.user!.schoolId },
+            include: {
+                teacher: {
+                    select: { user: { select: { id: true, name: true, email: true } } }
+                },
+                enrollments: {
+                    include: {
+                        student: {
+                            include: {
+                                user: { select: { id: true, name: true, email: true, avatarUrl: true } }
+                            }
+                        }
+                    },
+                    orderBy: { student: { user: { name: 'asc' } } }
+                },
+                lessons: {
+                    where: { isPublished: true },
+                    select: { id: true, title: true, type: true, order: true },
+                    orderBy: { order: 'asc' }
                 }
-              }
             }
-          }
-        },
-        lessons: {
-          select: { id: true, title: true, type: true, isPublished: true }
-        },
-        _count: { select: { enrollments: true, lessons: true } }
-      }
-    });
+        });
 
-    if (!classData) {
-      return res.status(404).json({ error: 'Class not found' });
+        if (!classData) {
+            return res.status(404).json({ error: 'Class not found' });
+        }
+        res.json(classData);
+    } catch (error) {
+        console.error(`Failed to fetch class ${id}:`, error);
+        res.status(500).json({ error: 'Failed to fetch class details' });
     }
-
-    res.json(classData);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to fetch class' });
-  }
 });
 
-// POST /classes - Create new class
-router.post('/', protect, authorize('ADMIN', 'SCHOOL_ADMIN', 'SUPER_ADMIN'), async (req: RequestWithUser, res: Response) => {
-  try {
-    const user = req.user!;
-    const { name, code, grade, capacity, teacherId, subjects, schedule, room } = req.body;
+// POST /classes - Create new class (Admins only)
+router.post('/', protect, async (req, res) => {
+    if (req.user!.role !== Role.ADMIN) {
+        return res.status(403).json({ error: 'You are not authorized to create classes.' });
+    }
+
+    const { name, code, grade, capacity, teacherId } = req.body;
 
     if (!name || !grade) {
-      return res.status(400).json({ error: 'Class name and grade are required' });
+        return res.status(400).json({ error: 'Class name and grade are required' });
     }
 
-    const newClass = await prisma.class.create({
-      data: {
-        name,
-        code: code || `${grade}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`,
-        grade,
-        capacity: capacity || 30,
-        teacherId,
-        schoolId: user.schoolId,
-      },
-      include: {
-        teacher: {
-          include: {
-            user: {
-              select: { id: true, name: true, email: true }
+    try {
+        const newClass = await prisma.class.create({
+            data: {
+                name,
+                code: code || `${grade.replace(/\s+/g, '-')}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+                grade,
+                capacity: capacity ? parseInt(capacity) : 30,
+                teacherId,
+                schoolId: req.user!.schoolId,
+            },
+            include: {
+                teacher: {
+                    select: { user: { select: { id: true, name: true, email: true } } }
+                }
             }
-          }
-        }
-      }
-    });
-
-    res.status(201).json(newClass);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to create class' });
-  }
+        });
+        res.status(201).json(newClass);
+    } catch (error) {
+        console.error('Failed to create class:', error);
+        res.status(500).json({ error: 'Failed to create class' });
+    }
 });
 
-// PUT /classes/:id - Update class
-router.put('/:id', protect, authorize('ADMIN', 'SCHOOL_ADMIN', 'SUPER_ADMIN'), async (req: RequestWithUser, res: Response) => {
-  try {
-    const user = req.user!;
-    const { id } = req.params;
-    const updates = req.body;
-
-    // Check if class belongs to user's school
-    const existingClass = await prisma.class.findFirst({
-      where: { id, schoolId: user.schoolId }
-    });
-
-    if (!existingClass) {
-      return res.status(404).json({ error: 'Class not found' });
+// PUT /classes/:id - Update class (Admins only)
+router.put('/:id', protect, async (req, res) => {
+    if (req.user!.role !== Role.ADMIN) {
+        return res.status(403).json({ error: 'You are not authorized to update classes.' });
     }
+    const { id } = req.params;
+    const { name, code, grade, capacity, teacherId } = req.body;
 
-    const updatedClass = await prisma.class.update({
-      where: { id },
-      data: updates,
-      include: {
-        teacher: {
-          include: {
-            user: {
-              select: { id: true, name: true, email: true }
+    try {
+        const updatedClass = await prisma.class.update({
+            where: { id, schoolId: req.user!.schoolId },
+            data: { name, code, grade, capacity: capacity ? parseInt(capacity) : undefined, teacherId },
+            include: {
+                teacher: {
+                    select: { user: { select: { id: true, name: true, email: true } } }
+                }
             }
-          }
-        }
-      }
-    });
-
-    res.json(updatedClass);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to update class' });
-  }
+        });
+        res.json(updatedClass);
+    } catch (error) {
+        console.error(`Failed to update class ${id}:`, error);
+        res.status(500).json({ error: 'Failed to update class' });
+    }
 });
 
-// DELETE /classes/:id - Delete class
-router.delete('/:id', protect, authorize('ADMIN', 'SCHOOL_ADMIN', 'SUPER_ADMIN'), async (req: RequestWithUser, res: Response) => {
-  try {
-    const user = req.user!;
+// DELETE /classes/:id - Delete class (Admins only)
+router.delete('/:id', protect, async (req, res) => {
+    if (req.user!.role !== Role.ADMIN) {
+        return res.status(403).json({ error: 'You are not authorized to delete classes.' });
+    }
     const { id } = req.params;
 
-    // Check if class belongs to user's school
-    const existingClass = await prisma.class.findFirst({
-      where: { id, schoolId: user.schoolId }
-    });
-
-    if (!existingClass) {
-      return res.status(404).json({ error: 'Class not found' });
+    try {
+        // Prisma's onDelete: Cascade in schema.prisma will handle related enrollments
+        await prisma.class.delete({
+            where: { id, schoolId: req.user!.schoolId }
+        });
+        res.status(204).send();
+    } catch (error) {
+        console.error(`Failed to delete class ${id}:`, error);
+        res.status(500).json({ error: 'Failed to delete class' });
     }
-
-    await prisma.class.delete({
-      where: { id }
-    });
-
-    res.json({ message: 'Class deleted successfully' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to delete class' });
-  }
 });
 
-// POST /classes/:id/students - Add students to class
-router.post('/:id/students', protect, authorize('ADMIN', 'SCHOOL_ADMIN', 'SUPER_ADMIN', 'TEACHER'), async (req: RequestWithUser, res: Response) => {
-  try {
-    const user = req.user!;
-    const { id } = req.params;
-    const { studentIds } = req.body;
+// POST /classes/:id/enroll - Enroll students in a class (Admins and Teachers)
+router.post('/:id/enroll', protect, async (req, res) => {
+    if (req.user!.role !== Role.ADMIN && req.user!.role !== Role.TEACHER) {
+        return res.status(403).json({ error: 'You are not authorized to enroll students.' });
+    }
+    const { id: classId } = req.params;
+    const { studentIds } = req.body; // Expect an array of student IDs
 
-    // Check if class belongs to user's school
-    const existingClass = await prisma.class.findFirst({
-      where: { id, schoolId: user.schoolId }
-    });
-
-    if (!existingClass) {
-      return res.status(404).json({ error: 'Class not found' });
+    if (!studentIds || !Array.isArray(studentIds)) {
+        return res.status(400).json({ error: 'An array of studentIds is required.' });
     }
 
-    // Create enrollments for students
-    const enrollmentPromises = studentIds.map((studentId: string) => 
-      prisma.enrollment.create({
-        data: {
-          studentId,
-          classId: id,
-          enrolledAt: new Date(),
-        }
-      })
-    );
-
-    await Promise.all(enrollmentPromises);
-
-    res.json({ message: 'Students added to class successfully' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to add students to class' });
-  }
+    try {
+        const enrollments = await prisma.enrollment.createMany({
+            data: studentIds.map(studentId => ({
+                classId,
+                studentId,
+                userId: req.user?.id
+            })),
+            skipDuplicates: true,
+        });
+        res.status(201).json({ message: `${enrollments.count} students enrolled successfully.` });
+    } catch (error) {
+        console.error(`Failed to enroll students in class ${classId}:`, error);
+        res.status(500).json({ error: 'Failed to enroll students' });
+    }
 });
 
-// DELETE /classes/:id/students/:studentId - Remove student from class
-router.delete('/:id/students/:studentId', protect, authorize('ADMIN', 'SCHOOL_ADMIN', 'SUPER_ADMIN', 'TEACHER'), async (req: RequestWithUser, res: Response) => {
-  try {
-    const user = req.user!;
-    const { id, studentId } = req.params;
-
-    // Check if class belongs to user's school
-    const existingClass = await prisma.class.findFirst({
-      where: { id, schoolId: user.schoolId }
-    });
-
-    if (!existingClass) {
-      return res.status(404).json({ error: 'Class not found' });
+// DELETE /classes/:classId/enrollments/:enrollmentId - Remove a student's enrollment from a class
+router.delete('/:classId/enrollments/:enrollmentId', protect, async (req, res) => {
+    if (req.user!.role !== Role.ADMIN && req.user!.role !== Role.TEACHER) {
+        return res.status(403).json({ error: 'You are not authorized to manage enrollments.' });
     }
+    const { enrollmentId } = req.params;
 
-    // Remove student enrollment
-    await prisma.enrollment.deleteMany({
-      where: {
-        studentId,
-        classId: id,
-      }
-    });
-
-    res.json({ message: 'Student removed from class successfully' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to remove student from class' });
-  }
+    try {
+        await prisma.enrollment.delete({
+            where: { id: enrollmentId }
+        });
+        res.status(204).send();
+    } catch (error) {
+        console.error(`Failed to delete enrollment ${enrollmentId}:`, error);
+        res.status(500).json({ error: 'Failed to remove student from class' });
+    }
 });
 
 export default router;

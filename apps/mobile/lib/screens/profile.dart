@@ -83,31 +83,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             const SizedBox(height: 16),
             
-            Card(
+            const Card(
               child: Column(
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.email),
-                    title: const Text('Email'),
-                    subtitle: const Text('john.doe@school.edu.ug'),
+                    leading: Icon(Icons.email),
+                    title: Text('Email'),
+                    subtitle: Text('john.doe@school.edu.ug'),
                   ),
-                  const Divider(),
+                  Divider(),
                   ListTile(
-                    leading: const Icon(Icons.phone),
-                    title: const Text('Phone'),
-                    subtitle: const Text('+256 123 456 789'),
+                    leading: Icon(Icons.phone),
+                    title: Text('Phone'),
+                    subtitle: Text('+256 123 456 789'),
                   ),
-                  const Divider(),
+                  Divider(),
                   ListTile(
-                    leading: const Icon(Icons.school),
-                    title: const Text('School'),
-                    subtitle: const Text('Kampala International School'),
+                    leading: Icon(Icons.school),
+                    title: Text('School'),
+                    subtitle: Text('Kampala International School'),
                   ),
-                  const Divider(),
+                  Divider(),
                   ListTile(
-                    leading: const Icon(Icons.class_),
-                    title: const Text('Class'),
-                    subtitle: const Text('Grade 10 - Section A'),
+                    leading: Icon(Icons.class_),
+                    title: Text('Class'),
+                    subtitle: Text('Grade 10 - Section A'),
                   ),
                 ],
               ),

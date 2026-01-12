@@ -5,7 +5,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
 
 export default function UsersPage() {
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth(); // Destructure user to get schoolId
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,8 +29,10 @@ export default function UsersPage() {
       setLoading(true);
       const response = await api.get('/users');
       setUsers(response.data);
-    } catch (err) {
-      setError('Failed to load users');
+      setError(null); // Clear any previous errors
+    } catch (err: any) {
+      console.error('Failed to load users:', err);
+      setError(err.response?.data?.error || 'Failed to load users');
     } finally {
       setLoading(false);
     }
@@ -38,7 +40,10 @@ export default function UsersPage() {
 
   const handleInviteUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUser.name || !newUser.email) return;
+    if (!newUser.name || !newUser.email || !user?.schoolId) { // Check for schoolId
+        setError('Missing user details or school ID.');
+        return;
+    }
 
     try {
       setInviting(true);
@@ -46,13 +51,16 @@ export default function UsersPage() {
         name: newUser.name,
         email: newUser.email,
         role: newUser.role,
+        schoolId: user.schoolId, // Pass schoolId from authenticated user
       });
 
       setShowAddModal(false);
       setNewUser({ name: '', email: '', role: 'STUDENT' });
       await loadUsers();
-    } catch (err) {
-      setError('Failed to invite user');
+      setError(null); // Clear any previous errors
+    } catch (err: any) {
+        console.error('Failed to invite user:', err);
+        setError(err.response?.data?.error || 'Failed to invite user');
     } finally {
       setInviting(false);
     }
@@ -107,14 +115,14 @@ export default function UsersPage() {
               <th style={{ textAlign: 'left', padding: '0.75rem' }}>Email</th>
               <th style={{ textAlign: 'left', padding: '0.75rem' }}>Role</th>
               <th style={{ textAlign: 'left', padding: '0.75rem' }}>Status</th>
-              <th style={{ textAlign: 'left', padding: '0.75rem' }}>Last Login</th>
+              <th style={{ textAlign: 'left', padding: '0.75rem' }}>Created At</th>
             </tr>
           </thead>
           <tbody>
-            {users.map((user) => (
-              <tr key={user.id} style={{ borderBottom: '1px solid #eee' }}>
-                <td style={{ padding: '0.75rem' }}>{user.name}</td>
-                <td style={{ padding: '0.75rem' }}>{user.email}</td>
+            {users.map((u) => (
+              <tr key={u.id} style={{ borderBottom: '1px solid #eee' }}>
+                <td style={{ padding: '0.75rem' }}>{u.name}</td>
+                <td style={{ padding: '0.75rem' }}>{u.email}</td>
                 <td style={{ padding: '0.75rem' }}>
                   <span style={{
                     padding: '0.25rem 0.5rem',
@@ -122,22 +130,22 @@ export default function UsersPage() {
                     borderRadius: '4px',
                     fontSize: '0.875rem',
                   }}>
-                    {user.role}
+                    {u.role}
                   </span>
                 </td>
                 <td style={{ padding: '0.75rem' }}>
                   <span style={{
                     padding: '0.25rem 0.5rem',
-                    backgroundColor: user.status === 'active' ? '#d4edda' : '#f8d7da',
-                    color: user.status === 'active' ? '#155724' : '#721c24',
+                    backgroundColor: u.isActive ? '#d4edda' : '#f8d7da',
+                    color: u.isActive ? '#155724' : '#721c24',
                     borderRadius: '4px',
                     fontSize: '0.875rem',
                   }}>
-                    {user.status}
+                    {u.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </td>
                 <td style={{ padding: '0.75rem' }}>
-                  {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
+                  {new Date(u.createdAt).toLocaleDateString()}
                 </td>
               </tr>
             ))}

@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../services/api.dart';
+import '../services/notification_service.dart';
 
 class CreateLessonScreen extends ConsumerStatefulWidget {
   const CreateLessonScreen({super.key});
@@ -12,22 +16,43 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _subjectController = TextEditingController();
   final _durationController = TextEditingController();
-  String _selectedDifficulty = 'Intermediate';
-  List<String> _selectedTopics = [];
+  final _videoUrlController = TextEditingController();
+  final _documentUrlController = TextEditingController();
+
   bool _isLoading = false;
+  String? _selectedSubject;
+  String? _selectedClass;
+  String? _selectedDifficulty;
+  bool _isPublished = false;
+  final List<String> _selectedTags = [];
 
   final List<String> _subjects = [
     'Mathematics',
     'Science',
-    'History',
     'English',
-    'Computer Science',
+    'History',
+    'Geography',
     'Physics',
     'Chemistry',
     'Biology',
-    'Geography',
+    'Computer Science',
+    'Art',
+  ];
+
+  final List<String> _classes = [
+    'Grade 1',
+    'Grade 2',
+    'Grade 3',
+    'Grade 4',
+    'Grade 5',
+    'Grade 6',
+    'Grade 7',
+    'Grade 8',
+    'Grade 9',
+    'Grade 10',
+    'Grade 11',
+    'Grade 12',
   ];
 
   final List<String> _difficulties = [
@@ -37,51 +62,117 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
     'Expert',
   ];
 
-  final List<String> _topics = [
-    'Algebra',
-    'Geometry',
-    'Calculus',
-    'Physics Basics',
-    'Chemistry Fundamentals',
-    'World History',
-    'Essay Writing',
-    'Programming Concepts',
-    'Data Structures',
-    'Web Development',
-    'Mobile Development',
-    'Database Design',
+  final List<String> _availableTags = [
+    'Introduction',
+    'Theory',
+    'Practical',
+    'Assessment',
+    'Homework',
+    'Video',
+    'Reading',
+    'Interactive',
+    'Group Work',
+    'Individual',
   ];
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
-    _subjectController.dispose();
     _durationController.dispose();
+    _videoUrlController.dispose();
+    _documentUrlController.dispose();
     super.dispose();
   }
 
-  Future<void> _saveLesson() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _createLesson() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
     setState(() => _isLoading = true);
 
-    // Simulate saving lesson
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      final token = await ApiService.getToken();
+      if (token == null) {
+        throw Exception('Not authenticated');
+      }
 
-    setState(() => _isLoading = false);
+      final lessonData = {
+        'title': _titleController.text.trim(),
+        'description': _descriptionController.text.trim(),
+        'duration': int.parse(_durationController.text.trim()),
+        'videoUrl': _videoUrlController.text.trim().isNotEmpty
+            ? _videoUrlController.text.trim()
+            : null,
+        'documentUrl': _documentUrlController.text.trim().isNotEmpty
+            ? _documentUrlController.text.trim()
+            : null,
+        'subject': _selectedSubject,
+        'class': _selectedClass,
+        'difficulty': _selectedDifficulty,
+        'tags': _selectedTags,
+        'isPublished': _isPublished,
+        'type': 'lesson',
+      };
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Lesson created successfully!'),
-          backgroundColor: Colors.green,
-        ),
+      final response = await http.post(
+        Uri.parse('${ApiService.baseUrl}/lessons'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(lessonData),
       );
-      
-      // Navigate back to dashboard
-      Navigator.of(context).pop();
+
+      if (response.statusCode == 201) {
+        // Send notifications
+        await NotificationService().sendNotification(
+          title: 'New Lesson Available',
+          message:
+              'A new lesson has been created: ${_titleController.text.trim()}',
+          type: NotificationType.contentCreated,
+          contentId: jsonDecode(response.body)['id'],
+          contentType: 'lesson',
+          recipients: ['students', 'parents', 'admin'],
+          channels: ['in_app', 'push'],
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Lesson created successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.pop(context, true); // Return true to indicate success
+        }
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['error'] ?? 'Failed to create lesson');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
     }
+  }
+
+  void _toggleTag(String tag) {
+    setState(() {
+      if (_selectedTags.contains(tag)) {
+        _selectedTags.remove(tag);
+      } else {
+        _selectedTags.add(tag);
+      }
+    });
   }
 
   @override
@@ -93,251 +184,370 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
         foregroundColor: Colors.white,
         actions: [
           TextButton(
-            onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Colors.white),
-            ),
+            onPressed: _isLoading ? null : _createLesson,
+            child: _isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Text(
+                    'Create',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Lesson Information',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    TextFormField(
-                      controller: _titleController,
-                      decoration: const InputDecoration(
-                        labelText: 'Lesson Title',
-                        hintText: 'Enter a descriptive title',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.title),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a lesson title';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _subjectController,
-                      decoration: InputDecoration(
-                        labelText: 'Subject',
-                        hintText: 'Select subject',
-                        border: const OutlineInputBorder(),
-                        prefixIcon: const Icon(Icons.book),
-                        suffixIcon: PopupMenuButton<String>(
-                          icon: const Icon(Icons.arrow_drop_down),
-                          onSelected: (String? value) {
-                            _subjectController.text = value ?? '';
-                          },
-                          itemBuilder: (BuildContext context) {
-                            return _subjects.map((String value) {
-                              return PopupMenuItem<String>(
-                                value: value,
-                                child: Text(value),
-                              );
-                            }).toList();
-                          },
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Basic Information Section
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Basic Information',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.purple,
                         ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please select a subject';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _descriptionController,
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
-                        hintText: 'Describe what students will learn',
-                        border: OutlineInputBorder(),
-                        prefixIcon: const Icon(Icons.description),
-                      ),
-                      maxLines: 4,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a description';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _durationController,
-                      decoration: const InputDecoration(
-                        labelText: 'Duration (minutes)',
-                        hintText: 'Estimated completion time',
-                        border: OutlineInputBorder(),
-                        prefixIcon: const Icon(Icons.timer),
-                      ),
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter duration';
-                        }
-                        if (int.tryParse(value) == null) {
-                          return 'Please enter a valid number';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Difficulty Level',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    DropdownButtonFormField<String>(
-                      value: _selectedDifficulty,
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.signal_cellular_alt),
-                      ),
-                      items: _difficulties.map((String difficulty) {
-                        return DropdownMenuItem<String>(
-                          value: difficulty,
-                          child: Text(difficulty),
-                        );
-                      }).toList(),
-                      onChanged: (String? value) {
-                        setState(() {
-                          _selectedDifficulty = value ?? 'Intermediate';
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Topics Covered',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _topics.map((topic) {
-                        final isSelected = _selectedTopics.contains(topic);
-                        return FilterChip(
-                          label: Text(topic),
-                          selected: isSelected,
-                          onSelected: (bool selected) {
-                            setState(() {
-                              if (selected) {
-                                _selectedTopics.add(topic);
-                              } else {
-                                _selectedTopics.remove(topic);
-                              }
-                            });
-                          },
-                          backgroundColor: isSelected ? Colors.purple[100] : null,
-                          labelStyle: TextStyle(
-                            color: isSelected ? Colors.white : Colors.black87,
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 32),
-                    Text(
-                      'Lesson Resources',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          children: [
-                            ListTile(
-                              leading: const Icon(Icons.video_library),
-                              title: const Text('Video Content'),
-                              subtitle: const Text('Upload or link video lessons'),
-                              trailing: const Icon(Icons.add_circle_outline),
-                              onTap: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Video upload coming soon!')),
-                                );
-                              },
-                            ),
-                            const Divider(),
-                            ListTile(
-                              leading: const Icon(Icons.article),
-                              title: const Text('Study Materials'),
-                              subtitle: const Text('Add PDFs, documents, and links'),
-                              trailing: const Icon(Icons.add_circle_outline),
-                              onTap: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Materials upload coming soon!')),
-                                );
-                              },
-                            ),
-                            const Divider(),
-                            ListTile(
-                              leading: const Icon(Icons.quiz),
-                              title: const Text('Assessment'),
-                              subtitle: const Text('Create quiz for this lesson'),
-                              trailing: const Icon(Icons.add_circle_outline),
-                              onTap: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Quiz creation coming soon!')),
-                                );
-                              },
-                            ),
-                          ],
+                      const SizedBox(height: 20),
+
+                      TextFormField(
+                        controller: _titleController,
+                        decoration: const InputDecoration(
+                          labelText: 'Lesson Title *',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.title),
                         ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter a lesson title';
+                          }
+                          return null;
+                        },
                       ),
-                    ),
-                    const SizedBox(height: 32),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _saveLesson,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.purple,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                      const SizedBox(height: 16),
+
+                      TextFormField(
+                        controller: _descriptionController,
+                        decoration: const InputDecoration(
+                          labelText: 'Description *',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.description),
                         ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              )
-                            : const Text(
-                                'Create Lesson',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                        maxLines: 4,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter a description';
+                          }
+                          return null;
+                        },
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+
+                      TextFormField(
+                        controller: _durationController,
+                        decoration: const InputDecoration(
+                          labelText: 'Duration (minutes) *',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.timer),
+                        ),
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter duration';
+                          }
+                          final duration = int.tryParse(value.trim());
+                          if (duration == null || duration <= 0) {
+                            return 'Please enter a valid duration';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
+
+              const SizedBox(height: 16),
+
+              // Media Resources Section
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Media Resources',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.purple,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      TextFormField(
+                        controller: _videoUrlController,
+                        decoration: const InputDecoration(
+                          labelText: 'Video URL (optional)',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.video_library),
+                          hintText: 'https://example.com/video.mp4',
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      TextFormField(
+                        controller: _documentUrlController,
+                        decoration: const InputDecoration(
+                          labelText: 'Document URL (optional)',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.description),
+                          hintText: 'https://example.com/document.pdf',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Classification Section
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Classification',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.purple,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      DropdownButtonFormField<String>(
+                        initialValue: _selectedSubject,
+                        decoration: const InputDecoration(
+                          labelText: 'Subject *',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.school),
+                        ),
+                        items: _subjects.map((subject) {
+                          return DropdownMenuItem(
+                            value: subject,
+                            child: Text(subject),
+                          );
+                        }).toList(),
+                        validator: (value) {
+                          if (value == null) {
+                            return 'Please select a subject';
+                          }
+                          return null;
+                        },
+                        onChanged: (value) =>
+                            setState(() => _selectedSubject = value),
+                      ),
+                      const SizedBox(height: 16),
+
+                      DropdownButtonFormField<String>(
+                        initialValue: _selectedClass,
+                        decoration: const InputDecoration(
+                          labelText: 'Class/Grade *',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.people),
+                        ),
+                        items: _classes.map((className) {
+                          return DropdownMenuItem(
+                            value: className,
+                            child: Text(className),
+                          );
+                        }).toList(),
+                        validator: (value) {
+                          if (value == null) {
+                            return 'Please select a class/grade';
+                          }
+                          return null;
+                        },
+                        onChanged: (value) =>
+                            setState(() => _selectedClass = value),
+                      ),
+                      const SizedBox(height: 16),
+
+                      DropdownButtonFormField<String>(
+                        initialValue: _selectedDifficulty,
+                        decoration: const InputDecoration(
+                          labelText: 'Difficulty Level *',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.signal_cellular_alt),
+                        ),
+                        items: _difficulties.map((difficulty) {
+                          return DropdownMenuItem(
+                            value: difficulty,
+                            child: Text(difficulty),
+                          );
+                        }).toList(),
+                        validator: (value) {
+                          if (value == null) {
+                            return 'Please select a difficulty level';
+                          }
+                          return null;
+                        },
+                        onChanged: (value) =>
+                            setState(() => _selectedDifficulty = value),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Tags Section
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Tags',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.purple,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Select relevant tags for this lesson',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _availableTags.map((tag) {
+                          final isSelected = _selectedTags.contains(tag);
+                          return FilterChip(
+                            label: Text(tag),
+                            selected: isSelected,
+                            onSelected: (_) => _toggleTag(tag),
+                            backgroundColor: Colors.grey[200],
+                            selectedColor: Colors.purple[100],
+                            labelStyle: TextStyle(
+                              color: isSelected
+                                  ? Colors.purple[800]
+                                  : Colors.black,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Publishing Options
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Publishing Options',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.purple,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      SwitchListTile(
+                        title: const Text('Publish immediately'),
+                        subtitle: const Text(
+                          'Make this lesson available to students',
+                        ),
+                        value: _isPublished,
+                        onChanged: (value) =>
+                            setState(() => _isPublished = value),
+                        activeThumbColor: Colors.purple,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              // Create Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _createLesson,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Text('Creating...'),
+                          ],
+                        )
+                      : const Text(
+                          'Create Lesson',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
