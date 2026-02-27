@@ -4,7 +4,7 @@ class LiveClassScreen extends StatefulWidget {
   final String lessonTitle;
   final String teacherName;
 
-  LiveClassScreen({
+  const LiveClassScreen({
     super.key,
     required this.lessonTitle,
     required this.teacherName,

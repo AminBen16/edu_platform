@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/media_content_viewer.dart';
-import '../services/api_service.dart';
+import '../services/api.dart';
 import '../models/class.dart'; // Assuming a Class model will be created
 // Assuming a Lesson model will be created
 // Added import
 
 class CourseDetailsScreen extends ConsumerStatefulWidget {
   final String courseId; // This is actually classId
-  
+
   const CourseDetailsScreen({super.key, required this.courseId});
 
   @override
-  ConsumerState<CourseDetailsScreen> createState() => _CourseDetailsScreenState();
+  ConsumerState<CourseDetailsScreen> createState() =>
+      _CourseDetailsScreenState();
 }
 
 class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen> {
   Class? _class;
+  List<dynamic> _assignments = [];
   bool _isLoading = true;
   String? _error;
 
@@ -24,6 +26,7 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen> {
   void initState() {
     super.initState();
     _fetchClassDetails();
+    _fetchAssignments();
   }
 
   Future<void> _fetchClassDetails() async {
@@ -33,9 +36,9 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen> {
         _error = null;
       });
 
-      final classData = await ApiService().fetchClass(widget.courseId);
+      final classData = await ApiService.fetchClass(widget.courseId);
       // Assuming a Class.fromJson constructor exists
-      _class = Class.fromJson(classData); 
+      _class = Class.fromJson(classData);
 
       setState(() {
         _isLoading = false;
@@ -45,6 +48,19 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen> {
         _error = e.toString().replaceFirst('Exception: ', '');
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _fetchAssignments() async {
+    try {
+      // Fetch all assignments and filter by this class/course ID
+      // In a real app, we would pass the courseId to the API
+      final allAssignments = await ApiService.fetchAssignments();
+      setState(() {
+        _assignments = allAssignments.where((a) => a['classId'] == widget.courseId).toList();
+      });
+    } catch (e) {
+      // Ignore errors for assignments, just won't show progress
     }
   }
 
@@ -80,16 +96,28 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen> {
       );
     }
 
-    final List<Map<String, dynamic>> classMediaResources = _class!.lessons
-        ?.expand((lesson) => lesson.resources?.map((res) => ({
-              'id': res.id,
-              'title': res.title,
-              'type': res.type,
-              'url': res.url,
-              'size': res.size,
-            })) ?? [])
-        .toList()
-        .cast<Map<String, dynamic>>() ?? []; // Explicit cast
+    final List<Map<String, dynamic>> classMediaResources =
+        _class!.lessons
+            ?.expand(
+              (lesson) =>
+                  lesson.resources?.map(
+                    (res) => ({
+                      'id': res.id,
+                      'title': res.title,
+                      'type': res.type,
+                      'url': res.url,
+                      'size': res.size,
+                    }),
+                  ) ??
+                  [],
+            )
+            .toList()
+            .cast<Map<String, dynamic>>() ??
+        []; // Explicit cast
+
+    // Calculate progress based on assignments (mock logic for now as we don't have submission status)
+    final totalAssignments = _assignments.length;
+    final completedAssignments = 0; // Placeholder as we don't have submission status in assignment list
 
     return Scaffold(
       appBar: AppBar(
@@ -116,11 +144,7 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.school,
-                    size: 64,
-                    color: Colors.white,
-                  ),
+                  const Icon(Icons.school, size: 64, color: Colors.white),
                   const SizedBox(height: 16),
                   Text(
                     _class!.name,
@@ -132,26 +156,20 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen> {
                   ),
                   Text(
                     _class!.grade ?? 'N/A',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
-                    ),
+                    style: const TextStyle(color: Colors.white70, fontSize: 16),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
-            
+
             // Course Information
             const Text(
               'Course Information',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            
+
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -201,40 +219,35 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            
+
             // Course Description
             const Text(
               'Course Description',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            
+
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Text(
                   // Assuming class description is directly available or from an associated lesson
-                  _class!.lessons?.first.description ?? 'No description available for this course.',
+                  _class!.lessons?.first.description ??
+                      'No description available for this course.',
                   style: const TextStyle(fontSize: 16),
                 ),
               ),
             ),
             const SizedBox(height: 24),
-            
+
             // Course Media Content
             if (classMediaResources.isNotEmpty) ...[
               const Text(
                 'Course Media',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              
+
               SizedBox(
                 height: 300,
                 child: MediaContentViewer(
@@ -248,13 +261,10 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen> {
             // Progress (Placeholder for now, requires more complex logic)
             const Text(
               'Your Progress',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            
+
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -264,22 +274,27 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen> {
                     const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Overall Progress'),
-                        Text('N/A', style: TextStyle(fontWeight: FontWeight.bold)), // Placeholder
+                        Text('Course Progress'),
+                        Text(
+                          '0%', // Placeholder until we have submission status
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
                     LinearProgressIndicator(
-                      value: 0.0, // Placeholder
+                      value: 0.0,
                       backgroundColor: Colors.grey.shade300,
-                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        Colors.green,
+                      ),
                     ),
                     const SizedBox(height: 16),
-                    const Row(
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Lessons Completed: N/A'), // Placeholder
-                        Text('Average Grade: N/A'), // Placeholder
+                        Text('Assignments: $totalAssignments'),
+                        const Text('Average Grade: -'), // Placeholder
                       ],
                     ),
                   ],
@@ -287,14 +302,16 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            
+
             // Action Buttons
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.of(context).pushNamed('/lessons', arguments: _class!.id);
+                      Navigator.of(
+                        context,
+                      ).pushNamed('/lessons', arguments: _class!.id);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
@@ -308,7 +325,9 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen> {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
-                       Navigator.of(context).pushNamed('/assignments', arguments: _class!.id);
+                      Navigator.of(
+                        context,
+                      ).pushNamed('/assignments', arguments: _class!.id);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.orange,

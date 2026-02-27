@@ -23,6 +23,8 @@ import contentRoutes from './routes/content';
 import notificationRoutes from './routes/notifications';
 import schoolSettingsRoutes from './routes/school-settings';
 import reportsRoutes from './routes/reports';
+import attendanceRoutes from './routes/attendance';
+import scheduleRoutes from './routes/schedule';
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN || '',
@@ -88,6 +90,8 @@ app.use('/api/v1/content', contentRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/school-settings', schoolSettingsRoutes);
 app.use('/api/v1/reports', reportsRoutes);
+app.use('/api/v1/attendance', attendanceRoutes);
+app.use('/api/v1/schedule', scheduleRoutes);
 
 // Error handling
 app.use(Sentry.Handlers.errorHandler());
@@ -112,9 +116,11 @@ app.use('*', (req: Request, res: Response) => {
       '/api/v1/upload',
       '/api/v1/download',
       '/api/v1/content',
-      '/api/v1/notifications',
+'/api/v1/notifications',
       '/api/v1/school-settings',
-      '/api/v1/reports'
+      '/api/v1/reports',
+      '/api/v1/attendance',
+      '/api/v1/schedule'
     ]
   });
 });

@@ -2,7 +2,6 @@
 import { Router } from 'express';
 import { prisma } from '../config/database';
 import { protect } from '../middleware/auth';
-import { UserRole } from '@prisma/client';
 
 const router = Router();
 
@@ -11,7 +10,7 @@ router.get('/', protect, async (req, res) => {
     try {
         const { role, schoolId } = req.user!;
         const schools = await prisma.school.findMany({
-            where: role === UserRole.SUPER_ADMIN ? undefined : { id: schoolId },
+            where: role === 'SUPER_ADMIN' ? undefined : { id: schoolId },
             orderBy: { name: 'asc' },
         });
 
@@ -44,7 +43,7 @@ router.get('/:id', protect, async (req, res) => {
 
 // POST /schools - Creates a new school (SUPER_ADMIN only)
 router.post('/', protect, async (req, res) => {
-    if (req.user!.role !== UserRole.SUPER_ADMIN) {
+    if (req.user!.role !== 'SUPER_ADMIN') {
         return res.status(403).json({ error: 'You are not authorized to create schools.' });
     }
 
@@ -74,7 +73,7 @@ router.put('/:id', protect, async (req, res) => {
     const { name, domain, logoUrl, settings } = req.body;
     const { role, schoolId } = req.user!;
 
-    if (role !== UserRole.SUPER_ADMIN && (role !== UserRole.ADMIN || schoolId !== id)) {
+    if (role !== 'SUPER_ADMIN' && (role !== 'ADMIN' || schoolId !== id)) {
         return res.status(403).json({ error: 'You are not authorized to update this school.' });
     }
 
@@ -106,7 +105,7 @@ router.put('/:id', protect, async (req, res) => {
 
 // DELETE /schools/:id - Delete a school (SUPER_ADMIN only)
 router.delete('/:id', protect, async (req, res) => {
-    if (req.user!.role !== UserRole.SUPER_ADMIN) {
+    if (req.user!.role !== 'SUPER_ADMIN') {
         return res.status(403).json({ error: 'You are not authorized to delete schools.' });
     }
     const { id } = req.params;

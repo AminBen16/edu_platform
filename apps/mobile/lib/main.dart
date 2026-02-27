@@ -41,19 +41,13 @@ class EduApp extends StatelessWidget {
       initialRoute: '/login',
       routes: {
         '/login': (context) => const LoginScreen(),
-        '/dashboard': (context) => Scaffold(
-          body: const DashboardScreen(),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () => Navigator.pushNamed(context, '/messages', arguments: 'clx010203000008l48h3g8j9k'), // Hardcoded classId for now
-            child: const Badge(label: Text('3'), child: Icon(Icons.message)),
-          ),
-        ),
+        '/dashboard': (context) => const Scaffold(body: DashboardScreen()),
         '/notifications': (context) => const NotificationsScreen(),
         // '/messages': (context) => const MessagesScreen(), // Removed
         '/profile': (context) => const ProfileScreen(),
         '/settings': (context) => const SettingsScreen(),
         // '/course-details': (context) => const CourseDetailsScreen(courseId: ''), // Removed
-        '/live-class': (context) => LiveClassScreen(
+        '/live-class': (context) => const LiveClassScreen(
           lessonTitle: 'Live Class',
           teacherName: 'Instructor',
         ),

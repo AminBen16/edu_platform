@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import '../services/api.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class SchoolSettingsScreen extends ConsumerStatefulWidget {
   const SchoolSettingsScreen({super.key});
@@ -26,37 +23,33 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
   Future<void> _loadSettings() async {
     setState(() => _isLoading = true);
     try {
-      final token = await ApiService.getToken();
-      if (token != null) {
-        final response = await http.get(
-          Uri.parse('${ApiService.baseUrl}/api/v1/school-settings'),
-          headers: <String, String>{
-            'Content-Type': 'application/json; charset=UTF-8',
-            'Authorization': 'Bearer $token',
-          },
-        );
-
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          setState(() {
-            _settings = {
-              'academicYear': data['academicYear'] ?? '2024-2025',
-              'semester': data['semester'] ?? 'Fall',
-              'gradingScale': _formatGradingScale(data['gradingScale']),
-              'timezone': data['timezone'] ?? 'UTC',
-              'features': {
-                'onlineGrading': data['onlineGrading'] ?? false,
-                'digitalLibrary': data['digitalLibrary'] ?? false,
-                'parentPortal': data['parentPortal'] ?? false,
-              },
-              'email': data['schoolEmail'] ?? 'admin@school.edu',
-              'phone': data['schoolPhone'] ?? '+1 (555) 123-4567',
-              'emergencyContact':
-                  data['emergencyContact'] ?? '+1 (555) 987-6543',
-            };
-            _isLoading = false;
-          });
-        }
+      // This method needs to be implemented in ApiService
+      final data = await ApiService.getSchoolSettings();
+      if (mounted) {
+        setState(() {
+          _settings = {
+            'schoolName': data['name'] ?? 'Lincoln High School',
+            'schoolCode': data['code'] ?? 'LHS001',
+            'principal': data['principal'] ?? 'Dr. Smith',
+            'vicePrincipal': data['vicePrincipal'] ?? 'Mr. Jones',
+            'totalStudents': data['totalStudents'] ?? 1200,
+            'totalTeachers': data['totalTeachers'] ?? 80,
+            'totalClasses': data['totalClasses'] ?? 40,
+            'academicYear': data['academicYear'] ?? '2024-2025',
+            'semester': data['semester'] ?? 'Fall',
+            'gradingScale': _formatGradingScale(data['gradingScale']),
+            'timezone': data['timezone'] ?? 'UTC',
+            'features': {
+              'onlineGrading': data['onlineGrading'] ?? false,
+              'digitalLibrary': data['digitalLibrary'] ?? false,
+              'parentPortal': data['parentPortal'] ?? false,
+            },
+            'email': data['schoolEmail'] ?? 'admin@school.edu',
+            'phone': data['schoolPhone'] ?? '+1 (555) 123-4567',
+            'emergencyContact': data['emergencyContact'] ?? '+1 (555) 987-6543',
+          };
+          _isLoading = false;
+        });
       }
     } catch (e) {
       setState(() => _isLoading = false);
@@ -81,29 +74,18 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
 
   Future<void> _updateSetting(String key, dynamic value) async {
     try {
-      final token = await ApiService.getToken();
-      if (token != null) {
-        final response = await http.patch(
-          Uri.parse('${ApiService.baseUrl}/api/v1/school-settings/$key'),
-          headers: <String, String>{
-            'Content-Type': 'application/json; charset=UTF-8',
-            'Authorization': 'Bearer $token',
-          },
-          body: jsonEncode({key: value}),
-        );
-
-        if (response.statusCode == 200) {
-          setState(() {
-            _settings[key] = value;
-          });
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Setting updated successfully'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
+      await ApiService.updateSchoolSetting(key, value);
+      if (mounted) {
+        setState(() {
+          _settings[key] = value;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Setting updated successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
         }
       }
     } catch (e) {
@@ -120,29 +102,18 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
 
   Future<void> _updateFeature(String feature, bool value) async {
     try {
-      final token = await ApiService.getToken();
-      if (token != null) {
-        final response = await http.patch(
-          Uri.parse('${ApiService.baseUrl}/api/v1/school-settings/features'),
-          headers: <String, String>{
-            'Content-Type': 'application/json; charset=UTF-8',
-            'Authorization': 'Bearer $token',
-          },
-          body: jsonEncode({feature: value}),
-        );
-
-        if (response.statusCode == 200) {
-          setState(() {
-            _settings['features'][feature] = value;
-          });
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Feature updated successfully'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
+      await ApiService.updateSchoolFeature(feature, value);
+      if (mounted) {
+        setState(() {
+          _settings['features'][feature] = value;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Feature updated successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
         }
       }
     } catch (e) {
@@ -159,35 +130,24 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
 
   Future<void> _updateContactSetting(String key, dynamic value) async {
     try {
-      final token = await ApiService.getToken();
-      if (token != null) {
-        final response = await http.patch(
-          Uri.parse('${ApiService.baseUrl}/api/v1/school-settings/contact'),
-          headers: <String, String>{
-            'Content-Type': 'application/json; charset=UTF-8',
-            'Authorization': 'Bearer $token',
-          },
-          body: jsonEncode({key: value}),
-        );
-
-        if (response.statusCode == 200) {
-          setState(() {
-            if (key == 'schoolEmail') {
-              _settings['email'] = value;
-            } else if (key == 'schoolPhone') {
-              _settings['phone'] = value;
-            } else {
-              _settings['emergencyContact'] = value;
-            }
-          });
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Contact information updated successfully'),
-                backgroundColor: Colors.green,
-              ),
-            );
+      await ApiService.updateSchoolContact(key, value);
+      if (mounted) {
+        setState(() {
+          if (key == 'schoolEmail') {
+            _settings['email'] = value;
+          } else if (key == 'schoolPhone') {
+            _settings['phone'] = value;
+          } else {
+            _settings['emergencyContact'] = value;
           }
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Contact information updated successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
         }
       }
     } catch (e) {
@@ -276,7 +236,7 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
     );
   }
 
-  Future<void> _showGradingScaleDialog(BuildContext context) async {
+  Future<void> _showGradingScaleDialog() async {
     final aController = TextEditingController(text: '90');
     final bController = TextEditingController(text: '80');
     final cController = TextEditingController(text: '70');
@@ -284,7 +244,7 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
 
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Edit Grading Scale'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -328,7 +288,7 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
@@ -342,34 +302,21 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
               };
 
               try {
-                final token = await ApiService.getToken();
-                if (token != null) {
-                  final response = await http.patch(
-                    Uri.parse(
-                      '${ApiService.baseUrl}/api/v1/school-settings/grading-scale',
+                // This method needs to be implemented in ApiService
+                await ApiService.updateGradingScale(gradingScale);
+                if (mounted) {
+                  setState(() {
+                    _settings['gradingScale'] = _formatGradingScale(
+                      gradingScale,
+                    );
+                  });
+                  Navigator.of(context).pop(); // Pop dialog using screen context
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Grading scale updated successfully'),
+                      backgroundColor: Colors.green,
                     ),
-                    headers: <String, String>{
-                      'Content-Type': 'application/json; charset=UTF-8',
-                      'Authorization': 'Bearer $token',
-                    },
-                    body: jsonEncode({'gradingScale': gradingScale}),
                   );
-
-                  if (response.statusCode == 200) {
-                    setState(() {
-                      _settings['gradingScale'] = _formatGradingScale(
-                        gradingScale,
-                      );
-                    });
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Grading scale updated successfully'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    }
-                  }
                 }
               } catch (e) {
                 if (mounted) {
@@ -383,8 +330,6 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                   );
                 }
               }
-
-              Navigator.pop(context);
             },
             child: const Text('Save'),
           ),
@@ -393,7 +338,17 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
     );
   }
 
-  Future<void> _showViewDialog(String title, List<String> items) async {
+  Future<void> _showViewDialog(String title, String type) async {
+    // In a real app, fetch these from API. For now, we'll use the user management API
+    // or specific endpoints if they existed.
+    List<String> items = [];
+    try {
+      final users = await ApiService.getUsers(role: type == 'Classes' ? null : (type == 'Students' ? 'STUDENT' : 'TEACHER'));
+      items = users.map((u) => u['name'] as String).toList();
+    } catch (e) {
+      // Fallback or error handling
+    }
+
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -419,42 +374,6 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
     );
   }
 
-  Future<void> _saveSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('schoolName', _settings['schoolName']);
-    await prefs.setString('schoolCode', _settings['schoolCode']);
-    await prefs.setString('address', _settings['address']);
-    await prefs.setString('phone', _settings['phone']);
-    await prefs.setString('email', _settings['email']);
-    await prefs.setString('principal', _settings['principal']);
-    await prefs.setString('vicePrincipal', _settings['vicePrincipal']);
-    await prefs.setInt('totalStudents', _settings['totalStudents']);
-    await prefs.setInt('totalTeachers', _settings['totalTeachers']);
-    await prefs.setInt('totalClasses', _settings['totalClasses']);
-    await prefs.setString('academicYear', _settings['academicYear']);
-    await prefs.setString('semester', _settings['semester']);
-    await prefs.setString('timezone', _settings['timezone']);
-    await prefs.setString('gradingScale', _settings['gradingScale']);
-    await prefs.setString('attendancePolicy', _settings['attendancePolicy']);
-    await prefs.setString('bellStart', _settings['bellSchedule']['start']);
-    await prefs.setString('bellLunch', _settings['bellSchedule']['lunch']);
-    await prefs.setString('bellEnd', _settings['bellSchedule']['end']);
-    await prefs.setBool(
-      'onlineGrading',
-      _settings['features']['onlineGrading'],
-    );
-    await prefs.setBool(
-      'digitalLibrary',
-      _settings['features']['digitalLibrary'],
-    );
-    await prefs.setBool('parentPortal', _settings['features']['parentPortal']);
-    await prefs.setBool('studentEmail', _settings['features']['studentEmail']);
-    await prefs.setBool(
-      'emergencyAlerts',
-      _settings['features']['emergencyAlerts'],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -462,20 +381,6 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
         title: const Text('School Settings'),
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: () async {
-              await _saveSettings();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Settings saved successfully!'),
-                  backgroundColor: Colors.indigo,
-                ),
-              );
-            },
-          ),
-        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -507,7 +412,7 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                                 _settings['schoolName'],
                                 'text',
                               );
-                              if (!context.mounted) return;
+                              if (!mounted) return;
                               if (result != null) {
                                 await _updateSetting('schoolName', result);
                               }
@@ -525,7 +430,7 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                                 _settings['schoolCode'],
                                 'text',
                               );
-                              if (!context.mounted) return;
+                              if (!mounted) return;
                               if (result != null) {
                                 await _updateSetting('schoolCode', result);
                               }
@@ -543,7 +448,7 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                                 _settings['principal'],
                                 'text',
                               );
-                              if (!context.mounted) return;
+                              if (!mounted) return;
                               if (result != null) {
                                 await _updateSetting('principal', result);
                               }
@@ -561,6 +466,7 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                                 _settings['vicePrincipal'],
                                 'text',
                               );
+                              if (!mounted) return;
                               if (result != null) {
                                 await _updateSetting('vicePrincipal', result);
                               }
@@ -588,11 +494,7 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                             '${_settings['totalStudents']}',
                             Icons.people,
                             () {
-                              _showViewDialog('Students', [
-                                'Student 1',
-                                'Student 2',
-                                'Student 3',
-                              ]);
+                              _showViewDialog('Students', 'Students');
                             },
                           ),
                           const Divider(),
@@ -601,11 +503,7 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                             '${_settings['totalTeachers']}',
                             Icons.person_pin,
                             () {
-                              _showViewDialog('Teachers', [
-                                'Teacher 1',
-                                'Teacher 2',
-                                'Teacher 3',
-                              ]);
+                              _showViewDialog('Teachers', 'Teachers');
                             },
                           ),
                           const Divider(),
@@ -614,11 +512,7 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                             '${_settings['totalClasses']}',
                             Icons.class_,
                             () {
-                              _showViewDialog('Classes', [
-                                'Class A',
-                                'Class B',
-                                'Class C',
-                              ]);
+                              _showViewDialog('Classes', 'Classes');
                             },
                           ),
                           const Divider(),
@@ -633,6 +527,7 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                                 _settings['academicYear'],
                                 'text',
                               );
+                              if (!mounted) return;
                               if (result != null) {
                                 await _updateSetting('academicYear', result);
                               }
@@ -651,7 +546,7 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                                 'dropdown',
                                 options: ['Fall', 'Spring', 'Summer', 'Winter'],
                               );
-                              if (!context.mounted) return;
+                              if (!mounted) return;
                               if (result != null) {
                                 await _updateSetting('semester', result);
                               }
@@ -679,7 +574,7 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                             _settings['gradingScale'],
                             Icons.grade,
                             () async {
-                              await _showGradingScaleDialog(context);
+                              await _showGradingScaleDialog();
                             },
                           ),
                           const Divider(),
@@ -704,6 +599,7 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                                   'JST',
                                 ],
                               );
+                              if (!mounted) return;
                               if (result != null) {
                                 await _updateSetting('timezone', result);
                               }
@@ -759,6 +655,7 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                                 _settings['email'],
                                 'email',
                               );
+                              if (!mounted) return;
                               if (result != null) {
                                 await _updateContactSetting(
                                   'schoolEmail',
@@ -779,6 +676,7 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                                 _settings['phone'],
                                 'phone',
                               );
+                              if (!mounted) return;
                               if (result != null) {
                                 await _updateContactSetting(
                                   'schoolPhone',
@@ -790,15 +688,16 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                           const Divider(),
                           _buildSettingItem(
                             'Emergency Contact',
-                            _settings['phone'],
+                            _settings['emergencyContact'],
                             Icons.contact_phone,
                             () async {
                               final result = await _showEditDialog(
                                 context,
                                 'Edit Emergency Contact',
-                                _settings['phone'],
+                                _settings['emergencyContact'],
                                 'text',
                               );
+                              if (!mounted) return;
                               if (result != null) {
                                 await _updateContactSetting(
                                   'emergencyContact',

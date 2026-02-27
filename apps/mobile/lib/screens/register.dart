@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../services/api_service.dart';
+import '../services/api.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   final String invitationCode;
@@ -42,8 +42,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   Future<void> _validateInvitation() async {
     try {
-      final apiService = ApiService();
-      final response = await apiService.validateInvitation(widget.invitationCode);
+      final response = await ApiService.validateInvitation(widget.invitationCode);
       
       if (response['valid'] == true) {
         setState(() {
@@ -81,8 +80,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     });
 
     try {
-      final apiService = ApiService();
-      await apiService.register(
+      await ApiService.register(
         _emailController.text.trim(),
         _passwordController.text,
         _nameController.text.trim(),

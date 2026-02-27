@@ -2,7 +2,6 @@
 import { Router } from 'express';
 import { prisma } from '../config/database';
 import { protect } from '../middleware/auth';
-import { UserRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const router = Router();
@@ -54,7 +53,7 @@ router.put('/profile', protect, async (req, res) => {
 
 // GET /users - List all users in the school (Admin only)
 router.get('/', protect, async (req, res) => {
-    if (req.user!.role !== UserRole.ADMIN) {
+    if (req.user!.role !== "ADMIN") {
         return res.status(403).json({ error: 'You are not authorized to view all users.' });
     }
     try {
@@ -80,7 +79,7 @@ router.get('/', protect, async (req, res) => {
 
 // GET /users/:id - Get a specific user's details (Admin only)
 router.get('/:id', protect, async (req, res) => {
-    if (req.user!.role !== UserRole.ADMIN) {
+    if (req.user!.role !== "ADMIN") {
         return res.status(403).json({ error: 'You are not authorized to view this user.' });
     }
     const { id } = req.params;
@@ -104,7 +103,7 @@ router.get('/:id', protect, async (req, res) => {
 
 // POST /users - Create a new user (Admin only)
 router.post('/', protect, async (req, res) => {
-    if (req.user!.role !== UserRole.ADMIN) {
+    if (req.user!.role !== 'ADMIN') {
         return res.status(403).json({ error: 'You are not authorized to create users.' });
     }
     const { email, name, role, password: plainPassword } = req.body;
@@ -126,9 +125,9 @@ router.post('/', protect, async (req, res) => {
         });
 
         // Create a corresponding student or teacher profile
-        if (role === UserRole.STUDENT) {
+        if (role === "STUDENT") {
             await prisma.student.create({ data: { userId: newUser.id, schoolId: req.user!.schoolId } });
-        } else if (role === UserRole.TEACHER) {
+        } else if (role === "TEACHER") {
             await prisma.teacher.create({ data: { userId: newUser.id, schoolId: req.user!.schoolId } });
         }
         
@@ -146,7 +145,7 @@ router.post('/', protect, async (req, res) => {
 
 // PUT /users/:id - Update a user's details (Admin only)
 router.put('/:id', protect, async (req, res) => {
-    if (req.user!.role !== UserRole.ADMIN) {
+    if (req.user!.role !== 'ADMIN') {
         return res.status(403).json({ error: 'You are not authorized to update users.' });
     }
     const { id } = req.params;
@@ -167,7 +166,7 @@ router.put('/:id', protect, async (req, res) => {
 
 // DELETE /users/:id - Delete a user (Admin only)
 router.delete('/:id', protect, async (req, res) => {
-    if (req.user!.role !== UserRole.ADMIN) {
+    if (req.user!.role !== 'ADMIN') {
         return res.status(403).json({ error: 'You are not authorized to delete users.' });
     }
     const { id } = req.params;

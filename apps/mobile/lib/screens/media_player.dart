@@ -34,10 +34,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     _initializePlayer();
   }
 
-
   Future<void> _initializePlayer() async {
     try {
-      _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
+      _videoPlayerController = VideoPlayerController.networkUrl(
+        Uri.parse(widget.videoUrl),
+      );
       await _videoPlayerController!.initialize();
 
       setState(() {
@@ -71,9 +72,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
     // Request storage permission
     final status = await Permission.storage.request();
+    if (!mounted) return;
     if (!status.isGranted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Storage permission required for downloads')),
+        const SnackBar(
+          content: Text('Storage permission required for downloads'),
+        ),
       );
       return;
     }
@@ -86,7 +90,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     try {
       final dio = Dio();
       final directory = await getExternalStorageDirectory();
-      final savePath = '${directory!.path}/${widget.title.replaceAll(' ', '_')}.mp4';
+      final savePath =
+          '${directory!.path}/${widget.title.replaceAll(' ', '_')}.mp4';
 
       await dio.download(
         widget.downloadUrl!,
@@ -103,7 +108,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         _downloadedPath = savePath;
       });
 
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Video downloaded successfully!'),
@@ -116,9 +121,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         _isDownloading = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Download failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Download failed: $e')));
       }
     }
   }
@@ -162,42 +167,42 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _videoPlayerController != null
-              ? Column(
-                  children: [
-                    Expanded(
-                      child: AspectRatio(
-                        aspectRatio: _videoPlayerController!.value.aspectRatio,
-                        child: VideoPlayer(_videoPlayerController!),
-                      ),
-                    ),
-                    if (_isDownloading)
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          children: [
-                            LinearProgressIndicator(value: _downloadProgress / 100),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Downloading: ${_downloadProgress.toStringAsFixed(1)}%',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                )
-              : const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.error, size: 64, color: Colors.red),
-                      SizedBox(height: 16),
-                      Text('Failed to load video'),
-                      SizedBox(height: 16),
-                      Text('Please try again later'),
-                    ],
+          ? Column(
+              children: [
+                Expanded(
+                  child: AspectRatio(
+                    aspectRatio: _videoPlayerController!.value.aspectRatio,
+                    child: VideoPlayer(_videoPlayerController!),
                   ),
                 ),
+                if (_isDownloading)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        LinearProgressIndicator(value: _downloadProgress / 100),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Downloading: ${_downloadProgress.toStringAsFixed(1)}%',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            )
+          : const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error, size: 64, color: Colors.red),
+                  SizedBox(height: 16),
+                  Text('Failed to load video'),
+                  SizedBox(height: 16),
+                  Text('Please try again later'),
+                ],
+              ),
+            ),
     );
   }
 }
@@ -237,7 +242,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Future<void> _initializePlayer() async {
     try {
       await _audioPlayer.setUrl(widget.audioUrl);
-      
+
       _audioPlayer.durationStream.listen((duration) {
         setState(() {
           _duration = duration ?? Duration.zero;
@@ -281,9 +286,12 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
 
     // Request storage permission
     final status = await Permission.storage.request();
+    if (!mounted) return;
     if (!status.isGranted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Storage permission required for downloads')),
+        const SnackBar(
+          content: Text('Storage permission required for downloads'),
+        ),
       );
       return;
     }
@@ -296,7 +304,8 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
     try {
       final dio = Dio();
       final directory = await getExternalStorageDirectory();
-      final savePath = '${directory!.path}/${widget.title.replaceAll(' ', '_')}.mp3';
+      final savePath =
+          '${directory!.path}/${widget.title.replaceAll(' ', '_')}.mp3';
 
       await dio.download(
         widget.downloadUrl!,
@@ -313,7 +322,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
         _downloadedPath = savePath;
       });
 
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Audio downloaded successfully!'),
@@ -326,9 +335,9 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
         _isDownloading = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Download failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Download failed: $e')));
       }
     }
   }
@@ -387,7 +396,9 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                     width: double.infinity,
                     height: 200,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                      color: Theme.of(
+                        context,
+                      ).primaryColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
@@ -408,11 +419,13 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                     ),
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // Progress Bar
                   SliderTheme(
                     data: SliderTheme.of(context).copyWith(
-                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+                      thumbShape: const RoundSliderThumbShape(
+                        enabledThumbRadius: 8,
+                      ),
                       trackHeight: 4,
                     ),
                     child: Slider(
@@ -424,7 +437,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Time Display
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -434,14 +447,16 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                     ],
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // Control Buttons
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       IconButton(
                         onPressed: () {
-                          _audioPlayer.seek(_position - const Duration(seconds: 10));
+                          _audioPlayer.seek(
+                            _position - const Duration(seconds: 10),
+                          );
                         },
                         icon: const Icon(Icons.replay_10),
                         iconSize: 32,
@@ -459,7 +474,9 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                       ),
                       IconButton(
                         onPressed: () {
-                          _audioPlayer.seek(_position + const Duration(seconds: 10));
+                          _audioPlayer.seek(
+                            _position + const Duration(seconds: 10),
+                          );
                         },
                         icon: const Icon(Icons.forward_10),
                         iconSize: 32,
@@ -467,7 +484,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                     ],
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // Download Progress
                   if (_isDownloading)
                     Column(

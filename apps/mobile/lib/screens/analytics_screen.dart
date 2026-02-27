@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/api.dart';
 
 class AnalyticsScreen extends ConsumerStatefulWidget {
   const AnalyticsScreen({super.key});
@@ -8,22 +9,50 @@ class AnalyticsScreen extends ConsumerStatefulWidget {
   ConsumerState<AnalyticsScreen> createState() => _AnalyticsScreenState();
 }
 
-class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerProviderStateMixin {
+class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
+    with TickerProviderStateMixin {
   bool _isLoading = true;
+  String? _error;
+  Map<String, dynamic>? _analyticsData;
+  List<dynamic> _classes = [];
+  String _selectedPeriod = 'month';
 
   @override
   void initState() {
     super.initState();
     _loadAnalyticsData();
+    _loadClasses();
   }
 
   Future<void> _loadAnalyticsData() async {
-    // Simulate loading analytics data
-    await Future.delayed(const Duration(seconds: 1));
-    
     setState(() {
-      _isLoading = false;
+      _isLoading = true;
+      _error = null;
     });
+
+    try {
+      final data = await ApiService.getKPIs('');
+      setState(() {
+        _analyticsData = data.isNotEmpty ? data.first : {};
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadClasses() async {
+    try {
+      final classes = await ApiService.fetchClasses();
+      setState(() {
+        _classes = classes;
+      });
+    } catch (e) {
+      // Ignore
+    }
   }
 
   @override
@@ -36,32 +65,52 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.date_range),
-            onSelected: (String? value) {},
-            itemBuilder: (BuildContext context) {
-              return [
-                const PopupMenuItem<String>(
-                  value: 'week',
-                  child: Text('This Week'),
-                ),
-                const PopupMenuItem<String>(
-                  value: 'month',
-                  child: Text('This Month'),
-                ),
-                const PopupMenuItem<String>(
-                  value: 'quarter',
-                  child: Text('This Quarter'),
-                ),
-                const PopupMenuItem<String>(
-                  value: 'year',
-                  child: Text('This Year'),
-                ),
-              ];
+            onSelected: (String? value) {
+              setState(() => _selectedPeriod = value ?? 'month');
+              _loadAnalyticsData();
             },
+            itemBuilder: (BuildContext context) => [
+              const PopupMenuItem(value: 'week', child: Text('This Week')),
+              const PopupMenuItem(value: 'month', child: Text('This Month')),
+              const PopupMenuItem(
+                value: 'quarter',
+                child: Text('This Quarter'),
+              ),
+              const PopupMenuItem(value: 'year', child: Text('This Year')),
+            ],
           ),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
+          : _error != null
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error loading analytics',
+                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                  ),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _loadAnalyticsData,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            )
           : RefreshIndicator(
               onRefresh: _loadAnalyticsData,
               child: SingleChildScrollView(
@@ -69,13 +118,12 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Overview Cards
                     Row(
                       children: [
                         Expanded(
                           child: _buildOverviewCard(
                             'Total Students',
-                            '45',
+                            '${_analyticsData?['totalStudents'] ?? '0'}',
                             Icons.people,
                             Colors.blue,
                             '+12% from last month',
@@ -85,7 +133,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
                         Expanded(
                           child: _buildOverviewCard(
                             'Avg Progress',
-                            '72%',
+                            '${_analyticsData?['avgProgress'] ?? '0'}%',
                             Icons.trending_up,
                             Colors.green,
                             '+5% from last month',
@@ -99,7 +147,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
                         Expanded(
                           child: _buildOverviewCard(
                             'Completion Rate',
-                            '85%',
+                            '${_analyticsData?['completionRate'] ?? '0'}%',
                             Icons.task_alt,
                             Colors.orange,
                             '+3% from last month',
@@ -109,7 +157,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
                         Expanded(
                           child: _buildOverviewCard(
                             'Engagement',
-                            '78%',
+                            '${_analyticsData?['engagement'] ?? '0'}%',
                             Icons.psychology,
                             Colors.purple,
                             '-2% from last month',
@@ -120,32 +168,26 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
                     const SizedBox(height: 24),
                     Text(
                       'Performance by Class',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
-                    // Class Performance List
                     _buildClassPerformanceList(),
                     const SizedBox(height: 24),
                     Text(
                       'Student Progress Distribution',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
-                    // Progress Distribution Chart
                     _buildProgressChart(),
                     const SizedBox(height: 24),
                     Text(
                       'Assignment Completion Trends',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
-                    // Trends Chart
                     _buildTrendsChart(),
                   ],
                 ),
@@ -154,7 +196,13 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
     );
   }
 
-  Widget _buildOverviewCard(String title, String value, IconData icon, Color color, String subtitle) {
+  Widget _buildOverviewCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+    String subtitle,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -193,10 +241,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
             const SizedBox(height: 8),
             Text(
               subtitle,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             ),
           ],
         ),
@@ -205,22 +250,28 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
   }
 
   Widget _buildClassPerformanceList() {
-    final classes = [
-      {'name': 'Mathematics 101', 'students': 15, 'avgProgress': 78, 'completionRate': 85},
-      {'name': 'Science Fundamentals', 'students': 12, 'avgProgress': 82, 'completionRate': 92},
-      {'name': 'History Essay', 'students': 18, 'avgProgress': 65, 'completionRate': 73},
-    ];
+    // Use real classes if available, otherwise fallback to mock data or empty
+    final List<dynamic> classes = _classes.isNotEmpty
+        ? _classes
+              .map(
+                (c) => {
+                  'name': c['name'],
+                  'students': c['counts']?['enrollments'] ?? 0,
+                  'avgProgress': 0, // Placeholder
+                  'completionRate': 0, // Placeholder
+                },
+              )
+              .toList()
+        : (_analyticsData?['classPerformance'] as List<dynamic>? ?? []);
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ...classes.map((class_) {
-              final avgProgress = (class_['avgProgress'] as num?) ?? 0;
-
-              return Padding(
+          children: classes.map<Widget>((class_) {
+            final avgProgress = (class_['avgProgress'] as num?) ?? 0;
+            return Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: Row(
                 children: [
@@ -230,7 +281,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          (class_['name'] as String?) ?? '',
+                          class_['name'] ?? '',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -240,13 +291,22 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
                         Row(
                           children: [
                             Expanded(
-                              child: _buildMetricItem('Students', '${class_['students']}'),
+                              child: _buildMetricItem(
+                                'Students',
+                                '${class_['students'] ?? 0}',
+                              ),
                             ),
                             Expanded(
-                              child: _buildMetricItem('Avg Progress', '${class_['avgProgress']}%'),
+                              child: _buildMetricItem(
+                                'Avg Progress',
+                                '${class_['avgProgress'] ?? 0}%',
+                              ),
                             ),
                             Expanded(
-                              child: _buildMetricItem('Completion', '${class_['completionRate']}%'),
+                              child: _buildMetricItem(
+                                'Completion',
+                                '${class_['completionRate'] ?? 0}%',
+                              ),
                             ),
                           ],
                         ),
@@ -260,14 +320,15 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
                     child: CircularProgressIndicator(
                       value: avgProgress / 100.0,
                       backgroundColor: Colors.blue[100],
-                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        Colors.blue,
+                      ),
                     ),
                   ),
                 ],
               ),
             );
-            }),
-          ],
+          }).toList(),
         ),
       ),
     );
@@ -277,20 +338,11 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-          ),
-        ),
+        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
         const SizedBox(height: 4),
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ],
     );
@@ -305,9 +357,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
           children: [
             Text(
               'Grade Distribution',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -373,10 +425,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
           ),
           Text(
             '${percentage.toInt()}%',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -397,10 +446,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
         const SizedBox(width: 8),
         Text(
           grade,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
         ),
       ],
     );
@@ -415,118 +461,21 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
           children: [
             Text(
               'Assignment Completion Rate (Last 30 Days)',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             SizedBox(
               height: 150,
               child: Row(
                 children: [
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          '100%',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        Container(
-                          width: 40,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            color: Colors.green,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 20),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          '85%',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        Container(
-                          width: 40,
-                          height: 68,
-                          decoration: BoxDecoration(
-                            color: Colors.blue,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 20),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          '92%',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        Container(
-                          width: 40,
-                          height: 110,
-                          decoration: BoxDecoration(
-                            color: Colors.orange,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 20),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          '78%',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        Container(
-                          width: 40,
-                          height: 94,
-                          decoration: BoxDecoration(
-                            color: Colors.purple,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  _buildTrendBar('Week 1', 100, Colors.green),
+                  _buildTrendBar('Week 2', 85, Colors.blue),
+                  _buildTrendBar('Week 3', 92, Colors.orange),
+                  _buildTrendBar('Week 4', 78, Colors.purple),
                 ],
               ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildTrendLegend('Week 1', Colors.green),
-                _buildTrendLegend('Week 2', Colors.blue),
-                _buildTrendLegend('Week 3', Colors.orange),
-                _buildTrendLegend('Week 4', Colors.purple),
-              ],
             ),
           ],
         ),
@@ -534,26 +483,31 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with TickerPr
     );
   }
 
-  Widget _buildTrendLegend(String label, Color color) {
-    return Row(
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(2),
+  Widget _buildTrendBar(String label, double percentage, Color color) {
+    return Expanded(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Text(
+            '${percentage.toInt()}%',
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
           ),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
+          const SizedBox(height: 8),
+          Container(
+            width: 40,
+            height: 100 * (percentage / 100),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(4),
+            ),
           ),
-        ),
-      ],
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
     );
   }
 }

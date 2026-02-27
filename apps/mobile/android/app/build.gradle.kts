@@ -5,9 +5,15 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val keyPropertiesFile = rootProject.file("key.properties")
+val keyProperties = java.util.Properties()
+if (keyPropertiesFile.exists()) {
+    keyProperties.load(java.io.FileInputStream(keyPropertiesFile))
+}
+
 android {
     namespace = "com.eduplatform.mobile"
-    compileSdk = "34"
+    compileSdk = 34
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -15,8 +21,17 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+    signingConfigs {
+        create("release") {
+            keyAlias = keyProperties["keyAlias"] as String?
+            keyPassword = keyProperties["keyPassword"] as String?
+            storeFile = if (keyProperties["storeFile"] != null) {
+                rootProject.file(keyProperties["storeFile"] as String)
+            } else {
+                null
+            }
+            storePassword = keyProperties["storePassword"] as String?
+        }
     }
 
     defaultConfig {
@@ -24,7 +39,7 @@ android {
         applicationId = "com.eduplatform.mobile"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 21
+        minSdk = flutter.minSdkVersion
         targetSdk = 34
         versionCode = 1
         versionName = "1.0.0"
@@ -52,4 +67,10 @@ android {
 
 flutter {
     source = "../.."
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
 }

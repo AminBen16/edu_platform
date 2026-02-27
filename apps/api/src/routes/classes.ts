@@ -162,7 +162,6 @@ router.post('/:id/enroll', protect, async (req, res) => {
                 studentId,
                 userId: req.user?.id
             })),
-            skipDuplicates: true,
         });
         res.status(201).json({ message: `${enrollments.count} students enrolled successfully.` });
     } catch (error) {

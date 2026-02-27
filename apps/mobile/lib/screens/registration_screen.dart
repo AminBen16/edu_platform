@@ -79,17 +79,19 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
         widget.invitationCode,
       );
 
-      if (!mounted) return;
       // After successful registration, navigate to the main screen or dashboard
+      if (!mounted) return;
       Navigator.of(context).pushReplacementNamed('/home');
     } catch (e) {
-      if (!mounted) return;
-      setState(
-        () => _error = e.toString().replaceFirst('Exception: ', ''),
-      ); // Clean up error message
+      if (mounted) {
+        setState(
+          () => _error = e.toString().replaceFirst('Exception: ', ''),
+        ); // Clean up error message
+      }
     } finally {
-      if (!mounted) return;
-      setState(() => _isRegistering = false);
+      if (mounted) {
+        setState(() => _isRegistering = false);
+      }
     }
   }
 

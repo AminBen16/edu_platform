@@ -163,6 +163,19 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                         },
                         backgroundColor: Colors.purple[100],
                       ),
+                      const SizedBox(width: 8),
+                      FilterChip(
+                        label: const Text('KPIs'),
+                        selected: _selectedReport == 'KPIs',
+                        onSelected: (bool selected) {
+                          setState(() {
+                            _selectedReport = selected
+                                ? 'KPIs'
+                                : _selectedReport;
+                          });
+                        },
+                        backgroundColor: Colors.purple[100],
+                      ),
                     ],
                   ),
                 ),

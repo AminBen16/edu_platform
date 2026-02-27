@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../services/api_service.dart';
+import '../services/api.dart';
 
 class AccountSettingsScreen extends ConsumerStatefulWidget {
   const AccountSettingsScreen({super.key});
@@ -44,8 +44,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
 
   Future<void> _loadUserProfile() async {
     try {
-      final apiService = ApiService();
-      final profile = await apiService.getUserProfile();
+      final profile = await ApiService.getUserProfile();
       setState(() {
         _nameController.text = profile['name'] ?? '';
       });
@@ -60,8 +59,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
 
   Future<void> _loadDeletionStatus() async {
     try {
-      final apiService = ApiService();
-      final status = await apiService.getDeletionStatus();
+      final status = await ApiService.getDeletionStatus();
       setState(() {
         _deletionStatus = status;
       });
@@ -78,8 +76,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
     });
 
     try {
-      final apiService = ApiService();
-      await apiService.updateProfile(
+      await ApiService.updateProfile(
         name: _nameController.text.trim(),
       );
 
@@ -123,8 +120,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
     });
 
     try {
-      final apiService = ApiService();
-      await apiService.changePassword(
+      await ApiService.changePassword(
         _passwordController.text,
         _confirmPasswordController.text
       );
@@ -173,8 +169,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
     });
 
     try {
-      final apiService = ApiService();
-      await apiService.requestDeletion(_deletionPasswordController.text);
+      await ApiService.requestDeletion(_deletionPasswordController.text);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -213,8 +208,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
     });
 
     try {
-      final apiService = ApiService();
-      await apiService.restoreAccount();
+      await ApiService.restoreAccount();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -16,14 +16,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _schoolIdController =
-      TextEditingController(); // Controller for schoolId
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _schoolIdController.dispose();
     super.dispose();
   }
 
@@ -36,11 +33,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     try {
-      await ApiService.login(
-        _emailController.text,
-        _passwordController.text,
-        _schoolIdController.text, // Pass schoolId
-      );
+      await ApiService.login(_emailController.text, _passwordController.text);
 
       // Store token and navigate to dashboard
       if (!mounted) return;
@@ -51,8 +44,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         () => _error = e.toString().replaceFirst('Exception: ', ''),
       ); // Clean up error message
     } finally {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -60,7 +54,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final emailController = TextEditingController();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Reset Password'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -81,13 +75,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () async {
               if (emailController.text.isEmpty) return;
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               try {
                 await ApiService.requestPasswordReset(emailController.text);
                 if (mounted) {
@@ -192,22 +186,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     onPressed: _showForgotPasswordDialog,
                     child: const Text('Forgot Password?'),
                   ),
-                ),
-
-                // School ID Field
-                TextFormField(
-                  controller: _schoolIdController,
-                  decoration: const InputDecoration(
-                    labelText: 'School ID',
-                    prefixIcon: Icon(Icons.location_city),
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your School ID';
-                    }
-                    return null;
-                  },
                 ),
                 const SizedBox(height: 24),
 

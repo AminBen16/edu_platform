@@ -136,15 +136,15 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                   'content': messageController.text,
                   'type': 'TEXT', // Assuming text messages for now
                 });
-                if (!context.mounted) return;
+                if (!dialogContext.mounted) return;
                 if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
                     const SnackBar(
                       content: Text('Message sent successfully'),
                       backgroundColor: Colors.green,
                     ),
                   );
-                  Navigator.of(context).pop(); // Close dialog
+                  Navigator.of(dialogContext).pop(); // Close dialog
                   // Refresh messages after sending
                   _loadMessages();
                 }
@@ -167,6 +167,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
 
       // Assuming API returns the created message
       final newMessage = Message.fromJson(responseData);
+      if (!mounted) return false;
       setState(() {
         _conversations.insert(0, newMessage); // Add to the top of the list
       });
@@ -420,6 +421,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                                   : Colors.lightBlue,
                               borderRadius: BorderRadius.circular(8),
                             ),
+                            alignment: Alignment.center,
                             child: Text(
                               'All Messages',
                               style: TextStyle(
@@ -429,7 +431,6 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            alignment: Alignment.center,
                           ),
                         ),
                       ),
@@ -446,6 +447,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                                   : Colors.transparent,
                               borderRadius: BorderRadius.circular(8),
                             ),
+                            alignment: Alignment.center,
                             child: Text(
                               'Unread',
                               style: TextStyle(
@@ -455,7 +457,6 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            alignment: Alignment.center,
                           ),
                         ),
                       ),

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
+import '../services/api.dart';
 
 class AttendanceScreen extends ConsumerStatefulWidget {
   const AttendanceScreen({super.key});
@@ -13,7 +11,9 @@ class AttendanceScreen extends ConsumerStatefulWidget {
 
 class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   List<Map<String, dynamic>> _attendance = [];
+  List<dynamic> _classes = [];
   bool _isLoading = true;
+  String? _error;
   String _selectedClass = 'All';
   String _selectedPeriod = 'month';
 
@@ -21,99 +21,38 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   void initState() {
     super.initState();
     _loadAttendanceData();
+    _loadClasses();
   }
 
   Future<void> _loadAttendanceData() async {
-    setState(() => _isLoading = true);
-
-    // Mock attendance data for development
-    await Future.delayed(const Duration(seconds: 1));
-
     setState(() {
-      _isLoading = false;
-      _attendance = [
-        {
-          'id': '1',
-          'studentName': 'Emma Johnson',
-          'className': 'Mathematics 101',
-          'date': '2024-01-15',
-          'status': 'present',
-          'checkInTime': '8:05 AM',
-          'checkOutTime': '2:30 PM',
-          'notes': '',
-        },
-        {
-          'id': '2',
-          'studentName': 'Emma Johnson',
-          'className': 'Mathematics 101',
-          'date': '2024-01-16',
-          'status': 'absent',
-          'checkInTime': null,
-          'checkOutTime': null,
-          'notes': 'Sick day - parent notification received',
-        },
-        {
-          'id': '3',
-          'studentName': 'Lucas Johnson',
-          'className': 'Science Fundamentals',
-          'date': '2024-01-15',
-          'status': 'present',
-          'checkInTime': '8:10 AM',
-          'checkOutTime': '2:35 PM',
-          'notes': 'Participated actively in class discussion',
-        },
-        {
-          'id': '4',
-          'studentName': 'Sophia Johnson',
-          'className': 'History Essay',
-          'date': '2024-01-15',
-          'status': 'late',
-          'checkInTime': '8:25 AM',
-          'checkOutTime': '2:45 PM',
-          'notes': 'Late due to transportation issue',
-        },
-        {
-          'id': '5',
-          'studentName': 'Mike Johnson',
-          'className': 'Mathematics 101',
-          'date': '2024-01-14',
-          'status': 'present',
-          'checkInTime': '8:00 AM',
-          'checkOutTime': '2:15 PM',
-          'notes': 'Left early for doctor appointment',
-        },
-        {
-          'id': '6',
-          'studentName': 'Emma Johnson',
-          'className': 'Science Fundamentals',
-          'date': '2024-01-17',
-          'status': 'present',
-          'checkInTime': '8:05 AM',
-          'checkOutTime': '2:30 PM',
-          'notes': 'Submitted science project ahead of schedule',
-        },
-      ];
+      _isLoading = true;
+      _error = null;
     });
-  }
 
-  List<Map<String, dynamic>> get _filteredAttendance {
-    List<Map<String, dynamic>> filtered = _attendance;
-
-    if (_selectedClass != 'All') {
-      filtered = _attendance
-          .where((record) => record['className'] == _selectedClass)
-          .toList();
+    try {
+      final data = await ApiService.fetchAttendance();
+      setState(() {
+        _attendance = List<Map<String, dynamic>>.from(data);
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
     }
-
-    return filtered;
   }
 
-  double get _attendancePercentage {
-    if (_attendance.isEmpty) return 0.0;
-    final presentCount = _attendance
-        .where((record) => record['status'] == 'present')
-        .length;
-    return (presentCount / _attendance.length) * 100;
+  Future<void> _loadClasses() async {
+    try {
+      final classes = await ApiService.fetchClasses();
+      setState(() {
+        _classes = classes;
+      });
+    } catch (e) {
+      // Ignore error for classes, just won't show in filter
+    }
   }
 
   Color _getStatusColor(String status) {
@@ -129,43 +68,29 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     }
   }
 
-  Future<void> _exportAttendance() async {
-    if (_filteredAttendance.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No attendance records to export')),
-      );
-      return;
+  IconData _getStatusIcon(String status) {
+    switch (status) {
+      case 'present':
+        return Icons.check_circle;
+      case 'absent':
+        return Icons.cancel;
+      case 'late':
+        return Icons.access_time;
+      default:
+        return Icons.help;
     }
+  }
 
-    try {
-      final StringBuffer csvContent = StringBuffer();
-      csvContent.writeln(
-        'Student Name,Class,Date,Status,Check In,Check Out,Notes',
-      );
+  int _getPresentCount() {
+    return _attendance.where((a) => a['status'] == 'present').length;
+  }
 
-      for (final record in _filteredAttendance) {
-        csvContent.writeln(
-          '"${record['studentName']}","${record['className']}","${record['date']}","${record['status']}","${record['checkInTime'] ?? ''}","${record['checkOutTime'] ?? ''}","${record['notes'] ?? ''}"',
-        );
-      }
+  int _getAbsentCount() {
+    return _attendance.where((a) => a['status'] == 'absent').length;
+  }
 
-      final directory = await getTemporaryDirectory();
-      final file = File(
-        '${directory.path}/attendance_export_${DateTime.now().millisecondsSinceEpoch}.csv',
-      );
-      await file.writeAsString(csvContent.toString());
-
-      await Share.shareXFiles([XFile(file.path)], text: 'Exported Attendance');
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error exporting attendance: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+  int _getLateCount() {
+    return _attendance.where((a) => a['status'] == 'late').length;
   }
 
   @override
@@ -177,321 +102,162 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: const Icon(Icons.download),
-            onPressed: _exportAttendance,
+            icon: const Icon(Icons.filter_list),
+            onPressed: () => _showFilterDialog(),
           ),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                // Summary Card
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        Text(
-                          'Attendance Overview',
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildStatCard(
-                                'Total Records',
-                                '${_attendance.length}',
-                                Icons.list_alt,
-                                Colors.blue,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _buildStatCard(
-                                'Present',
-                                '${(_attendance.where((r) => r['status'] == 'present').length)}',
-                                Icons.check_circle,
-                                Colors.green,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _buildStatCard(
-                                'Absent',
-                                '${(_attendance.where((r) => r['status'] == 'absent').length)}',
-                                Icons.cancel,
-                                Colors.red,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _buildStatCard(
-                                'Late',
-                                '${(_attendance.where((r) => r['status'] == 'late').length)}',
-                                Icons.schedule,
-                                Colors.orange,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Attendance Rate: ${_attendancePercentage.toStringAsFixed(1)}%',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: _attendancePercentage >= 95
-                                ? Colors.green
-                                : _attendancePercentage >= 90
-                                ? Colors.blue
-                                : _attendancePercentage >= 80
-                                ? Colors.orange
-                                : Colors.red,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Filter Bar
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
+          : _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          initialValue: _selectedClass,
-                          decoration: const InputDecoration(
-                            labelText: 'Filter by Class',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.filter_list),
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'All',
-                              child: Text('All Classes'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'Mathematics 101',
-                              child: Text('Mathematics 101'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'Science Fundamentals',
-                              child: Text('Science Fundamentals'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'History Essay',
-                              child: Text('History Essay'),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedClass = value ?? 'All';
-                            });
-                          },
-                        ),
+                      Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
+                      const SizedBox(height: 16),
+                      Text('Error loading attendance', style: TextStyle(fontSize: 18, color: Colors.grey[600])),
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        child: Text(_error!, textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: Colors.grey[500])),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          initialValue: _selectedPeriod,
-                          decoration: const InputDecoration(
-                            labelText: 'Period',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.date_range),
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'today',
-                              child: Text('Today'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'week',
-                              child: Text('This Week'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'month',
-                              child: Text('This Month'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'quarter',
-                              child: Text('This Quarter'),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedPeriod = value ?? 'month';
-                            });
-                          },
-                        ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _loadAttendanceData,
+                        child: const Text('Retry'),
                       ),
                     ],
                   ),
-                ),
-                const Divider(),
-                // Attendance List
-                Expanded(
-                  child: _filteredAttendance.isEmpty
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadAttendanceData,
+                  child: _attendance.isEmpty
                       ? Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.event_busy,
-                                size: 64,
-                                color: Colors.grey[400],
-                              ),
+                              Icon(Icons.calendar_today, size: 64, color: Colors.grey[400]),
                               const SizedBox(height: 16),
-                              Text(
-                                'No attendance records found',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey[600],
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
+                              Text('No attendance records', style: TextStyle(fontSize: 18, color: Colors.grey[600], fontWeight: FontWeight.w500)),
                               const SizedBox(height: 8),
-                              Text(
-                                'Attendance records will appear here once classes are scheduled',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[500],
-                                ),
-                              ),
+                              Text('Attendance records will appear here', style: TextStyle(fontSize: 14, color: Colors.grey[500])),
                             ],
                           ),
                         )
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(8),
-                          itemCount: _filteredAttendance.length,
-                          itemBuilder: (context, index) {
-                            final record = _filteredAttendance[index];
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 8),
+                      : CustomScrollView(
+                          slivers: [
+                            SliverToBoxAdapter(
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
+                                    Text('Attendance Overview', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.grey[800])),
+                                    const SizedBox(height: 16),
                                     Row(
                                       children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
+                                        Expanded(child: _buildStatCard('Present', _getPresentCount().toString(), Icons.check_circle, Colors.green)),
+                                        const SizedBox(width: 12),
+                                        Expanded(child: _buildStatCard('Absent', _getAbsentCount().toString(), Icons.cancel, Colors.red)),
+                                        const SizedBox(width: 12),
+                                        Expanded(child: _buildStatCard('Late', _getLateCount().toString(), Icons.access_time, Colors.orange)),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 24),
+                                    Text('Recent Records', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[800])),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                                  final record = _attendance[index];
+                                  return Card(
+                                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
                                             children: [
-                                              Text(
-                                                record['studentName'],
-                                                style: const TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
+                                              Icon(_getStatusIcon(record['status'] ?? 'present'), color: _getStatusColor(record['status'] ?? 'present'), size: 28),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(record['studentName'] ?? record['name'] ?? 'Student', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                                                    const SizedBox(height: 4),
+                                                    Text(record['className'] ?? record['class'] ?? '', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                                                  ],
                                                 ),
                                               ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                record['className'],
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  color: Colors.grey[600],
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                                decoration: BoxDecoration(
+                                                  color: _getStatusColor(record['status'] ?? 'present').withValues(alpha: 0.1),
+                                                  borderRadius: BorderRadius.circular(20),
+                                                ),
+                                                child: Text(
+                                                  (record['status'] ?? 'present').toString().toUpperCase(),
+                                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _getStatusColor(record['status'] ?? 'present')),
                                                 ),
                                               ),
                                             ],
                                           ),
-                                        ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 6,
+                                          const SizedBox(height: 12),
+                                          Row(
+                                            children: [
+                                              Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
+                                              const SizedBox(width: 4),
+                                              Text(record['date'] ?? '', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                                              if (record['checkInTime'] != null) ...[
+                                                const SizedBox(width: 16),
+                                                Icon(Icons.login, size: 16, color: Colors.grey[600]),
+                                                const SizedBox(width: 4),
+                                                Text(record['checkInTime']!, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                                              ],
+                                              if (record['checkOutTime'] != null) ...[
+                                                const SizedBox(width: 16),
+                                                Icon(Icons.logout, size: 16, color: Colors.grey[600]),
+                                                const SizedBox(width: 4),
+                                                Text(record['checkOutTime']!, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                                              ],
+                                            ],
                                           ),
-                                          decoration: BoxDecoration(
-                                            color: _getStatusColor(
-                                              record['status'],
+                                          if (record['notes'] != null && record['notes']!.isNotEmpty) ...[
+                                            const SizedBox(height: 12),
+                                            Container(
+                                              padding: const EdgeInsets.all(8),
+                                              decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(4)),
+                                              child: Row(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text('Notes', style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w600)),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(child: Text(record['notes']!, style: TextStyle(fontSize: 12, color: Colors.blue[700]))),
+                                                ],
+                                              ),
                                             ),
-                                            borderRadius: BorderRadius.circular(
-                                              20,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            record['status'].toUpperCase(),
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          record['date'],
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                        const Spacer(),
-                                        Text(
-                                          '${record['checkInTime'] ?? 'N/A'} - ${record['checkOutTime'] ?? 'N/A'}',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    if (record['notes'] != null &&
-                                        record['notes']!.isNotEmpty) ...[
-                                      Text(
-                                        'Notes',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[600],
-                                        ),
+                                          ],
+                                        ],
                                       ),
-                                      const SizedBox(height: 4),
-                                      Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: Colors.blue[50],
-                                          borderRadius: BorderRadius.circular(
-                                            4,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          record['notes']!,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.blue[700],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
+                                    ),
+                                  );
+                                },
+                                childCount: _attendance.length,
                               ),
-                            );
-                          },
+                            ),
+                          ],
                         ),
                 ),
-              ],
-            ),
     );
   }
 
-  Widget _buildStatCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -499,22 +265,72 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, color: color, size: 24),
           const SizedBox(height: 8),
           Text(title, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
           const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
+          Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
         ],
       ),
+    );
+  }
+
+  void _showFilterDialog() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Filter Options', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 24),
+              const Text('Class', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: _selectedClass,
+                decoration: const InputDecoration(border: OutlineInputBorder()),
+                items: [
+                  const DropdownMenuItem(value: 'All', child: Text('All Classes')),
+                  ..._classes.map((c) => DropdownMenuItem(
+                        value: c['id'].toString(),
+                        child: Text(c['name'] ?? 'Class ${c['id']}'),
+                      )),
+                ],
+                onChanged: (value) => setState(() => _selectedClass = value ?? 'All'),
+              ),
+              const SizedBox(height: 16),
+              const Text('Time Period', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: _selectedPeriod,
+                decoration: const InputDecoration(border: OutlineInputBorder()),
+                items: const [
+                  DropdownMenuItem(value: 'week', child: Text('This Week')),
+                  DropdownMenuItem(value: 'month', child: Text('This Month')),
+                  DropdownMenuItem(value: 'semester', child: Text('This Semester')),
+                ],
+                onChanged: (value) => setState(() => _selectedPeriod = value ?? 'month'),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _loadAttendanceData();
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16)),
+                  child: const Text('Apply Filters'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

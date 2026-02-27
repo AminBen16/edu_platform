@@ -89,6 +89,7 @@ class NotificationService {
       // Start real-time connection (WebSocket simulation)
       _startRealtimeConnection(token);
     } catch (e) {
+      debugPrint('Error initializing notifications: $e');
     }
   }
 
@@ -110,6 +111,7 @@ class NotificationService {
         }
       } catch (e) {
         // Ignore errors in polling
+        debugPrint('Error polling notifications: $e');
       }
     });
   }
@@ -147,6 +149,7 @@ class NotificationService {
         _notificationsStream.add(_notifications);
       }
     } catch (e) {
+      debugPrint('Error marking notification as read: $e');
     }
   }
 
@@ -174,6 +177,7 @@ class NotificationService {
       )).toList();
       _notificationsStream.add(_notifications);
     } catch (e) {
+      debugPrint('Error marking all notifications as read: $e');
     }
   }
 
@@ -211,6 +215,7 @@ class NotificationService {
         body: jsonEncode(notificationData),
       );
     } catch (e) {
+      debugPrint('Error sending notification: $e');
     }
   }
 

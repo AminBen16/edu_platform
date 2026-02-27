@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import '../services/api.dart';
 
 class QuizTakingScreen extends StatefulWidget {
   final Map<String, dynamic> quiz;
@@ -7,7 +8,7 @@ class QuizTakingScreen extends StatefulWidget {
   const QuizTakingScreen({super.key, required this.quiz});
 
   @override
-  _QuizTakingScreenState createState() => _QuizTakingScreenState();
+  State<QuizTakingScreen> createState() => _QuizTakingScreenState();
 }
 
 class _QuizTakingScreenState extends State<QuizTakingScreen> {
@@ -16,23 +17,33 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
   int _currentQuestionIndex = 0;
   List<int?> _selectedAnswers = [];
 
-  // Mock questions
-  final List<Map<String, dynamic>> _questions = List.generate(
-    20,
-    (index) => {
-      'id': index + 1,
-      'question': 'This is sample question number ${index + 1}. What is the correct answer?',
-      'options': ['Option A', 'Option B', 'Option C', 'Option D'],
-      'correctAnswerIndex': (index % 4),
-    },
-  );
+  List<Map<String, dynamic>> _questions = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _start = widget.quiz['timeLimit'] * 60;
-    _selectedAnswers = List.generate(_questions.length, (_) => null);
-    startTimer();
+    _loadQuestions();
+  }
+
+  Future<void> _loadQuestions() async {
+    try {
+      final quizDetails = await ApiService.fetchQuiz(widget.quiz['id']);
+      setState(() {
+        _questions = List<Map<String, dynamic>>.from(quizDetails['questions']);
+        _selectedAnswers = List.generate(_questions.length, (_) => null);
+        _start = (widget.quiz['timeLimit'] ?? 30) * 60;
+        _isLoading = false;
+      });
+      startTimer();
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading questions: $e')),
+        );
+      }
+    }
   }
 
   void startTimer() {
@@ -59,32 +70,43 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
     super.dispose();
   }
 
-  void _submitQuiz() {
+  Future<void> _submitQuiz() async {
     _timer?.cancel();
-    // In a real app, you would calculate the score and save it.
-    int score = 0;
+    
+    // Prepare answers for submission
+    final answers = <String, dynamic>{};
     for (int i = 0; i < _questions.length; i++) {
-      if (_selectedAnswers[i] == _questions[i]['correctAnswerIndex']) {
-        score++;
+      if (_selectedAnswers[i] != null) {
+        answers[_questions[i]['id'].toString()] = _selectedAnswers[i];
       }
     }
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Quiz Completed'),
-        content: Text('You scored $score/${_questions.length}.'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // Close dialog
-              Navigator.pop(context); // Go back to quizzes screen
-            },
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
+    try {
+      final result = await ApiService.submitQuiz(widget.quiz['id'], {'answers': answers});
+      
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Quiz Completed'),
+          content: Text('Your score: ${result['score']}/${result['totalPoints']}'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close dialog
+                Navigator.pop(context); // Go back to quizzes screen
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error submitting quiz: $e')),
+      );
+    }
   }
 
   String get _timerString {
@@ -95,6 +117,10 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     final currentQuestion = _questions[_currentQuestionIndex];
 
     return Scaffold(

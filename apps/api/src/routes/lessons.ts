@@ -2,7 +2,6 @@
 import { Router } from 'express';
 import { prisma } from '../config/database';
 import { protect } from '../middleware/auth';
-import { UserRole } from '@prisma/client';
 
 const router = Router();
 
@@ -52,7 +51,7 @@ router.get('/:id', protect, async (req, res) => {
 
 // POST /lessons - Create a lesson (only for teachers and admins)
 router.post('/', protect, async (req, res) => {
-    if (req.user!.role !== UserRole.TEACHER && req.user!.role !== UserRole.ADMIN) {
+    if (req.user!.role !== 'TEACHER' && req.user!.role !== 'ADMIN') {
         return res.status(403).json({ error: 'You are not authorized to create lessons.' });
     }
 
@@ -131,7 +130,7 @@ router.put('/:id', protect, async (req, res) => {
             return res.status(404).json({ error: 'Lesson not found' });
         }
 
-        if (req.user!.role !== UserRole.ADMIN && lesson.teacherId !== req.user!.id) {
+        if (req.user!.role !== "ADMIN" && lesson.teacherId !== req.user!.id) {
             return res.status(403).json({ error: 'You are not authorized to update this lesson.' });
         }
 
@@ -174,7 +173,7 @@ router.delete('/:id', protect, async (req, res) => {
             return res.status(404).json({ error: 'Lesson not found' });
         }
 
-        if (req.user!.role !== UserRole.ADMIN && lesson.teacherId !== req.user!.id) {
+        if (req.user!.role !== 'ADMIN' && lesson.teacherId !== req.user!.id) {
             return res.status(403).json({ error: 'You are not authorized to delete this lesson.' });
         }
 

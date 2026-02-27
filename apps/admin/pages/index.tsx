@@ -5,6 +5,7 @@ import { api, setAuthToken, School } from '../lib/api'; // Import School and set
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
 import StatsCard from '../components/StatsCard';
+import { getSession } from 'next-auth/react'; // Import getSession
 
 export default function AdminDashboard() {
   const { user, isAuthenticated, token, logout } = useAuth(); // Get token from useAuth
@@ -202,4 +203,14 @@ export default function AdminDashboard() {
       </div>
     </main>
   );
+}
+
+export async function getServerSideProps(context: any) {
+  const session = await getSession(context);
+
+  return {
+    props: {
+      session,
+    },
+  };
 }

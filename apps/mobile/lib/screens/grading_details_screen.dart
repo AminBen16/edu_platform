@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/api.dart';
 
 class GradingDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> submission;
@@ -6,7 +7,7 @@ class GradingDetailsScreen extends StatefulWidget {
   const GradingDetailsScreen({super.key, required this.submission});
 
   @override
-  _GradingDetailsScreenState createState() => _GradingDetailsScreenState();
+  State<GradingDetailsScreen> createState() => _GradingDetailsScreenState();
 }
 
 class _GradingDetailsScreenState extends State<GradingDetailsScreen> {
@@ -28,20 +29,26 @@ class _GradingDetailsScreenState extends State<GradingDetailsScreen> {
     super.dispose();
   }
 
-  void _submitGrade() {
+  Future<void> _submitGrade() async {
     if (_formKey.currentState!.validate()) {
-      // In a real app, you'd save this data to your backend.
       final score = int.tryParse(_scoreController.text);
       final feedback = _feedbackController.text;
 
-      // Mock saving
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Grade submitted: $score/100'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      Navigator.pop(context, {'score': score, 'feedback': feedback});
+      try {
+        await ApiService.submitGrade(widget.submission['id'], {
+          'score': score,
+          'feedback': feedback,
+        });
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Grade submitted successfully')),
+        );
+        Navigator.pop(context, {'score': score, 'feedback': feedback});
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error submitting grade: $e')),
+        );
+      }
     }
   }
 

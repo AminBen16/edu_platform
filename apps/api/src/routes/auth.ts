@@ -5,7 +5,6 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { prisma } from '../config/database';
 import { protect } from '../middleware/auth';
-import { UserRole } from '@prisma/client';
 // import EmailService from '../services/emailService'; // Assuming this service exists
 
 const router = Router();
@@ -101,9 +100,9 @@ router.post('/register', async (req, res) => {
         });
         
         // Create corresponding profile
-        if(user.role === UserRole.STUDENT) {
+        if(user.role === 'STUDENT') {
             await prisma.student.create({ data: { userId: user.id, schoolId: user.schoolId }});
-        } else if (user.role === UserRole.TEACHER) {
+        } else if (user.role === 'TEACHER') {
             await prisma.teacher.create({ data: { userId: user.id, schoolId: user.schoolId }});
         }
 
@@ -129,7 +128,7 @@ router.post('/register', async (req, res) => {
 
 // POST /auth/invite - Generate invitation (Admin only)
 router.post('/invite', protect, async (req, res) => {
-    if (req.user!.role !== UserRole.ADMIN) {
+    if (req.user!.role !== "ADMIN") {
         return res.status(403).json({ error: 'You are not authorized to invite users.' });
     }
     const { email, name, role, schoolId } = req.body;
@@ -169,7 +168,7 @@ router.post('/invite', protect, async (req, res) => {
 
 // GET /auth/invitations - List pending invitations for a school (Admin only)
 router.get('/invitations', protect, async (req, res) => {
-     if (req.user!.role !== UserRole.ADMIN) {
+     if (req.user!.role !== "ADMIN") {
         return res.status(403).json({ error: 'You are not authorized to view invitations.' });
     }
     try {
@@ -182,6 +181,98 @@ router.get('/invitations', protect, async (req, res) => {
     } catch (error) {
         console.error('Failed to fetch invitations:', error);
         res.status(500).json({ error: 'Failed to fetch invitations.' });
+    }
+});
+
+// POST /auth/forgot-password - Request password reset
+router.post('/forgot-password', async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ error: 'Email is required.' });
+    }
+
+    try {
+        const users = await prisma.user.findMany({ where: { email } });
+        
+        if (users.length === 0) {
+            return res.status(200).json({ message: 'If an account exists with this email, a password reset link has been sent.' });
+        }
+
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
+
+        await prisma.passwordReset.create({
+            data: {
+                userId: users[0].id,
+                token: resetToken,
+                expiresAt: resetTokenExpiry,
+                createdAt: new Date(),
+            }
+        });
+
+        const resetLink = `eduplatform://reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+        console.log(`Password reset link for ${email}: ${resetLink}`);
+
+        res.status(200).json({ 
+            message: 'If an account exists with this email, a password reset link has been sent.',
+            debugResetLink: resetLink
+        });
+
+    } catch (error) {
+        console.error('Forgot password error:', error);
+        res.status(500).json({ error: 'Failed to process password reset request.' });
+    }
+});
+
+// POST /auth/reset-password - Reset password with token
+router.post('/reset-password', async (req, res) => {
+    const { email, token, newPassword } = req.body;
+
+    if (!email || !token || !newPassword) {
+        return res.status(400).json({ error: 'Email, token, and new password are required.' });
+    }
+
+    if (newPassword.length < 6) {
+        return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+    }
+
+    try {
+        const users = await prisma.user.findMany({ where: { email } });
+        
+        if (users.length === 0) {
+            return res.status(400).json({ error: 'Invalid or expired reset token.' });
+        }
+
+        const passwordReset = await prisma.passwordReset.findFirst({
+            where: {
+                userId: users[0].id,
+                token: token,
+                expiresAt: { gt: new Date() },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+
+        if (!passwordReset) {
+            return res.status(400).json({ error: 'Invalid or expired reset token.' });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+        await prisma.user.update({
+            where: { id: users[0].id },
+            data: { password: hashedPassword },
+        });
+
+        await prisma.passwordReset.deleteMany({
+            where: { userId: users[0].id },
+        });
+
+        res.status(200).json({ message: 'Password has been reset successfully.' });
+
+    } catch (error) {
+        console.error('Reset password error:', error);
+        res.status(500).json({ error: 'Failed to reset password.' });
     }
 });
 

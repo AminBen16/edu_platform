@@ -2,7 +2,6 @@
 import { Router } from 'express';
 import { prisma } from '../config/database';
 import { protect } from '../middleware/auth';
-import { UserRole } from '@prisma/client';
 
 const router = Router();
 
@@ -52,7 +51,7 @@ router.get('/:id', protect, async (req, res) => {
 
 // POST /quizzes - Create a quiz (only for teachers and admins)
 router.post('/', protect, async (req, res) => {
-    if (req.user!.role !== UserRole.TEACHER && req.user!.role !== UserRole.ADMIN) {
+    if (req.user!.role !== 'TEACHER' && req.user!.role !== 'ADMIN') {
         return res.status(403).json({ error: 'You are not authorized to create quizzes.' });
     }
 
@@ -129,7 +128,7 @@ router.put('/:id', protect, async (req, res) => {
             return res.status(404).json({ error: 'Quiz not found' });
         }
 
-        if (req.user!.role !== UserRole.ADMIN && quiz.teacherId !== req.user!.id) {
+        if (req.user!.role !== "ADMIN" && quiz.teacherId !== req.user!.id) {
             return res.status(403).json({ error: 'You are not authorized to update this quiz.' });
         }
 
@@ -156,7 +155,7 @@ router.delete('/:id', protect, async (req, res) => {
             return res.status(404).json({ error: 'Quiz not found' });
         }
 
-        if (req.user!.role !== UserRole.ADMIN && quiz.teacherId !== req.user!.id) {
+        if (req.user!.role !== "ADMIN" && quiz.teacherId !== req.user!.id) {
             return res.status(403).json({ error: 'You are not authorized to delete this quiz.' });
         }
 
@@ -171,7 +170,7 @@ router.delete('/:id', protect, async (req, res) => {
 
 // POST /quizzes/:id/submit - Submit quiz answers
 router.post('/:id/submit', protect, async (req, res) => {
-    if (req.user!.role !== UserRole.STUDENT) {
+    if (req.user!.role !== 'STUDENT') {
         return res.status(403).json({ error: 'Only students can submit quizzes.' });
     }
 

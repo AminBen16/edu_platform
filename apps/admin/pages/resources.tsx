@@ -65,41 +65,15 @@ export default function ResourcesPage() {
     try {
       setLoading(true);
       
-      const [lessonsResponse, usersResponse] = await Promise.all([
+      const [lessonsResponse, usersResponse, resourcesResponse] = await Promise.all([
         api.get('/lessons'),
-        api.get('/users')
+        api.get('/users'),
+        api.get('/media').catch(() => ({ data: [] }))
       ]);
       
       setLessons(lessonsResponse.data);
       setTeachers(usersResponse.data.filter((user: User) => user.role === 'TEACHER'));
-      
-      // Mock resources for now - would fetch from API in real implementation
-      const mockResources: Resource[] = [
-        {
-          id: '1',
-          title: 'Mathematics Textbook Chapter 1',
-          type: 'pdf',
-          url: 'https://example.com/textbook.pdf',
-          path: 'school123/1234567890_textbook.pdf',
-          size: 5242880,
-          lessonId: lessonsResponse.data[0]?.id,
-          uploadedBy: teachers[0]?.id || '',
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: '2',
-          title: 'Science Lab Video Tutorial',
-          type: 'video',
-          url: 'https://example.com/tutorial.mp4',
-          path: 'school123/1234567891_tutorial.mp4',
-          size: 10485760,
-          lessonId: lessonsResponse.data[1]?.id,
-          uploadedBy: teachers[1]?.id || '',
-          createdAt: new Date(Date.now() - 86400000).toISOString(),
-        },
-      ];
-      
-      setResources(mockResources);
+      setResources(resourcesResponse.data || []);
     } catch (err) {
       setError('Failed to load data');
     } finally {
@@ -124,6 +98,9 @@ export default function ResourcesPage() {
     if (mimeType.includes('video')) return 'video';
     if (mimeType.includes('image')) return 'image';
     if (mimeType.includes('audio')) return 'audio';
+    if (mimeType.includes('word') || mimeType.includes('document')) return 'word';
+    if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return 'excel';
+    if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) return 'powerpoint';
     return 'document';
   };
 
@@ -166,41 +143,27 @@ export default function ResourcesPage() {
       const formData = new FormData();
       formData.append('file', selectedFile);
       formData.append('title', newResource.title);
-      formData.append('lessonId', newResource.lessonId);
+      if (newResource.lessonId) {
+        formData.append('lessonId', newResource.lessonId);
+      }
 
-      // Simulate upload progress
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return prev;
-          }
-          return prev + 10;
-        });
-      }, 200);
+      const response = await api.post('/upload/file', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent: any) => {
+          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(progress);
+        }
+      });
 
-      // In real implementation, this would be:
-      // const response = await api.post('/upload/file', formData, {
-      //   headers: { 'Content-Type': 'multipart/form-data' },
-      //   onUploadProgress: (progressEvent) => {
-      //     const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-      //     setUploadProgress(progress);
-      //   }
-      // });
-
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
       setUploadProgress(100);
-      clearInterval(progressInterval);
 
       // Add the new resource to the list
       const newResourceData: Resource = {
-        id: Date.now().toString(),
+        id: response.data.id || Date.now().toString(),
         title: newResource.title,
         type: newResource.type,
-        url: `https://example.com/${selectedFile.name}`,
-        path: `school123/${Date.now()}_${selectedFile.name}`,
+        url: response.data.url || `https://example.com/${selectedFile.name}`,
+        path: response.data.path || `school123/${Date.now()}_${selectedFile.name}`,
         size: selectedFile.size,
         lessonId: newResource.lessonId,
         uploadedBy: teachers[0]?.id || '',
@@ -211,14 +174,10 @@ export default function ResourcesPage() {
 
       setShowUploadModal(false);
       setSelectedFile(null);
-      setNewResource({
-        title: '',
-        lessonId: '',
-        type: 'document',
-      });
+      setNewResource({ title: '', lessonId: '', type: 'document' });
       setUploadProgress(0);
-    } catch (err) {
-      setError('Failed to upload file');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to upload file');
     } finally {
       setUploading(false);
     }
@@ -228,7 +187,7 @@ export default function ResourcesPage() {
     if (!confirm('Are you sure you want to delete this resource?')) return;
 
     try {
-      // In real implementation: await api.delete(`/resources/${resourceId}`);
+      await api.delete(`/media/${resourceId}`);
       setResources(resources.filter(r => r.id !== resourceId));
     } catch (err) {
       setError('Failed to delete resource');
@@ -237,42 +196,27 @@ export default function ResourcesPage() {
 
   const handlePlayMedia = (resource: Resource) => {
     if (resource.type === 'video' || resource.type === 'audio') {
-      setPlayingMedia({
-        url: resource.url,
-        type: resource.type,
-        title: resource.title,
-      });
+      setPlayingMedia({ url: resource.url, type: resource.type, title: resource.title });
     }
   };
 
-  const handleCloseMedia = () => {
-    setPlayingMedia(null);
-  };
+  const handleCloseMedia = () => setPlayingMedia(null);
 
   const handleViewDocument = (resource: Resource) => {
-    if (resource.type === 'pdf' || resource.type === 'word' || resource.type === 'excel' || resource.type === 'powerpoint' || resource.type === 'text') {
-      setViewingDocument({
-        url: resource.url,
-        type: resource.type,
-        title: resource.title,
-      });
+    if (['pdf', 'word', 'excel', 'powerpoint', 'text'].includes(resource.type)) {
+      setViewingDocument({ url: resource.url, type: resource.type as any, title: resource.title });
     }
   };
 
-  const handleCloseDocument = () => {
-    setViewingDocument(null);
-  };
+  const handleCloseDocument = () => setViewingDocument(null);
 
   const handleDownloadResource = async (resourceId: string, resourceUrl: string, resourceTitle: string) => {
     try {
-      // Extract file path from URL for download API
       const urlParts = resourceUrl.split('/');
       const fileName = urlParts[urlParts.length - 1];
-      const filePath = `school123/${fileName}`; // This should come from resource.path
+      const filePath = `school123/${fileName}`;
       
-      const response = await api.get(`/download/file/${filePath}`, {
-        responseType: 'blob'
-      });
+      const response = await api.get(`/download/file/${filePath}`, { responseType: 'blob' });
       
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
@@ -288,20 +232,11 @@ export default function ResourcesPage() {
   };
 
   if (!isAuthenticated) {
-    return (
-      <main style={{ padding: '2rem', textAlign: 'center' }}>
-        <h1>Please log in to access resources</h1>
-      </main>
-    );
+    return <main style={{ padding: '2rem', textAlign: 'center' }}><h1>Please log in to access resources</h1></main>;
   }
 
   if (loading) {
-    return (
-      <main style={{ padding: '2rem' }}>
-        <h1>Manage Resources</h1>
-        <LoadingSpinner />
-      </main>
-    );
+    return <main style={{ padding: '2rem' }}><h1>Manage Resources</h1><LoadingSpinner /></main>;
   }
 
   return (
@@ -311,17 +246,7 @@ export default function ResourcesPage() {
           <h1>Manage Resources</h1>
           <p>Upload and manage educational materials like PDFs, videos, and documents.</p>
         </div>
-        <button
-          onClick={() => setShowUploadModal(true)}
-          style={{
-            padding: '0.75rem 1.5rem',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer',
-          }}
-        >
+        <button onClick={() => setShowUploadModal(true)} style={{ padding: '0.75rem 1.5rem', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
           + Upload Resource
         </button>
       </div>
@@ -335,56 +260,18 @@ export default function ResourcesPage() {
             <p>Click "Upload Resource" to add your first educational material</p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr)', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
             {resources.map((resource) => (
-              <div
-                key={resource.id}
-                style={{
-                  border: '1px solid #e1e8ed',
-                  borderRadius: '8px',
-                  padding: '1.5rem',
-                  position: 'relative',
-                }}
-              >
+              <div key={resource.id} style={{ border: '1px solid #e1e8ed', borderRadius: '8px', padding: '1.5rem', position: 'relative' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                  <div
-                    style={{
-                      width: '40px',
-                      height: '40px',
-                      backgroundColor: getFileColor(resource.type),
-                      borderRadius: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontWeight: 'bold',
-                      marginRight: '0.75rem',
-                      fontSize: '1.2rem',
-                    }}
-                  >
+                  <div style={{ width: '40px', height: '40px', backgroundColor: getFileColor(resource.type), borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', marginRight: '0.75rem', fontSize: '1.2rem' }}>
                     {getFileIcon(resource.type)}
                   </div>
                   <div style={{ flex: 1 }}>
                     <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{resource.title}</h3>
                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                      <span style={{
-                        padding: '0.25rem 0.5rem',
-                        backgroundColor: getFileColor(resource.type),
-                        color: 'white',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                      }}>
-                        {resource.type.toUpperCase()}
-                      </span>
-                      <span style={{
-                        padding: '0.25rem 0.5rem',
-                        backgroundColor: '#6c757d',
-                        color: 'white',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                      }}>
-                        {formatFileSize(resource.size)}
-                      </span>
+                      <span style={{ padding: '0.25rem 0.5rem', backgroundColor: getFileColor(resource.type), color: 'white', borderRadius: '4px', fontSize: '0.75rem' }}>{resource.type.toUpperCase()}</span>
+                      <span style={{ padding: '0.25rem 0.5rem', backgroundColor: '#6c757d', color: 'white', borderRadius: '4px', fontSize: '0.75rem' }}>{formatFileSize(resource.size)}</span>
                     </div>
                   </div>
                 </div>
@@ -392,95 +279,22 @@ export default function ResourcesPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     {resource.lessonId && (
-                      <span style={{
-                        padding: '0.25rem 0.5rem',
-                        backgroundColor: '#6c757d',
-                        color: 'white',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                      }}>
+                      <span style={{ padding: '0.25rem 0.5rem', backgroundColor: '#6c757d', color: 'white', borderRadius: '4px', fontSize: '0.75rem' }}>
                         {lessons.find(l => l.id === resource.lessonId)?.title || 'No Lesson'}
                       </span>
                     )}
-                    <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>
-                      Uploaded {new Date(resource.createdAt).toLocaleDateString()}
-                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>Uploaded {new Date(resource.createdAt).toLocaleDateString()}</div>
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    {(resource.type === 'video' || resource.type === 'audio') ? (
-                      <button
-                        onClick={() => handlePlayMedia(resource)}
-                        style={{
-                          padding: '0.25rem 0.5rem',
-                          backgroundColor: '#28a745',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          fontSize: '0.75rem',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        ▶ Play
-                      </button>
-                    ) : (resource.type === 'pdf' || resource.type === 'word' || resource.type === 'excel' || resource.type === 'powerpoint' || resource.type === 'text') ? (
-                      <button
-                        onClick={() => handleViewDocument(resource)}
-                        style={{
-                          padding: '0.25rem 0.5rem',
-                          backgroundColor: '#17a2b8',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          fontSize: '0.75rem',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        📄 View
-                      </button>
+                    {['video', 'audio'].includes(resource.type) ? (
+                      <button onClick={() => handlePlayMedia(resource)} style={{ padding: '0.25rem 0.5rem', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer' }}>▶ Play</button>
+                    ) : ['pdf', 'word', 'excel', 'powerpoint', 'text'].includes(resource.type) ? (
+                      <button onClick={() => handleViewDocument(resource)} style={{ padding: '0.25rem 0.5rem', backgroundColor: '#17a2b8', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer' }}>📄 View</button>
                     ) : (
-                      <button
-                        onClick={() => window.open(resource.url, '_blank')}
-                        style={{
-                          padding: '0.25rem 0.5rem',
-                          backgroundColor: '#17a2b8',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          fontSize: '0.75rem',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        View
-                      </button>
+                      <button onClick={() => window.open(resource.url, '_blank')} style={{ padding: '0.25rem 0.5rem', backgroundColor: '#17a2b8', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer' }}>View</button>
                     )}
-                    <button
-                      onClick={() => handleDownloadResource(resource.id, resource.url, resource.title)}
-                      style={{
-                        padding: '0.25rem 0.5rem',
-                        backgroundColor: '#007bff',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Download
-                    </button>
-                    <button
-                      onClick={() => handleDeleteResource(resource.id)}
-                      style={{
-                        padding: '0.25rem 0.5rem',
-                        backgroundColor: '#dc3545',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Delete
-                    </button>
+                    <button onClick={() => handleDownloadResource(resource.id, resource.url, resource.title)} style={{ padding: '0.25rem 0.5rem', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer' }}>Download</button>
+                    <button onClick={() => handleDeleteResource(resource.id)} style={{ padding: '0.25rem 0.5rem', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer' }}>Delete</button>
                   </div>
                 </div>
               </div>
@@ -489,165 +303,55 @@ export default function ResourcesPage() {
         )}
       </div>
 
-      {/* Upload Modal */}
       {showUploadModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '2rem',
-            borderRadius: '8px',
-            width: '100%',
-            maxWidth: '500px',
-          }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '8px', width: '100%', maxWidth: '500px' }}>
             <h2 style={{ marginBottom: '1rem' }}>Upload Resource</h2>
             <form onSubmit={handleUpload}>
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem' }}>Select File</label>
-                <input
-                  type="file"
-                  onChange={handleFileSelect}
-                  accept=".pdf,.doc,.docx,.ppt,.pptx,.mp4,.mp3,.jpg,.jpeg,.png"
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                  }}
-                />
+                <input type="file" onChange={handleFileSelect} accept=".pdf,.doc,.docx,.ppt,.pptx,.mp4,.mp3,.jpg,.jpeg,.png" required style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }} />
               </div>
               
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem' }}>Resource Title</label>
-                <input
-                  type="text"
-                  value={newResource.title}
-                  onChange={(e) => setNewResource({ ...newResource, title: e.target.value })}
-                  placeholder="e.g., Mathematics Textbook Chapter 1"
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                  }}
-                />
+                <input type="text" value={newResource.title} onChange={(e) => setNewResource({ ...newResource, title: e.target.value })} placeholder="e.g., Mathematics Textbook Chapter 1" required style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }} />
               </div>
               
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem' }}>Associated Lesson (Optional)</label>
-                <select
-                  value={newResource.lessonId}
-                  onChange={(e) => setNewResource({ ...newResource, lessonId: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                  }}
-                >
+                <select value={newResource.lessonId} onChange={(e) => setNewResource({ ...newResource, lessonId: e.target.value })} style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}>
                   <option value="">No specific lesson</option>
-                  {lessons.map((lesson) => (
-                      <option key={lesson.id} value={lesson.id}>
-                        {lesson.title}
-                      </option>
-                    ))}
+                  {lessons.map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.title}</option>)}
                 </select>
               </div>
               
               {selectedFile && (
                 <div style={{ marginBottom: '1rem', padding: '0.75rem', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
-                  <div style={{ fontSize: '0.875rem', color: '#666' }}>
-                    <strong>Selected file:</strong> {selectedFile.name}
-                  </div>
-                  <div style={{ fontSize: '0.875rem', color: '#666' }}>
-                    <strong>Size:</strong> {formatFileSize(selectedFile.size)}
-                  </div>
-                  <div style={{ fontSize: '0.875rem', color: '#666' }}>
-                    <strong>Type:</strong> {selectedFile.type}
-                  </div>
+                  <div style={{ fontSize: '0.875rem', color: '#666' }}><strong>Selected file:</strong> {selectedFile.name}</div>
+                  <div style={{ fontSize: '0.875rem', color: '#666' }}><strong>Size:</strong> {formatFileSize(selectedFile.size)}</div>
                 </div>
               )}
               
               {uploading && (
                 <div style={{ marginBottom: '1rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span>Uploading...</span>
-                    <span>{uploadProgress}%</span>
-                  </div>
-                  <div style={{
-                    width: '100%',
-                    height: '8px',
-                    backgroundColor: '#e9ecef',
-                    borderRadius: '4px',
-                    overflow: 'hidden',
-                  }}>
-                    <div style={{
-                      width: `${uploadProgress}%`,
-                      height: '100%',
-                      backgroundColor: '#007bff',
-                      transition: 'width 0.3s ease',
-                    }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}><span>Uploading...</span><span>{uploadProgress}%</span></div>
+                  <div style={{ width: '100%', height: '8px', backgroundColor: '#e9ecef', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ width: `${uploadProgress}%`, height: '100%', backgroundColor: '#007bff', transition: 'width 0.3s ease' }} />
                   </div>
                 </div>
               )}
               
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowUploadModal(false)}
-                  disabled={uploading}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    backgroundColor: '#6c757d',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: uploading ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={uploading || !selectedFile}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    backgroundColor: uploading || !selectedFile ? '#6c757d' : '#007bff',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: uploading || !selectedFile ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {uploading ? 'Uploading...' : 'Upload'}
-                </button>
+                <button type="button" onClick={() => setShowUploadModal(false)} disabled={uploading} style={{ padding: '0.5rem 1rem', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: uploading ? 'not-allowed' : 'pointer' }}>Cancel</button>
+                <button type="submit" disabled={uploading || !selectedFile} style={{ padding: '0.5rem 1rem', backgroundColor: uploading || !selectedFile ? '#6c757d' : '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: uploading || !selectedFile ? 'not-allowed' : 'pointer' }}>{uploading ? 'Uploading...' : 'Upload'}</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Document Viewer Modal */}
-      {viewingDocument && (
-        <DocumentViewer
-          url={viewingDocument.url}
-          type={viewingDocument.type}
-          title={viewingDocument.title}
-          onClose={handleCloseDocument}
-        />
-      )}
-
+      {viewingDocument && <DocumentViewer url={viewingDocument.url} type={viewingDocument.type} title={viewingDocument.title} onClose={handleCloseDocument} />}
     </main>
   );
 }

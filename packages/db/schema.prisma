@@ -5,7 +5,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -15,7 +15,7 @@ model School {
   name      String
   logoUrl   String?  @map("logo_url")
   domain    String?  @unique // Custom domain per school
-  settings  Json? // School-specific settings
+  settings  String? // School-specific settings (JSON string)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -35,7 +35,7 @@ model Invitation {
   id        String    @id @default(cuid())
   email     String
   name      String
-  role      UserRole
+  role      String
   schoolId  String    @map("school_id")
   code      String    @unique // Secure invitation code
   expiresAt DateTime  @map("expires_at")
@@ -74,7 +74,7 @@ model AuditLog {
   userId    String?     @map("user_id")
   action    String      // LOGIN, LOGOUT, INVITE_CREATED, ACCOUNT_DELETED, etc.
   resource  String?     // Resource affected (user_id, school_id, etc.)
-  details   Json?       // Additional details
+  details   String?       // Additional details (JSON string)
   ipAddress String?     @map("ip_address")
   userAgent String?     @map("user_agent")
   createdAt DateTime    @default(now())
@@ -100,7 +100,7 @@ model User {
   name          String
   password      String?   // Optional for social login
   avatarUrl     String?   @map("avatar_url")
-  role          UserRole
+  role          String
   schoolId      String    @map("school_id")
   emailVerified DateTime? @map("email_verified")
   lastLoginAt   DateTime? @map("last_login_at")
@@ -136,7 +136,7 @@ model Teacher {
   department     String?
   bio            String?
   experience     Int? // Years of experience
-  qualifications Json? // Teaching qualifications
+  qualifications String? // Teaching qualifications (JSON string)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -212,14 +212,14 @@ model Lesson {
   title       String
   description String?
   content     String? // Rich text content
-  type        LessonType @default(LESSON)
+  type        String @default("LESSON")
   videoUrl    String?    @map("video_url") // Recorded video URL
   documentUrl String?    @map("document_url") // Document URL
   duration    Int? // Duration in minutes
   order       Int? // For lesson sequencing
   isPublished Boolean    @default(false) @map("is_published")
   difficulty  String? // Difficulty level (string field)
-  tags        String[]   // Array of tags
+  tags        String?   // Array of tags (JSON string)
   schoolId    String     @map("school_id")
   subjectId   String?    @map("subject_id")
   teacherId   String?    @map("teacher_id")
@@ -241,7 +241,7 @@ model Lesson {
 model LessonResource {
   id        String       @id @default(cuid())
   title     String
-  type      ResourceType
+  type      String
   url       String // Cloud storage URL
   size      Int? // File size in bytes
   lessonId  String       @map("lesson_id")
@@ -256,7 +256,7 @@ model Quiz {
   id           String   @id @default(cuid())
   title        String
   description  String?
-  type         QuizType @default(ASSIGNMENT)
+  type         String @default("ASSIGNMENT")
   timeLimit    Int?     @map("time_limit") // Minutes
   duration     Int? // Duration in minutes (alias for timeLimit)
   maxAttempts  Int      @default(1) @map("max_attempts") // Max attempts
@@ -281,7 +281,7 @@ model Quiz {
 model Question {
   id        String       @id @default(cuid())
   text      String
-  type      QuestionType
+  type      String
   order     Int
   points    Float        @default(1.0)
   quizId    String       @map("quiz_id")
@@ -343,7 +343,7 @@ model Enrollment {
   studentId  String           @map("student_id")
   classId    String?          @map("class_id")
   enrolledAt DateTime         @default(now()) @map("enrolled_at")
-  status     EnrollmentStatus @default(ACTIVE)
+  status     String @default("ACTIVE")
 
   // Relations
   student  Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
@@ -392,7 +392,7 @@ model Submission {
 model Message {
   id        String      @id @default(cuid())
   content   String
-  type      MessageType @default(TEXT)
+  type      String @default("TEXT")
   fileUrl   String?     @map("file_url") // Image/video attachment
   senderId  String      @map("sender_id")
   classId   String?     @map("class_id") // Class-specific chat
@@ -428,73 +428,14 @@ model LiveSessionParticipant {
   leftAt        DateTime?       @map("left_at")
   sessionId     String          @map("session_id")
   participantId String          @map("participant_id")
-  role          ParticipantRole @default(STUDENT)
+  role          String @default("STUDENT")
 
   // Relations
   session     LiveSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   participant User        @relation(fields: [participantId], references: [id], onDelete: Cascade)
 }
 
-// Enums for type safety
-enum UserRole {
-  SUPER_ADMIN
-  ADMIN
-  TEACHER
-  STUDENT
-  PARENT
-}
-
-enum LessonType {
-  LESSON
-  ASSIGNMENT
-  QUIZ
-  RECORDING
-}
-
-enum ResourceType {
-  PDF
-  VIDEO
-  AUDIO
-  IMAGE
-  DOCUMENT
-}
-
-enum QuizType {
-  ASSIGNMENT
-  QUIZ
-  EXAM
-  SURVEY
-}
-
-enum QuestionType {
-  MULTIPLE_CHOICE
-  TRUE_FALSE
-  SHORT_ANSWER
-  ESSAY
-  FILL_BLANK
-}
-
-enum MessageType {
-  TEXT
-  IMAGE
-  VIDEO
-  AUDIO
-  FILE
-  SYSTEM
-}
-
-enum EnrollmentStatus {
-  ACTIVE
-  INACTIVE
-  COMPLETED
-  SUSPENDED
-}
-
-enum ParticipantRole {
-  TEACHER
-  STUDENT
-  OBSERVER
-}
+// Note: Enums converted to String fields for SQLite compatibility
 
 // Notification system
 model Notification {
@@ -503,7 +444,7 @@ model Notification {
   type      String      // ASSIGNMENT, GRADE, ANNOUNCEMENT, REMINDER
   title     String
   message   String
-  data      Json?       // Additional notification data
+  data      String?       // Additional notification data (JSON string)
   isRead    Boolean     @default(false) @map("is_read")
   createdAt DateTime    @default(now()) @map("created_at")
 
