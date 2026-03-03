@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useDashboard } from '../hooks/useDashboard';
 import { useAuth } from '../hooks/useAuth';
-import { api, setAuthToken, School } from '../lib/api'; // Import School and setAuthToken
+import { api, setAuthToken } from '../lib/api'; // Import School and setAuthToken
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
 import StatsCard from '../components/StatsCard';
-import { getSession } from 'next-auth/react'; // Import getSession
+import { getSession } from 'next-auth/react';
+import type { GetServerSidePropsContext } from 'next';
 
 export default function AdminDashboard() {
   const { user, isAuthenticated, token, logout } = useAuth(); // Get token from useAuth
   const { analytics, recentUsers, recentLessons, recentQuizzes, school, loading, error, refreshData } = useDashboard(token); // Pass token to useDashboard
-  const [teachers, setTeachers] = useState([]);
+  const [teachers, setTeachers] = useState<any[]>([]);
 
   useEffect(() => {
     setAuthToken(token || null); // Set the auth token in the API client
@@ -27,14 +28,6 @@ export default function AdminDashboard() {
       });
     }
   }, [isAuthenticated, school, token]); // Add token to dependency array
-
-  if (!isAuthenticated) {
-    return (
-      <main style={{ padding: '2rem', textAlign: 'center' }}>
-        <h1>Please log in to access the admin dashboard</h1>
-      </main>
-    );
-  }
 
   if (loading) {
     return (
@@ -83,21 +76,21 @@ export default function AdminDashboard() {
           <StatsCard
             title="Total Users"
             value={analytics?.totalUsers || 0}
-            subtitle={`${analytics?.activeUsers || 0} active`}
+            subtitle={`${(analytics as any)?.activeUsers || 0} active`}
             icon="👥"
             color="#3498db"
           />
           <StatsCard
             title="Lessons"
             value={analytics?.totalLessons || 0}
-            subtitle={`${analytics?.publishedLessons || 0} published`}
+            subtitle={`${(analytics as any)?.publishedLessons || 0} published`}
             icon="📚"
             color="#2ecc71"
           />
           <StatsCard
             title="Quizzes"
             value={analytics?.totalQuizzes || 0}
-            subtitle={`${analytics?.publishedQuizzes || 0} published`}
+            subtitle={`${(analytics as any)?.publishedQuizzes || 0} published`}
             icon="📝"
             color="#f39c12"
           />
@@ -205,8 +198,17 @@ export default function AdminDashboard() {
   );
 }
 
-export async function getServerSideProps(context: any) {
+export async function getServerSideProps(context: GetServerSidePropsContext) {
   const session = await getSession(context);
+
+  if (!session) {
+    return {
+      redirect: {
+        destination: '/api/auth/signin', // Or your custom login page
+        permanent: false,
+      },
+    };
+  }
 
   return {
     props: {

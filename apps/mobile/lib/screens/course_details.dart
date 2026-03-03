@@ -117,7 +117,6 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen> {
 
     // Calculate progress based on assignments (mock logic for now as we don't have submission status)
     final totalAssignments = _assignments.length;
-    final completedAssignments = 0; // Placeholder as we don't have submission status in assignment list
 
     return Scaffold(
       appBar: AppBar(

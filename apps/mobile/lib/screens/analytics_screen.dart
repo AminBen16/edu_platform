@@ -31,7 +31,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
     });
 
     try {
-      final data = await ApiService.getKPIs('');
+      final data = await ApiService.getKPIs(_selectedPeriod);
       setState(() {
         _analyticsData = data.isNotEmpty ? data.first : {};
         _isLoading = false;

@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../lib/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
 import MediaPlayer from '../components/MediaPlayer';
 import DocumentViewer from '../components/DocumentViewer';
+import { getSession } from 'next-auth/react';
+import type { GetServerSidePropsContext } from 'next';
 
 interface Resource {
   id: string;
@@ -55,13 +57,7 @@ export default function ResourcesPage() {
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadData();
-    }
-  }, [isAuthenticated]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -79,7 +75,13 @@ export default function ResourcesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadData();
+    }
+  }, [isAuthenticated, loadData]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -184,7 +186,7 @@ export default function ResourcesPage() {
   };
 
   const handleDeleteResource = async (resourceId: string) => {
-    if (!confirm('Are you sure you want to delete this resource?')) return;
+    if (!window.confirm('Are you sure you want to delete this resource?')) return;
 
     try {
       await api.delete(`/media/${resourceId}`);
@@ -204,7 +206,7 @@ export default function ResourcesPage() {
 
   const handleViewDocument = (resource: Resource) => {
     if (['pdf', 'word', 'excel', 'powerpoint', 'text'].includes(resource.type)) {
-      setViewingDocument({ url: resource.url, type: resource.type as any, title: resource.title });
+      setViewingDocument({ url: resource.url, type: resource.type as 'pdf' | 'word' | 'excel' | 'powerpoint' | 'text', title: resource.title });
     }
   };
 
@@ -230,10 +232,6 @@ export default function ResourcesPage() {
       setError('Failed to download resource');
     }
   };
-
-  if (!isAuthenticated) {
-    return <main style={{ padding: '2rem', textAlign: 'center' }}><h1>Please log in to access resources</h1></main>;
-  }
 
   if (loading) {
     return <main style={{ padding: '2rem' }}><h1>Manage Resources</h1><LoadingSpinner /></main>;
@@ -310,17 +308,17 @@ export default function ResourcesPage() {
             <form onSubmit={handleUpload}>
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem' }}>Select File</label>
-                <input type="file" onChange={handleFileSelect} accept=".pdf,.doc,.docx,.ppt,.pptx,.mp4,.mp3,.jpg,.jpeg,.png" required style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }} />
+                <input type="file" aria-label="Select File" onChange={handleFileSelect} accept=".pdf,.doc,.docx,.ppt,.pptx,.mp4,.mp3,.jpg,.jpeg,.png" required style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }} />
               </div>
               
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem' }}>Resource Title</label>
-                <input type="text" value={newResource.title} onChange={(e) => setNewResource({ ...newResource, title: e.target.value })} placeholder="e.g., Mathematics Textbook Chapter 1" required style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }} />
+                <input type="text" aria-label="Resource Title" value={newResource.title} onChange={(e) => setNewResource({ ...newResource, title: e.target.value })} placeholder="e.g., Mathematics Textbook Chapter 1" required style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }} />
               </div>
               
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem' }}>Associated Lesson (Optional)</label>
-                <select value={newResource.lessonId} onChange={(e) => setNewResource({ ...newResource, lessonId: e.target.value })} style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}>
+                <select value={newResource.lessonId} aria-label="Associated Lesson" onChange={(e) => setNewResource({ ...newResource, lessonId: e.target.value })} style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}>
                   <option value="">No specific lesson</option>
                   {lessons.map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.title}</option>)}
                 </select>
@@ -354,4 +352,21 @@ export default function ResourcesPage() {
       {viewingDocument && <DocumentViewer url={viewingDocument.url} type={viewingDocument.type} title={viewingDocument.title} onClose={handleCloseDocument} />}
     </main>
   );
+}
+
+export async function getServerSideProps(context: GetServerSidePropsContext) {
+  const session = await getSession(context);
+
+  if (!session) {
+    return {
+      redirect: {
+        destination: '/api/auth/signin', // Or your custom login page
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: { session },
+  };
 }

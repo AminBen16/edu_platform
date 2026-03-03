@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../lib/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
+import { getSession } from 'next-auth/react';
+import type { GetServerSidePropsContext } from 'next';
 
 interface LiveSession {
   id: string;
@@ -50,13 +52,7 @@ export default function LiveClassesPage() {
     meetingUrl: '',
   });
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadData();
-    }
-  }, [isAuthenticated]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -68,14 +64,20 @@ export default function LiveClassesPage() {
       
       setSessions(sessionsResponse.data || []);
       setClasses(classesResponse.data);
-      setTeachers(usersResponse.data.filter((u: any) => u.role === 'TEACHER'));
+      setTeachers(usersResponse.data.filter((u: User & { role: string }) => u.role === 'TEACHER'));
     } catch (err: any) {
       console.error('Failed to load data:', err);
       setError('Failed to load live sessions');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadData();
+    }
+  }, [isAuthenticated, loadData]);
 
   const handleScheduleSession = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,7 +109,7 @@ export default function LiveClassesPage() {
   };
 
   const handleCancelSession = async (sessionId: string) => {
-    if (!confirm('Are you sure you want to cancel this live session?')) return;
+    if (!window.confirm('Are you sure you want to cancel this live session?')) return;
 
     try {
       await api.delete(`/live-sessions/${sessionId}`);
@@ -127,7 +129,7 @@ export default function LiveClassesPage() {
   };
 
   const handleEndSession = async (sessionId: string) => {
-    if (!confirm('Are you sure you want to end this live session?')) return;
+    if (!window.confirm('Are you sure you want to end this live session?')) return;
 
     try {
       await api.put(`/live-sessions/${sessionId}`, { status: 'ENDED' });
@@ -163,14 +165,6 @@ export default function LiveClassesPage() {
       default: return status;
     }
   };
-
-  if (!isAuthenticated) {
-    return (
-      <main style={{ padding: '2rem', textAlign: 'center' }}>
-        <h1>Please log in to access live classes</h1>
-      </main>
-    );
-  }
 
   if (loading) {
     return (
@@ -419,6 +413,7 @@ export default function LiveClassesPage() {
                 <label style={{ display: 'block', marginBottom: '0.5rem' }}>Session Title</label>
                 <input
                   type="text"
+                  aria-label="Session Title"
                   value={newSession.title}
                   onChange={(e) => setNewSession({ ...newSession, title: e.target.value })}
                   required
@@ -430,6 +425,7 @@ export default function LiveClassesPage() {
                 <label style={{ display: 'block', marginBottom: '0.5rem' }}>Description</label>
                 <textarea
                   value={newSession.description}
+                  aria-label="Description"
                   onChange={(e) => setNewSession({ ...newSession, description: e.target.value })}
                   rows={2}
                   style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
@@ -441,6 +437,7 @@ export default function LiveClassesPage() {
                   <label style={{ display: 'block', marginBottom: '0.5rem' }}>Class</label>
                   <select
                     value={newSession.classId}
+                    aria-label="Class"
                     onChange={(e) => setNewSession({ ...newSession, classId: e.target.value })}
                     required
                     style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
@@ -454,6 +451,7 @@ export default function LiveClassesPage() {
                   <label style={{ display: 'block', marginBottom: '0.5rem' }}>Teacher</label>
                   <select
                     value={newSession.teacherId}
+                    aria-label="Teacher"
                     onChange={(e) => setNewSession({ ...newSession, teacherId: e.target.value })}
                     required
                     style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
@@ -469,6 +467,7 @@ export default function LiveClassesPage() {
                   <label style={{ display: 'block', marginBottom: '0.5rem' }}>Date & Time</label>
                   <input
                     type="datetime-local"
+                    aria-label="Date and Time"
                     value={newSession.scheduledAt}
                     onChange={(e) => setNewSession({ ...newSession, scheduledAt: e.target.value })}
                     required
@@ -480,8 +479,9 @@ export default function LiveClassesPage() {
                   <label style={{ display: 'block', marginBottom: '0.5rem' }}>Duration (min)</label>
                   <input
                     type="number"
+                    aria-label="Duration"
                     value={newSession.duration}
-                    onChange={(e) => setNewSession({ ...newSession, duration: parseInt(e.target.value) || 60 })}
+                    onChange={(e) => setNewSession({ ...newSession, duration: parseInt(e.target.value, 10) || 60 })}
                     min="15"
                     max="180"
                     style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
@@ -522,4 +522,21 @@ export default function LiveClassesPage() {
       )}
     </main>
   );
+}
+
+export async function getServerSideProps(context: GetServerSidePropsContext) {
+  const session = await getSession(context);
+
+  if (!session) {
+    return {
+      redirect: {
+        destination: '/api/auth/signin', // Or your custom login page
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: { session },
+  };
 }

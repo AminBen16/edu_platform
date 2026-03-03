@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../lib/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
+import { getSession } from 'next-auth/react';
+import type { GetServerSidePropsContext } from 'next';
 
 interface AnalyticsData {
   totalUsers: number;
@@ -30,13 +32,7 @@ export default function AnalyticsPage() {
   const [error, setError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState('30'); // days
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadAnalytics();
-    }
-  }, [isAuthenticated, timeRange]);
-
-  const loadAnalytics = async () => {
+  const loadAnalytics = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -49,7 +45,13 @@ export default function AnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [timeRange]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadAnalytics();
+    }
+  }, [isAuthenticated, loadAnalytics]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -59,14 +61,6 @@ export default function AnalyticsPage() {
       minute: '2-digit'
     });
   };
-
-  if (!isAuthenticated) {
-    return (
-      <main style={{ padding: '2rem', textAlign: 'center' }}>
-        <h1>Please log in to access analytics</h1>
-      </main>
-    );
-  }
 
   if (loading) {
     return (
@@ -88,6 +82,7 @@ export default function AnalyticsPage() {
           <label style={{ fontSize: '0.875rem', color: '#666' }}>Time Range:</label>
           <select
             value={timeRange}
+            aria-label="Time Range"
             onChange={(e) => setTimeRange(e.target.value)}
             style={{
               padding: '0.5rem',
@@ -210,4 +205,21 @@ export default function AnalyticsPage() {
       </div>
     </main>
   );
+}
+
+export async function getServerSideProps(context: GetServerSidePropsContext) {
+  const session = await getSession(context);
+
+  if (!session) {
+    return {
+      redirect: {
+        destination: '/api/auth/signin', // Or your custom login page
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: { session },
+  };
 }

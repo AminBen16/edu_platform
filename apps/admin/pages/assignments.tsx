@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../lib/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
+import { getSession } from 'next-auth/react';
+import type { GetServerSidePropsContext } from 'next';
 
 interface Assignment {
   id: string;
@@ -59,13 +61,7 @@ export default function AssignmentsPage() {
     maxScore: 100,
   });
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadData();
-    }
-  }, [isAuthenticated]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -83,7 +79,13 @@ export default function AssignmentsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadData();
+    }
+  }, [isAuthenticated, loadData]);
 
   const handleCreateAssignment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,7 +114,7 @@ export default function AssignmentsPage() {
   };
 
   const handleDeleteAssignment = async (assignmentId: string) => {
-    if (!confirm('Are you sure you want to delete this assignment?')) return;
+    if (!window.confirm('Are you sure you want to delete this assignment?')) return;
 
     try {
       await api.delete(`/assignments/${assignmentId}`);
@@ -168,14 +170,6 @@ export default function AssignmentsPage() {
     if (!dueDate) return false;
     return new Date(dueDate) < new Date();
   };
-
-  if (!isAuthenticated) {
-    return (
-      <main style={{ padding: '2rem', textAlign: 'center' }}>
-        <h1>Please log in to access assignments</h1>
-      </main>
-    );
-  }
 
   if (loading) {
     return (
@@ -416,6 +410,7 @@ export default function AssignmentsPage() {
                   <label style={{ display: 'block', marginBottom: '0.5rem' }}>Lesson</label>
                   <select
                     value={newAssignment.lessonId}
+                    aria-label="Lesson"
                     onChange={(e) => setNewAssignment({ ...newAssignment, lessonId: e.target.value })}
                     required
                     style={{
@@ -438,6 +433,7 @@ export default function AssignmentsPage() {
                   <label style={{ display: 'block', marginBottom: '0.5rem' }}>Due Date</label>
                   <input
                     type="datetime-local"
+                    aria-label="Due Date"
                     value={newAssignment.dueDate}
                     onChange={(e) => setNewAssignment({ ...newAssignment, dueDate: e.target.value })}
                     style={{
@@ -454,8 +450,9 @@ export default function AssignmentsPage() {
                 <label style={{ display: 'block', marginBottom: '0.5rem' }}>Maximum Score</label>
                 <input
                   type="number"
+                  aria-label="Maximum Score"
                   value={newAssignment.maxScore}
-                  onChange={(e) => setNewAssignment({ ...newAssignment, maxScore: parseInt(e.target.value) || 100 })}
+                  onChange={(e) => setNewAssignment({ ...newAssignment, maxScore: parseInt(e.target.value, 10) || 100 })}
                   min="1"
                   max="1000"
                   style={{
@@ -503,4 +500,21 @@ export default function AssignmentsPage() {
       )}
     </main>
   );
+}
+
+export async function getServerSideProps(context: GetServerSidePropsContext) {
+  const session = await getSession(context);
+
+  if (!session) {
+    return {
+      redirect: {
+        destination: '/api/auth/signin', // Or your custom login page
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: { session },
+  };
 }

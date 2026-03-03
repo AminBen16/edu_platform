@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../lib/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
+import { getSession } from 'next-auth/react';
+import type { GetServerSidePropsContext } from 'next';
 
 interface Subject {
   id: string;
@@ -30,13 +32,7 @@ export default function SubjectsPage() {
     color: '#007bff',
   });
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadSubjects();
-    }
-  }, [isAuthenticated]);
-
-  const loadSubjects = async () => {
+  const loadSubjects = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get('/subjects');
@@ -46,7 +42,13 @@ export default function SubjectsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadSubjects();
+    }
+  }, [isAuthenticated, loadSubjects]);
 
   const handleCreateSubject = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,7 +77,7 @@ export default function SubjectsPage() {
   };
 
   const handleDeleteSubject = async (subjectId: string) => {
-    if (!confirm('Are you sure you want to delete this subject?')) return;
+    if (!window.confirm('Are you sure you want to delete this subject?')) return;
 
     try {
       await api.delete(`/subjects/${subjectId}`);
@@ -84,14 +86,6 @@ export default function SubjectsPage() {
       setError('Failed to delete subject');
     }
   };
-
-  if (!isAuthenticated) {
-    return (
-      <main style={{ padding: '2rem', textAlign: 'center' }}>
-        <h1>Please log in to access subjects</h1>
-      </main>
-    );
-  }
 
   if (loading) {
     return (
@@ -218,6 +212,7 @@ export default function SubjectsPage() {
                 <label style={{ display: 'block', marginBottom: '0.5rem' }}>Subject Name</label>
                 <input
                   type="text"
+                  aria-label="Subject Name"
                   value={newSubject.name}
                   onChange={(e) => setNewSubject({ ...newSubject, name: e.target.value })}
                   required
@@ -234,6 +229,7 @@ export default function SubjectsPage() {
                 <label style={{ display: 'block', marginBottom: '0.5rem' }}>Subject Code (Optional)</label>
                 <input
                   type="text"
+                  aria-label="Subject Code"
                   value={newSubject.code}
                   onChange={(e) => setNewSubject({ ...newSubject, code: e.target.value })}
                   style={{
@@ -249,6 +245,7 @@ export default function SubjectsPage() {
                 <label style={{ display: 'block', marginBottom: '0.5rem' }}>Description (Optional)</label>
                 <textarea
                   value={newSubject.description}
+                  aria-label="Description"
                   onChange={(e) => setNewSubject({ ...newSubject, description: e.target.value })}
                   rows={3}
                   style={{
@@ -265,6 +262,7 @@ export default function SubjectsPage() {
                 <label style={{ display: 'block', marginBottom: '0.5rem' }}>Color</label>
                 <input
                   type="color"
+                  aria-label="Color"
                   value={newSubject.color}
                   onChange={(e) => setNewSubject({ ...newSubject, color: e.target.value })}
                   style={{
@@ -313,4 +311,21 @@ export default function SubjectsPage() {
       )}
     </main>
   );
+}
+
+export async function getServerSideProps(context: GetServerSidePropsContext) {
+  const session = await getSession(context);
+
+  if (!session) {
+    return {
+      redirect: {
+        destination: '/api/auth/signin', // Or your custom login page
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: { session },
+  };
 }

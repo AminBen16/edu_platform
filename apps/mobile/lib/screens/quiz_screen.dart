@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import '../services/api.dart';
 
 class QuizScreen extends ConsumerStatefulWidget {

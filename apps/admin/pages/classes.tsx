@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { api, User } from '../lib/api'; // Import User from lib/api
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
+import { getSession } from 'next-auth/react';
+import type { GetServerSidePropsContext } from 'next';
 
 interface Class {
   id: string;
@@ -43,13 +45,7 @@ export default function ClassesPage() {
     teacherId: '', // This will be teacherProfile.id
   });
 
-  useEffect(() => {
-    if (isAuthenticated && token) { // Ensure token is available
-      loadData();
-    }
-  }, [isAuthenticated, token]); // Add token to dependency array
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -61,14 +57,20 @@ export default function ClassesPage() {
       
       setClasses(classesResponse.data);
       // Filter for users who have a teacherProfile and are active
-      setTeachers(usersResponse.data.filter((u: User) => u.teacherProfile && u.isActive));
+      setTeachers(usersResponse.data.filter((u: any) => u.teacherProfile && u.isActive));
     } catch (err: any) {
       console.error('Failed to load data:', err);
       setError(err.response?.data?.error || 'Failed to load data');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated && token) { // Ensure token is available
+      loadData();
+    }
+  }, [isAuthenticated, token, loadData]); // Add token to dependency array
 
   const handleCreateClass = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,7 +85,7 @@ export default function ClassesPage() {
       
       await api.post('/classes', {
           ...newClass,
-          capacity: parseInt(newClass.capacity as any), // Ensure capacity is number
+          capacity: parseInt(String(newClass.capacity), 10), // Ensure capacity is number
       });
 
       setShowAddModal(false);
@@ -98,7 +100,7 @@ export default function ClassesPage() {
   };
 
   const handleDeleteClass = async (classId: string) => {
-    if (!confirm('Are you sure you want to delete this class? This action cannot be undone.')) return;
+    if (!window.confirm('Are you sure you want to delete this class? This action cannot be undone.')) return;
 
     try {
       setError(null);
@@ -109,14 +111,6 @@ export default function ClassesPage() {
       setError(err.response?.data?.error || 'Failed to delete class');
     }
   };
-
-  if (!isAuthenticated) {
-    return (
-      <main style={{ padding: '2rem', textAlign: 'center' }}>
-        <h1>Please log in to access classes</h1>
-      </main>
-    );
-  }
 
   if (loading) {
     return (
@@ -313,6 +307,7 @@ export default function ClassesPage() {
                   <label style={{ display: 'block', marginBottom: '0.5rem' }}>Grade Level</label>
                   <input
                     type="text"
+                    aria-label="Grade Level"
                     value={newClass.grade}
                     onChange={(e) => setNewClass({ ...newClass, grade: e.target.value })}
                     placeholder="e.g., Grade 10"
@@ -330,8 +325,9 @@ export default function ClassesPage() {
                   <label style={{ display: 'block', marginBottom: '0.5rem' }}>Capacity</label>
                   <input
                     type="number"
+                    aria-label="Capacity"
                     value={newClass.capacity}
-                    onChange={(e) => setNewClass({ ...newClass, capacity: parseInt(e.target.value) || 30 })}
+                    onChange={(e) => setNewClass({ ...newClass, capacity: parseInt(e.target.value, 10) || 30 })}
                     min="1"
                     max="100"
                     style={{
@@ -347,6 +343,7 @@ export default function ClassesPage() {
                   <label style={{ display: 'block', marginBottom: '0.5rem' }}>Teacher</label>
                   <select
                     value={newClass.teacherId}
+                    aria-label="Teacher"
                     onChange={(e) => setNewClass({ ...newClass, teacherId: e.target.value })}
                     style={{
                       width: '100%',
@@ -401,4 +398,21 @@ export default function ClassesPage() {
       )}
     </main>
   );
+}
+
+export async function getServerSideProps(context: GetServerSidePropsContext) {
+  const session = await getSession(context);
+
+  if (!session) {
+    return {
+      redirect: {
+        destination: '/api/auth/signin', // Or your custom login page
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: { session },
+  };
 }

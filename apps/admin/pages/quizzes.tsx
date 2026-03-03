@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../lib/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
+import { getSession } from 'next-auth/react';
+import type { GetServerSidePropsContext } from 'next';
 
 interface Quiz {
   id: string;
@@ -71,13 +73,7 @@ export default function QuizzesPage() {
     points: 10,
   });
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadData();
-    }
-  }, [isAuthenticated]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -95,7 +91,13 @@ export default function QuizzesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadData();
+    }
+  }, [isAuthenticated, loadData]);
 
   const handleCreateQuiz = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,7 +171,7 @@ export default function QuizzesPage() {
   };
 
   const handleDeleteQuiz = async (quizId: string) => {
-    if (!confirm('Are you sure you want to delete this quiz?')) return;
+    if (!window.confirm('Are you sure you want to delete this quiz?')) return;
 
     try {
       await api.delete(`/quizzes/${quizId}`);
@@ -197,14 +199,6 @@ export default function QuizzesPage() {
       setError('Failed to download quiz');
     }
   };
-
-  if (!isAuthenticated) {
-    return (
-      <main style={{ padding: '2rem', textAlign: 'center' }}>
-        <h1>Please log in to access quizzes</h1>
-      </main>
-    );
-  }
 
   if (loading) {
     return (
@@ -431,6 +425,7 @@ export default function QuizzesPage() {
                   <label style={{ display: 'block', marginBottom: '0.5rem' }}>Subject</label>
                   <select
                     value={newQuiz.subjectId}
+                    aria-label="Subject"
                     onChange={(e) => setNewQuiz({ ...newQuiz, subjectId: e.target.value })}
                     required
                     style={{
@@ -455,8 +450,9 @@ export default function QuizzesPage() {
                   <label style={{ display: 'block', marginBottom: '0.5rem' }}>Time Limit (minutes)</label>
                   <input
                     type="number"
+                    aria-label="Time Limit"
                     value={newQuiz.timeLimit}
-                    onChange={(e) => setNewQuiz({ ...newQuiz, timeLimit: parseInt(e.target.value) || 30 })}
+                    onChange={(e) => setNewQuiz({ ...newQuiz, timeLimit: parseInt(e.target.value, 10) || 30 })}
                     min="5"
                     max="180"
                     style={{
@@ -472,8 +468,9 @@ export default function QuizzesPage() {
                   <label style={{ display: 'block', marginBottom: '0.5rem' }}>Passing Score (%)</label>
                   <input
                     type="number"
+                    aria-label="Passing Score"
                     value={newQuiz.passingScore}
-                    onChange={(e) => setNewQuiz({ ...newQuiz, passingScore: parseInt(e.target.value) || 70 })}
+                    onChange={(e) => setNewQuiz({ ...newQuiz, passingScore: parseInt(e.target.value, 10) || 70 })}
                     min="0"
                     max="100"
                     style={{
@@ -489,8 +486,9 @@ export default function QuizzesPage() {
                   <label style={{ display: 'block', marginBottom: '0.5rem' }}>Max Score</label>
                   <input
                     type="number"
+                    aria-label="Max Score"
                     value={newQuiz.maxScore}
-                    onChange={(e) => setNewQuiz({ ...newQuiz, maxScore: parseInt(e.target.value) || 100 })}
+                    onChange={(e) => setNewQuiz({ ...newQuiz, maxScore: parseInt(e.target.value, 10) || 100 })}
                     min="1"
                     max="1000"
                     style={{
@@ -528,7 +526,8 @@ export default function QuizzesPage() {
                     <label style={{ display: 'block', marginBottom: '0.5rem' }}>Question Type</label>
                     <select
                       value={currentQuestion.type}
-                      onChange={(e) => setCurrentQuestion({ ...currentQuestion, type: e.target.value as any })}
+                      aria-label="Question Type"
+                      onChange={(e) => setCurrentQuestion({ ...currentQuestion, type: e.target.value as QuizQuestion['type'] })}
                       style={{
                         width: '100%',
                         padding: '0.5rem',
@@ -546,8 +545,9 @@ export default function QuizzesPage() {
                     <label style={{ display: 'block', marginBottom: '0.5rem' }}>Points</label>
                     <input
                       type="number"
+                      aria-label="Points"
                       value={currentQuestion.points}
-                      onChange={(e) => setCurrentQuestion({ ...currentQuestion, points: parseInt(e.target.value) || 10 })}
+                      onChange={(e) => setCurrentQuestion({ ...currentQuestion, points: parseInt(e.target.value, 10) || 10 })}
                       min="1"
                       max="100"
                       style={{
@@ -691,4 +691,21 @@ export default function QuizzesPage() {
       )}
     </main>
   );
+}
+
+export async function getServerSideProps(context: GetServerSidePropsContext) {
+  const session = await getSession(context);
+
+  if (!session) {
+    return {
+      redirect: {
+        destination: '/api/auth/signin', // Or your custom login page
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: { session },
+  };
 }

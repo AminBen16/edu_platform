@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../lib/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
+import { getSession } from 'next-auth/react';
+import type { GetServerSidePropsContext } from 'next';
 
 interface User {
   id: string;
@@ -39,27 +41,7 @@ export default function ChatPage() {
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadConversations();
-    }
-  }, [isAuthenticated]);
-
-  useEffect(() => {
-    if (selectedUser) {
-      loadMessages(selectedUser.id);
-    }
-  }, [selectedUser]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get('/messages/conversations');
@@ -70,9 +52,9 @@ export default function ChatPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const loadMessages = async (userId: string) => {
+  const loadMessages = useCallback(async (userId: string) => {
     try {
       const response = await api.get(`/messages/${userId}`);
       setMessages(response.data);
@@ -86,7 +68,27 @@ export default function ChatPage() {
       console.error('Failed to load messages:', err);
       setError('Failed to load messages');
     }
-  };
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadConversations();
+    }
+  }, [isAuthenticated, loadConversations]);
+
+  useEffect(() => {
+    if (selectedUser) {
+      loadMessages(selectedUser.id);
+    }
+  }, [selectedUser, loadMessages]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,14 +140,6 @@ export default function ChatPage() {
     if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString();
   };
-
-  if (!isAuthenticated) {
-    return (
-      <main style={{ padding: '2rem', textAlign: 'center' }}>
-        <h1>Please log in to access chat</h1>
-      </main>
-    );
-  }
 
   if (loading) {
     return (
@@ -355,4 +349,21 @@ export default function ChatPage() {
       </div>
     </main>
   );
+}
+
+export async function getServerSideProps(context: GetServerSidePropsContext) {
+  const session = await getSession(context);
+
+  if (!session) {
+    return {
+      redirect: {
+        destination: '/api/auth/signin', // Or your custom login page
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: { session },
+  };
 }

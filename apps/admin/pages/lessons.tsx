@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../lib/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
+import { getSession } from 'next-auth/react';
+import type { GetServerSidePropsContext } from 'next';
 
 interface Lesson {
   id: string;
@@ -58,13 +60,7 @@ export default function LessonsPage() {
     isPublished: false,
   });
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadData();
-    }
-  }, [isAuthenticated]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -82,7 +78,13 @@ export default function LessonsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadData();
+    }
+  }, [isAuthenticated, loadData]);
 
   const handleCreateLesson = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,7 +126,7 @@ export default function LessonsPage() {
   };
 
   const handleDeleteLesson = async (lessonId: string) => {
-    if (!confirm('Are you sure you want to delete this lesson?')) return;
+    if (!window.confirm('Are you sure you want to delete this lesson?')) return;
 
     try {
       await api.delete(`/lessons/${lessonId}`);
@@ -152,14 +154,6 @@ export default function LessonsPage() {
       setError('Failed to download lesson');
     }
   };
-
-  if (!isAuthenticated) {
-    return (
-      <main style={{ padding: '2rem', textAlign: 'center' }}>
-        <h1>Please log in to access lessons</h1>
-      </main>
-    );
-  }
 
   if (loading) {
     return (
@@ -416,6 +410,7 @@ export default function LessonsPage() {
                   <label style={{ display: 'block', marginBottom: '0.5rem' }}>Subject</label>
                   <select
                     value={newLesson.subjectId}
+                    aria-label="Subject"
                     onChange={(e) => setNewLesson({ ...newLesson, subjectId: e.target.value })}
                     required
                     style={{
@@ -438,7 +433,8 @@ export default function LessonsPage() {
                   <label style={{ display: 'block', marginBottom: '0.5rem' }}>Type</label>
                   <select
                     value={newLesson.type}
-                    onChange={(e) => setNewLesson({ ...newLesson, type: e.target.value as any })}
+                    aria-label="Type"
+                    onChange={(e) => setNewLesson({ ...newLesson, type: e.target.value })}
                     style={{
                       width: '100%',
                       padding: '0.5rem',
@@ -475,8 +471,9 @@ export default function LessonsPage() {
                   <label style={{ display: 'block', marginBottom: '0.5rem' }}>Duration (minutes)</label>
                   <input
                     type="number"
+                    aria-label="Duration"
                     value={newLesson.duration}
-                    onChange={(e) => setNewLesson({ ...newLesson, duration: parseInt(e.target.value) || 30 })}
+                    onChange={(e) => setNewLesson({ ...newLesson, duration: parseInt(e.target.value, 10) || 30 })}
                     min="1"
                     max="240"
                     style={{
@@ -525,4 +522,21 @@ export default function LessonsPage() {
       )}
     </main>
   );
+}
+
+export async function getServerSideProps(context: GetServerSidePropsContext) {
+  const session = await getSession(context);
+
+  if (!session) {
+    return {
+      redirect: {
+        destination: '/api/auth/signin', // Or your custom login page
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: { session },
+  };
 }

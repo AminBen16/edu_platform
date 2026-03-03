@@ -146,6 +146,13 @@ class _ProgressReportsScreenState extends ConsumerState<ProgressReportsScreen> {
                                 itemCount: _filteredChildren.length,
                                 itemBuilder: (context, index) {
                                   final child = _filteredChildren[index];
+                                  final avgGrade = child['avgGrade'];
+                                  Color gradeColor = Colors.grey; // Default for N/A
+
+                                  if (avgGrade is num) {
+                                    gradeColor = _getGradeColor(avgGrade.toInt());
+                                  }
+
                                   return Card(
                                     margin: const EdgeInsets.only(bottom: 16),
                                     child: Padding(
@@ -180,7 +187,7 @@ class _ProgressReportsScreenState extends ConsumerState<ProgressReportsScreen> {
                                           const SizedBox(height: 16),
                                           Row(
                                             children: [
-                                              Expanded(child: _buildQuickStat('Average Grade', '${child['avgGrade'] ?? 'N/A'}', Colors.blue)),
+                                              Expanded(child: _buildQuickStat('Average Grade', '${avgGrade ?? 'N/A'}', gradeColor)),
                                               const SizedBox(width: 12),
                                               Expanded(child: _buildQuickStat('Attendance', '${child['attendance'] ?? 'N/A'}%', Colors.green)),
                                             ],

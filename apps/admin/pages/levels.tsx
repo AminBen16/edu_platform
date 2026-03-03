@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../lib/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
+import { getSession } from 'next-auth/react';
+import type { GetServerSidePropsContext } from 'next';
 
 interface School {
   id: string;
@@ -27,13 +29,7 @@ export default function LevelsPage() {
 
   const [levels, setLevels] = useState<string[]>([]);
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadSchool();
-    }
-  }, [isAuthenticated]);
-
-  const loadSchool = async () => {
+  const loadSchool = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get('/schools/current');
@@ -45,7 +41,13 @@ export default function LevelsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadSchool();
+    }
+  }, [isAuthenticated, loadSchool]);
 
   const handleAddLevel = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,7 +75,7 @@ export default function LevelsPage() {
   };
 
   const handleDeleteLevel = async (levelName: string) => {
-    if (!confirm(`Are you sure you want to delete "${levelName}"?`)) return;
+    if (!window.confirm(`Are you sure you want to delete "${levelName}"?`)) return;
     if (!school) return;
 
     try {
@@ -89,14 +91,6 @@ export default function LevelsPage() {
       setError('Failed to delete level');
     }
   };
-
-  if (!isAuthenticated) {
-    return (
-      <main style={{ padding: '2rem', textAlign: 'center' }}>
-        <h1>Please log in to access levels</h1>
-      </main>
-    );
-  }
 
   if (loading) {
     return (
@@ -288,4 +282,21 @@ export default function LevelsPage() {
       )}
     </main>
   );
+}
+
+export async function getServerSideProps(context: GetServerSidePropsContext) {
+  const session = await getSession(context);
+
+  if (!session) {
+    return {
+      redirect: {
+        destination: '/api/auth/signin', // Or your custom login page
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: { session },
+  };
 }

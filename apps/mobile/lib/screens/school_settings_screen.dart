@@ -304,31 +304,28 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
               try {
                 // This method needs to be implemented in ApiService
                 await ApiService.updateGradingScale(gradingScale);
-                if (mounted) {
-                  setState(() {
-                    _settings['gradingScale'] = _formatGradingScale(
-                      gradingScale,
-                    );
-                  });
-                  Navigator.of(context).pop(); // Pop dialog using screen context
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Grading scale updated successfully'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
+                if (!mounted) return;
+
+                setState(() {
+                  _settings['gradingScale'] = _formatGradingScale(gradingScale);
+                });
+                Navigator.of(context).pop(); // Pop dialog using screen context
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Grading scale updated successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
               } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Error updating grading scale: ${e.toString()}',
-                      ),
-                      backgroundColor: Colors.red,
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Error updating grading scale: ${e.toString()}',
                     ),
-                  );
-                }
+                    backgroundColor: Colors.red,
+                  ),
+                );
               }
             },
             child: const Text('Save'),
@@ -343,7 +340,11 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
     // or specific endpoints if they existed.
     List<String> items = [];
     try {
-      final users = await ApiService.getUsers(role: type == 'Classes' ? null : (type == 'Students' ? 'STUDENT' : 'TEACHER'));
+      final users = await ApiService.getUsers(
+        role: type == 'Classes'
+            ? null
+            : (type == 'Students' ? 'STUDENT' : 'TEACHER'),
+      );
       items = users.map((u) => u['name'] as String).toList();
     } catch (e) {
       // Fallback or error handling

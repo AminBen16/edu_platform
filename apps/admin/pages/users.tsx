@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { api, User } from '../lib/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
+import { getSession } from 'next-auth/react';
+import type { GetServerSidePropsContext } from 'next';
 
 export default function UsersPage() {
   const { user, isAuthenticated } = useAuth(); // Destructure user to get schoolId
@@ -12,19 +14,13 @@ export default function UsersPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [inviting, setInviting] = useState(false);
 
-  const [newUser, setNewUser] = useState({
+  const [newUser, setNewUser] = useState<{ name: string; email: string; role: 'STUDENT' | 'TEACHER' | 'ADMIN' | 'PARENT' }>({
     name: '',
     email: '',
-    role: 'STUDENT' as const,
+    role: 'STUDENT',
   });
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadUsers();
-    }
-  }, [isAuthenticated]);
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get('/users');
@@ -36,7 +32,13 @@ export default function UsersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadUsers();
+    }
+  }, [isAuthenticated, loadUsers]);
 
   const handleInviteUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,14 +67,6 @@ export default function UsersPage() {
       setInviting(false);
     }
   };
-
-  if (!isAuthenticated) {
-    return (
-      <main style={{ padding: '2rem', textAlign: 'center' }}>
-        <h1>Please log in to access user management</h1>
-      </main>
-    );
-  }
 
   if (loading) {
     return (
@@ -179,6 +173,7 @@ export default function UsersPage() {
                 <label style={{ display: 'block', marginBottom: '0.5rem' }}>Name</label>
                 <input
                   type="text"
+                  aria-label="Name"
                   value={newUser.name}
                   onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
                   required
@@ -195,6 +190,7 @@ export default function UsersPage() {
                 <label style={{ display: 'block', marginBottom: '0.5rem' }}>Email</label>
                 <input
                   type="email"
+                  aria-label="Email"
                   value={newUser.email}
                   onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                   required
@@ -211,7 +207,8 @@ export default function UsersPage() {
                 <label style={{ display: 'block', marginBottom: '0.5rem' }}>Role</label>
                 <select
                   value={newUser.role}
-                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value as any })}
+                  aria-label="Role"
+                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value as 'STUDENT' | 'TEACHER' | 'ADMIN' | 'PARENT' })}
                   style={{
                     width: '100%',
                     padding: '0.5rem',
@@ -262,4 +259,21 @@ export default function UsersPage() {
       )}
     </main>
   );
+}
+
+export async function getServerSideProps(context: GetServerSidePropsContext) {
+  const session = await getSession(context);
+
+  if (!session) {
+    return {
+      redirect: {
+        destination: '/api/auth/signin', // Or your custom login page
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: { session },
+  };
 }

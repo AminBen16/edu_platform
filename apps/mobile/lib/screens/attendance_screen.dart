@@ -110,154 +110,313 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
-                      const SizedBox(height: 16),
-                      Text('Error loading attendance', style: TextStyle(fontSize: 18, color: Colors.grey[600])),
-                      const SizedBox(height: 8),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 32),
-                        child: Text(_error!, textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: Colors.grey[500])),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadAttendanceData,
-                        child: const Text('Retry'),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error loading attendance',
+                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadAttendanceData,
-                  child: _attendance.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.calendar_today, size: 64, color: Colors.grey[400]),
-                              const SizedBox(height: 16),
-                              Text('No attendance records', style: TextStyle(fontSize: 18, color: Colors.grey[600], fontWeight: FontWeight.w500)),
-                              const SizedBox(height: 8),
-                              Text('Attendance records will appear here', style: TextStyle(fontSize: 14, color: Colors.grey[500])),
-                            ],
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _loadAttendanceData,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _loadAttendanceData,
+              child: _attendance.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.calendar_today,
+                            size: 64,
+                            color: Colors.grey[400],
                           ),
-                        )
-                      : CustomScrollView(
-                          slivers: [
-                            SliverToBoxAdapter(
+                          const SizedBox(height: 16),
+                          Text(
+                            'No attendance records',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Attendance records will appear here',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : CustomScrollView(
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Attendance Overview',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey[800],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _buildStatCard(
+                                        'Present',
+                                        _getPresentCount().toString(),
+                                        Icons.check_circle,
+                                        Colors.green,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: _buildStatCard(
+                                        'Absent',
+                                        _getAbsentCount().toString(),
+                                        Icons.cancel,
+                                        Colors.red,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: _buildStatCard(
+                                        'Late',
+                                        _getLateCount().toString(),
+                                        Icons.access_time,
+                                        Colors.orange,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 24),
+                                Text(
+                                  'Recent Records',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey[800],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        SliverList(
+                          delegate: SliverChildBuilderDelegate((
+                            context,
+                            index,
+                          ) {
+                            final record = _attendance[index];
+                            return Card(
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 6,
+                              ),
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('Attendance Overview', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.grey[800])),
-                                    const SizedBox(height: 16),
                                     Row(
                                       children: [
-                                        Expanded(child: _buildStatCard('Present', _getPresentCount().toString(), Icons.check_circle, Colors.green)),
+                                        Icon(
+                                          _getStatusIcon(
+                                            record['status'] ?? 'present',
+                                          ),
+                                          color: _getStatusColor(
+                                            record['status'] ?? 'present',
+                                          ),
+                                          size: 28,
+                                        ),
                                         const SizedBox(width: 12),
-                                        Expanded(child: _buildStatCard('Absent', _getAbsentCount().toString(), Icons.cancel, Colors.red)),
-                                        const SizedBox(width: 12),
-                                        Expanded(child: _buildStatCard('Late', _getLateCount().toString(), Icons.access_time, Colors.orange)),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                record['studentName'] ??
+                                                    record['name'] ??
+                                                    'Student',
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                record['className'] ??
+                                                    record['class'] ??
+                                                    '',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: _getStatusColor(
+                                              record['status'] ?? 'present',
+                                            ).withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            (record['status'] ?? 'present')
+                                                .toString()
+                                                .toUpperCase(),
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: _getStatusColor(
+                                                record['status'] ?? 'present',
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                       ],
                                     ),
-                                    const SizedBox(height: 24),
-                                    Text('Recent Records', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[800])),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (context, index) {
-                                  final record = _attendance[index];
-                                  return Card(
-                                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Icon(_getStatusIcon(record['status'] ?? 'present'), color: _getStatusColor(record['status'] ?? 'present'), size: 28),
-                                              const SizedBox(width: 12),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(record['studentName'] ?? record['name'] ?? 'Student', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                                                    const SizedBox(height: 4),
-                                                    Text(record['className'] ?? record['class'] ?? '', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-                                                  ],
-                                                ),
-                                              ),
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                                decoration: BoxDecoration(
-                                                  color: _getStatusColor(record['status'] ?? 'present').withValues(alpha: 0.1),
-                                                  borderRadius: BorderRadius.circular(20),
-                                                ),
-                                                child: Text(
-                                                  (record['status'] ?? 'present').toString().toUpperCase(),
-                                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _getStatusColor(record['status'] ?? 'present')),
-                                                ),
-                                              ),
-                                            ],
+                                    const SizedBox(height: 12),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.calendar_today,
+                                          size: 16,
+                                          color: Colors.grey[600],
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          record['date'] ?? '',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey[600],
                                           ),
-                                          const SizedBox(height: 12),
-                                          Row(
-                                            children: [
-                                              Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
-                                              const SizedBox(width: 4),
-                                              Text(record['date'] ?? '', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-                                              if (record['checkInTime'] != null) ...[
-                                                const SizedBox(width: 16),
-                                                Icon(Icons.login, size: 16, color: Colors.grey[600]),
-                                                const SizedBox(width: 4),
-                                                Text(record['checkInTime']!, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-                                              ],
-                                              if (record['checkOutTime'] != null) ...[
-                                                const SizedBox(width: 16),
-                                                Icon(Icons.logout, size: 16, color: Colors.grey[600]),
-                                                const SizedBox(width: 4),
-                                                Text(record['checkOutTime']!, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-                                              ],
-                                            ],
+                                        ),
+                                        if (record['checkInTime'] != null) ...[
+                                          const SizedBox(width: 16),
+                                          Icon(
+                                            Icons.login,
+                                            size: 16,
+                                            color: Colors.grey[600],
                                           ),
-                                          if (record['notes'] != null && record['notes']!.isNotEmpty) ...[
-                                            const SizedBox(height: 12),
-                                            Container(
-                                              padding: const EdgeInsets.all(8),
-                                              decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(4)),
-                                              child: Row(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text('Notes', style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w600)),
-                                                  const SizedBox(width: 8),
-                                                  Expanded(child: Text(record['notes']!, style: TextStyle(fontSize: 12, color: Colors.blue[700]))),
-                                                ],
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            record['checkInTime']!,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                        if (record['checkOutTime'] != null) ...[
+                                          const SizedBox(width: 16),
+                                          Icon(
+                                            Icons.logout,
+                                            size: 16,
+                                            color: Colors.grey[600],
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            record['checkOutTime']!,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    if (record['notes'] != null &&
+                                        record['notes']!.isNotEmpty) ...[
+                                      const SizedBox(height: 12),
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.blue[50],
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Notes',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[600],
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                record['notes']!,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.blue[700],
+                                                ),
                                               ),
                                             ),
                                           ],
-                                        ],
+                                        ),
                                       ),
-                                    ),
-                                  );
-                                },
-                                childCount: _attendance.length,
+                                    ],
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                            );
+                          }, childCount: _attendance.length),
                         ),
-                ),
+                      ],
+                    ),
+            ),
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -270,7 +429,14 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           const SizedBox(height: 8),
           Text(title, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
           const SizedBox(height: 4),
-          Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
         ],
       ),
     );
@@ -286,34 +452,53 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Filter Options', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const Text(
+                'Filter Options',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 24),
-              const Text('Class', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              const Text(
+                'Class',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: _selectedClass,
+                initialValue: _selectedClass,
                 decoration: const InputDecoration(border: OutlineInputBorder()),
                 items: [
-                  const DropdownMenuItem(value: 'All', child: Text('All Classes')),
-                  ..._classes.map((c) => DropdownMenuItem(
-                        value: c['id'].toString(),
-                        child: Text(c['name'] ?? 'Class ${c['id']}'),
-                      )),
+                  const DropdownMenuItem(
+                    value: 'All',
+                    child: Text('All Classes'),
+                  ),
+                  ..._classes.map(
+                    (c) => DropdownMenuItem(
+                      value: c['id'].toString(),
+                      child: Text(c['name'] ?? 'Class ${c['id']}'),
+                    ),
+                  ),
                 ],
-                onChanged: (value) => setState(() => _selectedClass = value ?? 'All'),
+                onChanged: (value) =>
+                    setState(() => _selectedClass = value ?? 'All'),
               ),
               const SizedBox(height: 16),
-              const Text('Time Period', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              const Text(
+                'Time Period',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: _selectedPeriod,
+                initialValue: _selectedPeriod,
                 decoration: const InputDecoration(border: OutlineInputBorder()),
                 items: const [
                   DropdownMenuItem(value: 'week', child: Text('This Week')),
                   DropdownMenuItem(value: 'month', child: Text('This Month')),
-                  DropdownMenuItem(value: 'semester', child: Text('This Semester')),
+                  DropdownMenuItem(
+                    value: 'semester',
+                    child: Text('This Semester'),
+                  ),
                 ],
-                onChanged: (value) => setState(() => _selectedPeriod = value ?? 'month'),
+                onChanged: (value) =>
+                    setState(() => _selectedPeriod = value ?? 'month'),
               ),
               const SizedBox(height: 24),
               SizedBox(
@@ -323,7 +508,11 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                     Navigator.pop(context);
                     _loadAttendanceData();
                   },
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
                   child: const Text('Apply Filters'),
                 ),
               ),
