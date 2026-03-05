@@ -30,3 +30,4 @@ apps/**/.env
 apps/**/.env.*
 packages/**/.env
 packages/**/.env.*
+.env*.local
