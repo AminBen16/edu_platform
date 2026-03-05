@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "projects": [
+    {
+      "name": "edu-platform-admin",
+      "src": "apps/admin"
+    }
+  ]
+}
