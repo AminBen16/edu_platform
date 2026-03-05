@@ -36,6 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = handler;
 // Production API - Complete Education Platform
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
@@ -52,28 +53,25 @@ const classes_1 = __importDefault(require("./routes/classes"));
 const assignments_1 = __importDefault(require("./routes/assignments"));
 const messages_1 = __importDefault(require("./routes/messages"));
 const live_sessions_1 = __importDefault(require("./routes/live-sessions"));
-const analytics_1 = __importDefault(require("./routes/analytics"));
+const analyticsRoutes_1 = __importDefault(require("./routes/analyticsRoutes"));
+const dashboard_1 = __importDefault(require("./routes/dashboard"));
+const upload_1 = __importDefault(require("./routes/upload"));
+const download_1 = __importDefault(require("./routes/download"));
+const content_1 = __importDefault(require("./routes/content"));
+const notifications_1 = __importDefault(require("./routes/notifications"));
+const school_settings_1 = __importDefault(require("./routes/school-settings"));
+const reports_1 = __importDefault(require("./routes/reports"));
+const attendance_1 = __importDefault(require("./routes/attendance"));
+const schedule_1 = __importDefault(require("./routes/schedule"));
 Sentry.init({
     dsn: process.env.SENTRY_DSN || '',
     tracesSampleRate: 1.0,
 });
 const app = (0, express_1.default)();
-const server = (0, http_1.createServer)(app);
-const io = new socket_io_1.Server(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
-});
 // Middleware
 app.use(Sentry.Handlers.requestHandler());
 app.use((0, cors_1.default)({
-    origin: [
-        'http://localhost:55719', // Flutter web development
-        'http://localhost:3000', // Local development
-        'https://*.vercel.app', // All Vercel deployments
-        'http://localhost:8080', // Additional local ports
-    ],
+    origin: '*', // Allow all origins for local development
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -89,6 +87,22 @@ app.get('/', (req, res) => {
         timestamp: new Date().toISOString()
     });
 });
+// Test endpoint for debugging
+app.get('/test', (req, res) => {
+    console.log('Test endpoint hit:', {
+        method: req.method,
+        headers: req.headers,
+        body: req.body,
+        url: req.url
+    });
+    res.status(200).json({
+        message: 'Test endpoint working',
+        received: {
+            body: req.body,
+            contentType: req.headers['content-type']
+        }
+    });
+});
 // API Routes with proper versioning
 app.use('/api/v1/auth', auth_1.default);
 app.use('/api/v1/users', users_1.default);
@@ -99,38 +113,16 @@ app.use('/api/v1/classes', classes_1.default);
 app.use('/api/v1/assignments', assignments_1.default);
 app.use('/api/v1/messages', messages_1.default);
 app.use('/api/v1/live-sessions', live_sessions_1.default);
-app.use('/api/v1/analytics', analytics_1.default);
-// Socket.IO for real-time features
-io.on('connection', (socket) => {
-    console.log('User connected:', socket.id);
-    // Join class rooms
-    socket.on('join-class', (classId) => {
-        socket.join(classId);
-        socket.emit('joined-class', { classId, userId: socket.id });
-    });
-    // Real-time chat
-    socket.on('send-message', (data) => {
-        io.to(data.classId).emit('new-message', {
-            ...data,
-            timestamp: new Date().toISOString(),
-            senderId: socket.id
-        });
-    });
-    // Live class WebRTC signaling
-    socket.on('join-live-session', (roomCode) => {
-        socket.join(roomCode);
-        socket.emit('joined-session', { roomCode, userId: socket.id });
-    });
-    socket.on('webrtc-signal', (data) => {
-        socket.to(data.roomCode).emit('webrtc-signal', {
-            ...data,
-            senderId: socket.id
-        });
-    });
-    socket.on('disconnect', () => {
-        console.log('User disconnected:', socket.id);
-    });
-});
+app.use('/api/v1/analytics', analyticsRoutes_1.default);
+app.use('/api/v1/dashboard', dashboard_1.default);
+app.use('/api/v1/upload', upload_1.default);
+app.use('/api/v1/download', download_1.default);
+app.use('/api/v1/content', content_1.default);
+app.use('/api/v1/notifications', notifications_1.default);
+app.use('/api/v1/school-settings', school_settings_1.default);
+app.use('/api/v1/reports', reports_1.default);
+app.use('/api/v1/attendance', attendance_1.default);
+app.use('/api/v1/schedule', schedule_1.default);
 // Error handling
 app.use(Sentry.Handlers.errorHandler());
 // 404 handler
@@ -148,13 +140,60 @@ app.use('*', (req, res) => {
             '/api/v1/assignments',
             '/api/v1/messages',
             '/api/v1/live-sessions',
-            '/api/v1/analytics'
+            '/api/v1/analytics',
+            '/api/v1/dashboard',
+            '/api/v1/upload',
+            '/api/v1/download',
+            '/api/v1/content',
+            '/api/v1/notifications',
+            '/api/v1/school-settings',
+            '/api/v1/reports',
+            '/api/v1/attendance',
+            '/api/v1/schedule'
         ]
     });
 });
 // Start server for local development
 if (process.env.NODE_ENV !== 'production') {
     const PORT = process.env.PORT || 3000;
+    const server = (0, http_1.createServer)(app);
+    const io = new socket_io_1.Server(server, {
+        cors: {
+            origin: "*",
+            methods: ["GET", "POST"]
+        }
+    });
+    // Socket.IO for real-time features (local dev only)
+    io.on('connection', (socket) => {
+        console.log('User connected:', socket.id);
+        // Join class rooms
+        socket.on('join-class', (classId) => {
+            socket.join(classId);
+            socket.emit('joined-class', { classId, userId: socket.id });
+        });
+        // Real-time chat
+        socket.on('send-message', (data) => {
+            io.to(data.classId).emit('new-message', {
+                ...data,
+                timestamp: new Date().toISOString(),
+                senderId: socket.id
+            });
+        });
+        // Live class WebRTC signaling
+        socket.on('join-live-session', (roomCode) => {
+            socket.join(roomCode);
+            socket.emit('joined-session', { roomCode, userId: socket.id });
+        });
+        socket.on('webrtc-signal', (data) => {
+            socket.to(data.roomCode).emit('webrtc-signal', {
+                ...data,
+                senderId: socket.id
+            });
+        });
+        socket.on('disconnect', () => {
+            console.log('User disconnected:', socket.id);
+        });
+    });
     server.listen(PORT, () => {
         console.log(`🚀 Education Platform API running on port ${PORT}`);
         console.log(`📚 API Documentation: http://localhost:${PORT}/api/v1`);
@@ -162,4 +201,6 @@ if (process.env.NODE_ENV !== 'production') {
     });
 }
 // Export for Vercel serverless
-exports.default = app;
+function handler(req, res) {
+    return app(req, res);
+}

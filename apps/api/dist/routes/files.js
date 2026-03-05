@@ -8,6 +8,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const auth_1 = require("../middleware/auth");
 const database_1 = require("../config/database");
+const database_2 = require("../lib/database");
 const multer_1 = __importDefault(require("multer"));
 const storageService_1 = __importDefault(require("../services/storageService"));
 const router = (0, express_1.Router)();
@@ -108,7 +109,7 @@ router.get('/', auth_1.protect, async (req, res) => {
     }
 });
 // POST /files - Upload files
-router.post('/', auth_1.protect, (0, auth_1.authorize)('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), (0, auth_1.requirePermission)('files.write'), upload.single('file'), async (req, res) => {
+router.post('/', auth_1.protect, (0, auth_1.authorize)(database_2.Role.TEACHER, database_2.Role.ADMIN, database_2.Role.SCHOOL_ADMIN), upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
@@ -176,7 +177,7 @@ router.get('/:id', auth_1.protect, async (req, res) => {
     }
 });
 // DELETE /files/:id - Delete file
-router.delete('/:id', auth_1.protect, (0, auth_1.authorize)('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), (0, auth_1.requirePermission)('files.delete'), async (req, res) => {
+router.delete('/:id', auth_1.protect, (0, auth_1.authorize)(database_2.Role.TEACHER, database_2.Role.ADMIN, database_2.Role.SCHOOL_ADMIN), async (req, res) => {
     const { id } = req.params;
     try {
         // Get resource info to delete file

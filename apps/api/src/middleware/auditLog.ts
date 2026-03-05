@@ -24,7 +24,7 @@ export const logAudit = async (
         userId,
         action,
         resource,
-        details: details || {},
+        details: details ? JSON.stringify(details) : null,
         ipAddress: req?.ip,
         userAgent: req?.get('User-Agent'),
       },

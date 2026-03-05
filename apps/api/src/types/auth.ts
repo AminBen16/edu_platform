@@ -7,14 +7,17 @@ export interface AuthenticatedUser {
   email: string;
   role: string;
   schoolId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  name: string;
+  password: string | null;
+  avatarUrl: string | null;
+  emailVerified: Date | null;
+  lastLoginAt: Date | null;
+  isActive: boolean;
+  deletedAt: Date | null;
+  deletionRequestedAt: Date | null;
   permissions?: string[];
-  isActive?: boolean;
-  name?: string;
-  avatarUrl?: string | null;
-  emailVerified?: Date | null;
-  lastLoginAt?: Date | null;
-  createdAt?: Date;
-  updatedAt?: Date;
 }
 
 export interface RequestWithUser extends Request {

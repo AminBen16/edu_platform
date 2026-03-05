@@ -5,10 +5,22 @@
     "packages/*"
   ],
   "scripts": {
+    "dev": "concurrently \"cd apps/api && npm run dev\" \"cd apps/admin && npm run dev\"",
     "build:api": "cd apps/api && npm run build",
     "build:admin": "cd apps/admin && npm run build",
     "build:mobile": "cd apps/mobile && flutter build web",
-    "build:all": "npm run build:api && npm run build:admin && npm run build:mobile"
+    "build:all": "npm run build:api && npm run build:admin",
+    "start": "npm run build:all && node apps/api/dist/index.js",
+    "db:generate": "cd packages/db && npx prisma generate",
+    "db:migrate": "cd packages/db && npx prisma migrate deploy",
+    "db:seed": "cd packages/db && npx prisma db seed",
+    "db:studio": "cd packages/db && npx prisma studio",
+    "db:push": "cd packages/db && npx prisma db push",
+    "lint": "eslint . --ext .ts,.tsx",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
   },
   "dependencies": {
     "@sentry/node": "^10.32.1",

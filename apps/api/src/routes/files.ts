@@ -1,8 +1,9 @@
 // apps/api/src/routes/files.ts
 // File management system for content delivery
 import { Router, Response, Request } from 'express';
-import { protect, authorize, requirePermission } from '../middleware/auth';
+import { protect, authorize } from '../middleware/auth';
 import { prisma } from '../config/database';
+import { Role } from '../lib/database';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -115,7 +116,7 @@ router.get('/', protect, async (req: Request, res: Response) => {
 });
 
 // POST /files - Upload files
-router.post('/', protect, authorize('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), requirePermission('files.write'), upload.single('file'), async (req: Request, res: Response) => {
+router.post('/', protect, authorize(Role.TEACHER, Role.ADMIN, Role.SCHOOL_ADMIN), upload.single('file'), async (req: Request, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -191,7 +192,7 @@ router.get('/:id', protect, async (req: Request, res: Response) => {
 });
 
 // DELETE /files/:id - Delete file
-router.delete('/:id', protect, authorize('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), requirePermission('files.delete'), async (req: Request, res: Response) => {
+router.delete('/:id', protect, authorize(Role.TEACHER, Role.ADMIN, Role.SCHOOL_ADMIN), async (req: Request, res: Response) => {
   const { id } = req.params;
 
   try {

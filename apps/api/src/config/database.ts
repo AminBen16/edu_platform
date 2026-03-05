@@ -1,5 +1,4 @@
-// apps/api/src/config/database.ts
-// Real database configuration with Neon PostgreSQL
+// Production database configuration with PostgreSQL (Neon)
 import { PrismaClient } from '@prisma/client';
 
 const globalForPrisma = globalThis as unknown as {
@@ -9,7 +8,7 @@ const globalForPrisma = globalThis as unknown as {
 export const prisma = globalForPrisma.prisma ?? new PrismaClient({
   datasources: {
     db: {
-      url: process.env.DATABASE_URL || 'file:./dev.db',
+      url: process.env.DATABASE_URL || 'postgresql://user:password@localhost:5432/eduplatform',
     },
   },
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
