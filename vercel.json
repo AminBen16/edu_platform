@@ -3,13 +3,10 @@
   "builds": [
     {
       "src": "apps/admin/next.config.js",
-      "use": "@vercel/next"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "apps/admin/$1"
+      "use": "@vercel/next",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
     }
   ]
 }
