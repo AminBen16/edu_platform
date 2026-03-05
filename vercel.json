@@ -1,9 +1,15 @@
 {
   "version": 2,
-  "projects": [
+  "builds": [
     {
-      "name": "edu-platform-admin",
-      "src": "apps/admin"
+      "src": "apps/admin",
+      "use": "@vercel/next",
+      "config": {
+        "zeroConfig": true,
+        "nodeVersion": "18.x"
+      }
     }
   ]
 }
+
+
