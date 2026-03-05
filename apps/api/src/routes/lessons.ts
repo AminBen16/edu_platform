@@ -19,7 +19,7 @@ router.get('/', protect, async (req, res) => {
         });
         res.json(lessons);
     } catch (error) {
-        console.error('Failed to fetch lessons:', error);
+        
         res.status(500).json({ error: 'Failed to fetch lessons.' });
     }
 });
@@ -44,7 +44,7 @@ router.get('/:id', protect, async (req, res) => {
         }
         res.json(lesson);
     } catch (error) {
-        console.error('Get lesson error:', error);
+        
         res.status(500).json({ error: 'Failed to fetch lesson.' });
     }
 });
@@ -97,7 +97,7 @@ router.post('/', protect, async (req, res) => {
         });
         res.status(201).json(newLesson);
     } catch (error) {
-        console.error('Lesson creation error:', error);
+        
         res.status(500).json({ error: 'Failed to create lesson.' });
     }
 });
@@ -155,7 +155,7 @@ router.put('/:id', protect, async (req, res) => {
         });
         res.json(updatedLesson);
     } catch (error) {
-        console.error('Update lesson error:', error);
+        
         res.status(500).json({ error: 'Failed to update lesson.' });
     }
 });
@@ -182,7 +182,7 @@ router.delete('/:id', protect, async (req, res) => {
         });
         res.status(204).send(); // No Content
     } catch (error) {
-        console.error('Delete lesson error:', error);
+        
         res.status(500).json({ error: 'Failed to delete lesson.' });
     }
 });

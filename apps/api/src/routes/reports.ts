@@ -28,7 +28,7 @@ router.get('/', protect, async (req: RequestWithUser, res: Response) => {
 
     res.json(reports);
   } catch (error) {
-    console.error('Error fetching reports:', error);
+    
     res.status(500).json({ error: 'Failed to fetch reports' });
   }
 });
@@ -68,7 +68,7 @@ router.post('/export', protect, async (req: RequestWithUser, res: Response) => {
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
     res.sendFile(filePath, (err) => {
       if (err) {
-        console.error('Error sending file:', err);
+        
         res.status(500).json({ error: 'Failed to export report' });
       } else {
         // Clean up temporary file
@@ -76,7 +76,7 @@ router.post('/export', protect, async (req: RequestWithUser, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('Error exporting report:', error);
+    
     res.status(500).json({ error: 'Failed to export report' });
   }
 });
@@ -105,7 +105,7 @@ router.post('/schedule', protect, authorize(Role.ADMIN, Role.SCHOOL_ADMIN, Role.
       scheduledReport
     });
   } catch (error) {
-    console.error('Error scheduling report:', error);
+    
     res.status(500).json({ error: 'Failed to schedule report' });
   }
 });
@@ -122,7 +122,7 @@ router.get('/scheduled', protect, authorize(Role.ADMIN, Role.SCHOOL_ADMIN, Role.
 
     res.json(scheduledReports);
   } catch (error) {
-    console.error('Error fetching scheduled reports:', error);
+    
     res.status(500).json({ error: 'Failed to fetch scheduled reports' });
   }
 });

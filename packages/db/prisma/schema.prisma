@@ -44,6 +44,10 @@ model School {
   classes        Class[]
   auditLogs      AuditLog[]
   notifications  Notification[]
+  attendance     Attendance[]
+  schedules      Schedule[]
+  liveSessions   LiveSession[]
+  teachers       Teacher[]
 }
 
 model User {
@@ -77,6 +81,8 @@ model User {
   taughtClasses    Class[]        @relation("ClassTeacher")
   attendedClasses  Class[]        @relation("ClassStudents")
   notifications    Notification[]
+  attendance       Attendance[]
+  teacher          Teacher?
 
   @@unique([email, schoolId])
   @@index([schoolId])
@@ -210,7 +216,7 @@ model Comment {
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   author User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  parent Comment? @relation("Replies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  parent Comment? @relation("Replies", fields: [parentId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   children Comment[] @relation("Replies")
 
   @@index([schoolId])
@@ -241,7 +247,7 @@ model Quiz {
 model Question {
   id        String   @id @default(cuid())
   text      String
-  options   Json
+  options   String
   schoolId  String
   quizId    String
   authorId  String
@@ -258,7 +264,7 @@ model Question {
 model QuizAttempt {
   id               String   @id @default(cuid())
   score            Float
-  answers          Json
+  answers          String
   schoolId         String
   quizId           String
   studentProfileId String
@@ -326,7 +332,7 @@ model SchoolSettings {
   schoolId         String   @unique
   academicYear     String   @default("2024-2025")
   semester         String   @default("Fall")
-  gradingScale     Json     @default("{\"A\": 90, \"B\": 80, \"C\": 70, \"D\": 60, \"F\": 0}")
+  gradingScale     String   @default("{\"A\": 90, \"B\": 80, \"C\": 70, \"D\": 60, \"F\": 0}")
   timezone         String   @default("UTC")
   onlineGrading    Boolean  @default(false)
   digitalLibrary   Boolean  @default(false)
@@ -347,7 +353,7 @@ model AuditLog {
   schoolId  String
   userId    String
   action    String
-  details   Json?
+  details   String?
   createdAt DateTime       @default(now())
 
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -365,7 +371,7 @@ model Notification {
   contentType  String?
   contentId    String?
   priority     String    @default("normal")
-  data         Json?
+  data         String?
   isRead       Boolean   @default(false)
   schoolId     String
   userId       String
@@ -391,6 +397,9 @@ model Class {
   school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   teacher  User   @relation("ClassTeacher", fields: [teacherId], references: [id], onDelete: Restrict)
   students User[] @relation("ClassStudents")
+  attendance Attendance[]
+  schedules Schedule[]
+  liveSessions LiveSession[]
 
   @@index([schoolId])
   @@index([teacherId])

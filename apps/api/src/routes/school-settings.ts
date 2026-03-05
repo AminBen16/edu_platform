@@ -35,7 +35,7 @@ router.get('/', protect, authorize(Role.ADMIN, Role.SCHOOL_ADMIN, Role.SUPER_ADM
 
     res.json(settings);
   } catch (error) {
-    console.error('Error fetching school settings:', error);
+    
     res.status(500).json({ error: 'Failed to fetch school settings' });
   }
 });
@@ -88,7 +88,7 @@ router.put('/', protect, authorize(Role.ADMIN, Role.SCHOOL_ADMIN, Role.SUPER_ADM
 
     res.json(settings);
   } catch (error) {
-    console.error('Error updating school settings:', error);
+    
     res.status(500).json({ error: 'Failed to update school settings' });
   }
 });
@@ -116,7 +116,7 @@ router.patch('/academic-year', protect, authorize(Role.ADMIN, Role.SCHOOL_ADMIN,
 
     res.json(settings);
   } catch (error) {
-    console.error('Error updating academic year:', error);
+    
     res.status(500).json({ error: 'Failed to update academic year' });
   }
 });
@@ -144,7 +144,7 @@ router.patch('/semester', protect, authorize(Role.ADMIN, Role.SCHOOL_ADMIN, Role
 
     res.json(settings);
   } catch (error) {
-    console.error('Error updating semester:', error);
+    
     res.status(500).json({ error: 'Failed to update semester' });
   }
 });
@@ -172,7 +172,7 @@ router.patch('/grading-scale', protect, authorize(Role.ADMIN, Role.SCHOOL_ADMIN,
 
     res.json(settings);
   } catch (error) {
-    console.error('Error updating grading scale:', error);
+    
     res.status(500).json({ error: 'Failed to update grading scale' });
   }
 });
@@ -200,7 +200,7 @@ router.patch('/timezone', protect, authorize(Role.ADMIN, Role.SCHOOL_ADMIN, Role
 
     res.json(settings);
   } catch (error) {
-    console.error('Error updating timezone:', error);
+    
     res.status(500).json({ error: 'Failed to update timezone' });
   }
 });
@@ -232,7 +232,7 @@ router.patch('/features', protect, authorize(Role.ADMIN, Role.SCHOOL_ADMIN, Role
 
     res.json(settings);
   } catch (error) {
-    console.error('Error updating features:', error);
+    
     res.status(500).json({ error: 'Failed to update features' });
   }
 });
@@ -267,7 +267,7 @@ router.patch('/contact', protect, authorize(Role.ADMIN, Role.SCHOOL_ADMIN, Role.
 
     res.json(settings);
   } catch (error) {
-    console.error('Error updating contact information:', error);
+    
     res.status(500).json({ error: 'Failed to update contact information' });
   }
 });

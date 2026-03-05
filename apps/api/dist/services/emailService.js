@@ -30,6 +30,9 @@ class EmailService {
             // });
         }
     }
+    static getPublicUrl() {
+        return process.env.PUBLIC_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    }
     static async sendEmail(options) {
         try {
             await this.initialize();
@@ -66,7 +69,7 @@ class EmailService {
             </div>
           </div>
           <div style="text-align: center; margin-top: 30px;">
-            <a href="http://localhost:3000/register/${invitationCode}" 
+            <a href="${EmailService.getPublicUrl()}/register/${invitationCode}" 
                style="background-color: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px; display: inline-block;">
               Register Now
             </a>
@@ -84,7 +87,7 @@ class EmailService {
             to: email,
             subject: `Invitation to join ${schoolName}`,
             html,
-            text: `Hello ${name},\n\nYou've been invited to join ${schoolName} education platform.\n\nYour invitation code is: ${invitationCode}\n\nRegister at: http://localhost:3000/register/${invitationCode}\n\nThis invitation expires in 7 days.`
+            text: `Hello ${name},\n\nYou've been invited to join ${schoolName} education platform.\n\nYour invitation code is: ${invitationCode}\n\nRegister at: ${EmailService.getPublicUrl()}/register/${invitationCode}\n\nThis invitation expires in 7 days.`
         });
     }
     static async sendDeletionConfirmationEmail(email, name, deletionToken, schoolName) {
@@ -100,7 +103,7 @@ class EmailService {
           <p>If you did not make this request, please ignore this email.</p>
           <p>If you want to proceed with account deletion, please click the confirmation link below:</p>
           <div style="text-align: center; margin: 30px 0;">
-            <a href="http://localhost:3000/users/confirm-deletion/${deletionToken}" 
+            <a href="${EmailService.getPublicUrl()}/users/confirm-deletion/${deletionToken}" 
                style="background-color: #dc3545; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px; display: inline-block;">
               Confirm Account Deletion
             </a>
@@ -123,7 +126,7 @@ class EmailService {
             to: email,
             subject: 'Account Deletion Confirmation',
             html,
-            text: `Hello ${name},\n\nA request was made to delete your account from ${schoolName} education platform.\n\nTo confirm deletion, visit: http://localhost:3000/users/confirm-deletion/${deletionToken}\n\nThis deletion is permanent and cannot be undone. You have 30 days to restore your account if you change your mind.\n\n© 2024 ${schoolName} Education Platform. All rights reserved.`
+            text: `Hello ${name},\n\nA request was made to delete your account from ${schoolName} education platform.\n\nTo confirm deletion, visit: ${EmailService.getPublicUrl()}/users/confirm-deletion/${deletionToken}\n\nThis deletion is permanent and cannot be undone. You have 30 days to restore your account if you change your mind.\n\n© 2024 ${schoolName} Education Platform. All rights reserved.`
         });
     }
 }

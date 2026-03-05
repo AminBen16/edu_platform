@@ -4,15 +4,26 @@
     {
       "src": "apps/api/src/index.ts",
       "use": "@vercel/node",
-      "config": { "includeFiles": ["apps/api/package.json", "apps/api/tsconfig.json", "packages/db/**"] }
+      "config": {
+        "includeFiles": [
+          "apps/api/package.json",
+          "apps/api/tsconfig.json",
+          "packages/db/**",
+          "node_modules/.prisma/**"
+        ],
+        "maxLambdaSize": "15mb"
+      }
     },
     {
-      "src": "apps/admin/package.json",
-      "use": "@vercel/next",
-      "config": { "maxLambdaSize": "15mb" }
+      "src": "apps/admin",
+      "use": "@vercel/next"
     }
   ],
   "routes": [
+    {
+      "src": "/api/v1/(.*)",
+      "dest": "apps/api/src/index.ts"
+    },
     {
       "src": "/api/(.*)",
       "dest": "apps/api/src/index.ts"
@@ -23,10 +34,7 @@
     }
   ],
   "env": {
-    "DATABASE_URL": "@database_url",
-    "NEXTAUTH_SECRET": "@nextauth_secret",
-    "SUPABASE_URL": "@supabase_url",
-    "SUPABASE_SERVICE_KEY": "@supabase_service_key",
-    "API_BASE_URL": "@api_base_url"
-  }
+    "NODE_ENV": "production"
+  },
+  "regions": ["iad1"]
 }

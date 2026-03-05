@@ -24,13 +24,13 @@ export const logAudit = async (
         userId,
         action,
         resource,
-        details: details || {},
+        details: details ? JSON.stringify(details) : null,
         ipAddress: req?.ip,
         userAgent: req?.get('User-Agent'),
       },
     });
   } catch (error) {
-    console.error('Failed to create manual audit log:', error);
+    
     // Should not fail the request if audit logging fails.
   }
 };
@@ -54,7 +54,7 @@ export const logSecurityEvent = async (
         details,
         req
     );
-    console.warn(`Security Event: ${event}`, { details, ip: req.ip });
+    
 };
 
 /**
@@ -71,9 +71,9 @@ export const cleanupOldAuditLogs = async (daysToKeep: number = 90) => {
     });
     
     if (count > 0) {
-        console.log(`Cleaned up ${count} old audit log records (older than ${daysToKeep} days).`);
+        
     }
   } catch (error) {
-    console.error('Error cleaning up audit logs:', error);
+    
   }
 };

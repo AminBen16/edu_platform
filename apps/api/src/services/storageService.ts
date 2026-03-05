@@ -68,7 +68,7 @@ class StorageService {
         size: options.file.length
       };
     } catch (error: any) {
-      console.error('Supabase storage error:', error);
+      
       throw new Error('Failed to store in Supabase');
     }
   }
@@ -108,7 +108,7 @@ class StorageService {
         size: options.file.length
       };
     } catch (error: any) {
-      console.error('Firebase storage error:', error);
+      
       throw new Error('Failed to store in Firebase');
     }
   }
@@ -146,7 +146,7 @@ class StorageService {
         size: options.file.length
       };
     } catch (error: any) {
-      console.error('Cloudinary storage error:', error);
+      
       throw new Error('Failed to store in Cloudinary');
     }
   }
@@ -160,35 +160,35 @@ class StorageService {
     if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
       try {
         const cloudResult = await this.storeSupabase(options);
-        console.log('File stored in Supabase:', cloudResult.url);
+        
         return cloudResult;
       } catch (error: any) {
-        console.log('Supabase failed, using local storage:', error.message);
+        
       }
     }
     
     if (process.env.FIREBASE_STORAGE_BUCKET) {
       try {
         const cloudResult = await this.storeFirebase(options);
-        console.log('File stored in Firebase:', cloudResult.url);
+        
         return cloudResult;
       } catch (error: any) {
-        console.log('Firebase failed, using local storage:', error.message);
+        
       }
     }
     
     if (process.env.CLOUDINARY_CLOUD_NAME) {
       try {
         const cloudResult = await this.storeCloudinary(options);
-        console.log('File stored in Cloudinary:', cloudResult.url);
+        
         return cloudResult;
       } catch (error: any) {
-        console.log('Cloudinary failed, using local storage:', error.message);
+        
       }
     }
     
     // Fallback to local storage
-    console.log('Using local storage:', localResult.url);
+    
     return localResult;
   }
   
@@ -220,7 +220,7 @@ class StorageService {
       
       return false;
     } catch (error: any) {
-      console.error('Delete file error:', error);
+      
       return false;
     }
   }

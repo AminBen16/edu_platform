@@ -16,7 +16,7 @@ router.get('/', protect, async (req, res) => {
 
         res.json(schools);
     } catch (error) {
-        console.error('Failed to fetch schools:', error);
+        
         res.status(500).json({ error: 'Failed to fetch schools.' });
     }
 });
@@ -35,11 +35,10 @@ router.get('/:id', protect, async (req, res) => {
         }
         res.json(school);
     } catch (error) {
-        console.error(`Failed to fetch school ${id}:`, error);
+        
         res.status(500).json({ error: 'Failed to fetch school.' });
     }
 });
-
 
 // POST /schools - Creates a new school (SUPER_ADMIN only)
 router.post('/', protect, async (req, res) => {
@@ -58,7 +57,7 @@ router.post('/', protect, async (req, res) => {
         });
         res.status(201).json(newSchool);
     } catch (error) {
-        console.error('Failed to create school:', error);
+        
         // @ts-ignore
         if (error.code === 'P2002') { // Prisma unique constraint violation for domain
             return res.status(409).json({ error: 'A school with this domain already exists.' });
@@ -98,7 +97,7 @@ router.put('/:id', protect, async (req, res) => {
         });
         res.json(updatedSchool);
     } catch (error) {
-        console.error(`Failed to update school ${id}:`, error);
+        
         res.status(500).json({ error: 'Failed to update school.' });
     }
 });
@@ -114,7 +113,7 @@ router.delete('/:id', protect, async (req, res) => {
         await prisma.school.delete({ where: { id } });
         res.status(204).send();
     } catch (error) {
-        console.error(`Failed to delete school ${id}:`, error);
+        
         res.status(500).json({ error: 'Failed to delete school.' });
     }
 });

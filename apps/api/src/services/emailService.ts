@@ -54,10 +54,10 @@ class EmailService {
       };
 
       await this.transporter.sendMail(mailOptions);
-      console.log(`Email sent to ${options.to}: ${options.subject}`);
+      
       return true;
     } catch (error) {
-      console.error('Failed to send email:', error);
+      
       return false;
     }
   }

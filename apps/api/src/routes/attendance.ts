@@ -79,7 +79,7 @@ router.get('/', async (req: RequestWithUser, res: Response) => {
 
     res.json(transformedAttendance);
   } catch (error) {
-    console.error('Error fetching attendance:', error);
+    
     res.status(500).json({ error: 'Failed to fetch attendance records' });
   }
 });
@@ -146,7 +146,7 @@ router.post(
         notes: attendance.notes,
       });
     } catch (error) {
-      console.error('Error creating attendance:', error);
+      
       res.status(500).json({ error: 'Failed to create attendance record' });
     }
   }
@@ -201,7 +201,7 @@ router.post(
         count: results.length,
       });
     } catch (error) {
-      console.error('Error bulk creating attendance:', error);
+      
       res.status(500).json({ error: 'Failed to bulk create attendance records' });
     }
   }
@@ -256,7 +256,7 @@ router.get(
         attendanceRate: Math.round(attendanceRate * 10) / 10,
       });
     } catch (error) {
-      console.error('Error fetching attendance stats:', error);
+      
       res.status(500).json({ error: 'Failed to fetch attendance statistics' });
     }
   }

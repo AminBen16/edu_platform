@@ -4,7 +4,6 @@ import { prisma } from '../config/database';
 import { protect, authorize } from '../middleware/auth';
 import { Role } from '../lib/database';
 
-
 const router = Router();
 
 // Middleware to authorize only Admins and Super Admins for analytics
@@ -60,7 +59,7 @@ router.get('/overview', async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error('Failed to fetch analytics overview:', error);
+    
     res.status(500).json({ error: 'Failed to fetch analytics overview.' });
   }
 });
@@ -112,7 +111,7 @@ router.get('/users', async (req, res) => {
 
     res.json(userAnalytics);
   } catch (error) {
-    console.error('Failed to fetch user analytics:', error);
+    
     res.status(500).json({ error: 'Failed to fetch user analytics.' });
   }
 });

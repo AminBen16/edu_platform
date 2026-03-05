@@ -46,23 +46,23 @@ model Invitation {
   updatedAt DateTime  @updatedAt
 
   // Relations
-  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  creator  User   @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  school  School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  creator User   @relation(fields: [createdBy], references: [id], onDelete: Cascade)
 
   @@unique([email, code]) // Unique email per invitation code
 }
 
 // Account deletion requests
 model DeletionRequest {
-  id         String    @id @default(cuid())
-  userId     String    @unique @map("user_id")
-  token      String    @unique // Secure deletion token
-  expiresAt  DateTime  @map("expires_at")
+  id          String    @id @default(cuid())
+  userId      String    @unique @map("user_id")
+  token       String    @unique // Secure deletion token
+  expiresAt   DateTime  @map("expires_at")
   confirmedAt DateTime? @map("confirmed_at")
   completedAt DateTime? @map("completed_at")
   requestedAt DateTime  @default(now()) @map("requested_at")
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -70,14 +70,14 @@ model DeletionRequest {
 
 // Audit logging for security
 model AuditLog {
-  id        String      @id @default(cuid())
-  userId    String?     @map("user_id")
-  action    String      // LOGIN, LOGOUT, INVITE_CREATED, ACCOUNT_DELETED, etc.
-  resource  String?     // Resource affected (user_id, school_id, etc.)
-  details   String?       // Additional details (JSON string)
-  ipAddress String?     @map("ip_address")
-  userAgent String?     @map("user_agent")
-  createdAt DateTime    @default(now())
+  id        String   @id @default(cuid())
+  userId    String?  @map("user_id")
+  action    String // LOGIN, LOGOUT, INVITE_CREATED, ACCOUNT_DELETED, etc.
+  resource  String? // Resource affected (user_id, school_id, etc.)
+  details   String? // Additional details (JSON string)
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now())
 
   // Relations
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -95,20 +95,20 @@ model RateLimit {
 
 // Base user model with role-based access
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String
-  password      String?   // Optional for social login
-  avatarUrl     String?   @map("avatar_url")
-  role          String
-  schoolId      String    @map("school_id")
-  emailVerified DateTime? @map("email_verified")
-  lastLoginAt   DateTime? @map("last_login_at")
-  isActive      Boolean   @default(true) @map("is_active")
-  deletedAt     DateTime? @map("deleted_at")
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  name                String
+  password            String? // Optional for social login
+  avatarUrl           String?   @map("avatar_url")
+  role                String
+  schoolId            String    @map("school_id")
+  emailVerified       DateTime? @map("email_verified")
+  lastLoginAt         DateTime? @map("last_login_at")
+  isActive            Boolean   @default(true) @map("is_active")
+  deletedAt           DateTime? @map("deleted_at")
   deletionRequestedAt DateTime? @map("deletion_requested_at")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   // Multi-tenancy: Users belong to schools
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -208,24 +208,24 @@ model Class {
 
 // Lesson content management
 model Lesson {
-  id          String     @id @default(cuid())
+  id          String   @id @default(cuid())
   title       String
   description String?
   content     String? // Rich text content
-  type        String @default("LESSON")
-  videoUrl    String?    @map("video_url") // Recorded video URL
-  documentUrl String?    @map("document_url") // Document URL
+  type        String   @default("LESSON")
+  videoUrl    String?  @map("video_url") // Recorded video URL
+  documentUrl String?  @map("document_url") // Document URL
   duration    Int? // Duration in minutes
   order       Int? // For lesson sequencing
-  isPublished Boolean    @default(false) @map("is_published")
+  isPublished Boolean  @default(false) @map("is_published")
   difficulty  String? // Difficulty level (string field)
-  tags        String?   // Array of tags (JSON string)
-  schoolId    String     @map("school_id")
-  subjectId   String?    @map("subject_id")
-  teacherId   String?    @map("teacher_id")
-  classId     String?    @map("class_id")
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  tags        String? // Array of tags (JSON string)
+  schoolId    String   @map("school_id")
+  subjectId   String?  @map("subject_id")
+  teacherId   String?  @map("teacher_id")
+  classId     String?  @map("class_id")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Relations
   school      School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -239,13 +239,13 @@ model Lesson {
 
 // Lesson resources (PDFs, videos, etc.)
 model LessonResource {
-  id        String       @id @default(cuid())
+  id        String   @id @default(cuid())
   title     String
   type      String
   url       String // Cloud storage URL
   size      Int? // File size in bytes
-  lessonId  String       @map("lesson_id")
-  createdAt DateTime     @default(now())
+  lessonId  String   @map("lesson_id")
+  createdAt DateTime @default(now())
 
   // Relations
   lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
@@ -256,7 +256,7 @@ model Quiz {
   id           String   @id @default(cuid())
   title        String
   description  String?
-  type         String @default("ASSIGNMENT")
+  type         String   @default("ASSIGNMENT")
   timeLimit    Int?     @map("time_limit") // Minutes
   duration     Int? // Duration in minutes (alias for timeLimit)
   maxAttempts  Int      @default(1) @map("max_attempts") // Max attempts
@@ -279,13 +279,13 @@ model Quiz {
 
 // Quiz questions
 model Question {
-  id        String       @id @default(cuid())
+  id        String   @id @default(cuid())
   text      String
   type      String
   order     Int
-  points    Float        @default(1.0)
-  quizId    String       @map("quiz_id")
-  createdAt DateTime     @default(now())
+  points    Float    @default(1.0)
+  quizId    String   @map("quiz_id")
+  createdAt DateTime @default(now())
 
   // Relations
   quiz    Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
@@ -339,11 +339,11 @@ model Answer {
 
 // Student enrollments
 model Enrollment {
-  id         String           @id @default(cuid())
-  studentId  String           @map("student_id")
-  classId    String?          @map("class_id")
-  enrolledAt DateTime         @default(now()) @map("enrolled_at")
-  status     String @default("ACTIVE")
+  id         String   @id @default(cuid())
+  studentId  String   @map("student_id")
+  classId    String?  @map("class_id")
+  enrolledAt DateTime @default(now()) @map("enrolled_at")
+  status     String   @default("ACTIVE")
 
   // Relations
   student  Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
@@ -390,14 +390,14 @@ model Submission {
 
 // Real-time chat system
 model Message {
-  id        String      @id @default(cuid())
+  id        String   @id @default(cuid())
   content   String
-  type      String @default("TEXT")
-  fileUrl   String?     @map("file_url") // Image/video attachment
-  senderId  String      @map("sender_id")
-  classId   String?     @map("class_id") // Class-specific chat
-  isRead    Boolean     @default(false) @map("is_read")
-  createdAt DateTime    @default(now())
+  type      String   @default("TEXT")
+  fileUrl   String?  @map("file_url") // Image/video attachment
+  senderId  String   @map("sender_id")
+  classId   String?  @map("class_id") // Class-specific chat
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now())
 
   // Relations
   sender User @relation(fields: [senderId], references: [id], onDelete: Cascade)
@@ -423,12 +423,12 @@ model LiveSession {
 
 // Live session participants
 model LiveSessionParticipant {
-  id            String          @id @default(cuid())
-  joinedAt      DateTime        @default(now()) @map("joined_at")
-  leftAt        DateTime?       @map("left_at")
-  sessionId     String          @map("session_id")
-  participantId String          @map("participant_id")
-  role          String @default("STUDENT")
+  id            String    @id @default(cuid())
+  joinedAt      DateTime  @default(now()) @map("joined_at")
+  leftAt        DateTime? @map("left_at")
+  sessionId     String    @map("session_id")
+  participantId String    @map("participant_id")
+  role          String    @default("STUDENT")
 
   // Relations
   session     LiveSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -439,14 +439,14 @@ model LiveSessionParticipant {
 
 // Notification system
 model Notification {
-  id        String      @id @default(cuid())
-  userId    String      @map("user_id")
-  type      String      // ASSIGNMENT, GRADE, ANNOUNCEMENT, REMINDER
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  type      String // ASSIGNMENT, GRADE, ANNOUNCEMENT, REMINDER
   title     String
   message   String
-  data      String?       // Additional notification data (JSON string)
-  isRead    Boolean     @default(false) @map("is_read")
-  createdAt DateTime    @default(now()) @map("created_at")
+  data      String? // Additional notification data (JSON string)
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

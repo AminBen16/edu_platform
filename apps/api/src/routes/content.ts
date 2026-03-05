@@ -30,13 +30,13 @@ router.get('/recent', async (req, res) => {
         });
 
         const combinedContent = [
-            ...lessons.map(item => ({ ...item, contentType: 'lesson' })),
-            ...quizzes.map(item => ({ ...item, contentType: 'quiz' }))
+            ...lessons.map((item: any) => ({ ...item, contentType: 'lesson' })),
+            ...quizzes.map((item: any) => ({ ...item, contentType: 'quiz' }))
         ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
         res.json(combinedContent);
     } catch (error) {
-        console.error('Failed to fetch recent content:', error);
+        
         res.status(500).json({ error: 'Failed to fetch recent content.' });
     }
 });
@@ -66,7 +66,7 @@ router.get('/drafts', async (req, res) => {
 
         res.json(combinedDrafts);
     } catch (error) {
-        console.error('Failed to fetch draft content:', error);
+        
         res.status(500).json({ error: 'Failed to fetch draft content.' });
     }
 });
@@ -103,7 +103,7 @@ router.post('/publish', async (req, res) => {
 
         res.status(200).json({ message: 'Content published successfully.', content });
     } catch (error) {
-        console.error('Content publishing error:', error);
+        
         res.status(500).json({ error: 'Failed to publish content.' });
     }
 });
@@ -138,10 +138,9 @@ router.post('/unpublish', async (req, res) => {
 
         res.status(200).json({ message: 'Content unpublished successfully.', content });
     } catch (error) {
-        console.error('Content unpublishing error:', error);
+        
         res.status(500).json({ error: 'Failed to unpublish content.' });
     }
 });
-
 
 export default router;

@@ -26,7 +26,7 @@ router.get('/', protect, async (req, res) => {
         });
         res.json(quizzes);
     } catch (error) {
-        console.error('Failed to fetch quizzes:', error);
+        
         res.status(500).json({ error: 'Failed to fetch quizzes.' });
     }
 });
@@ -44,7 +44,7 @@ router.get('/:id', protect, async (req, res) => {
         }
         res.json(quiz);
     } catch (error) {
-        console.error('Get quiz error:', error);
+        
         res.status(500).json({ error: 'Failed to fetch quiz.' });
     }
 });
@@ -111,7 +111,7 @@ router.post('/', protect, async (req, res) => {
         });
         res.status(201).json(newQuiz);
     } catch (error) {
-        console.error('Quiz creation error:', error);
+        
         res.status(500).json({ error: 'Failed to create quiz.' });
     }
 });
@@ -138,7 +138,7 @@ router.put('/:id', protect, async (req, res) => {
         });
         res.json(updatedQuiz);
     } catch (error) {
-        console.error('Update quiz error:', error);
+        
         res.status(500).json({ error: 'Failed to update quiz.' });
     }
 });
@@ -162,11 +162,10 @@ router.delete('/:id', protect, async (req, res) => {
         await prisma.quiz.delete({ where: { id } });
         res.status(204).send();
     } catch (error) {
-        console.error('Delete quiz error:', error);
+        
         res.status(500).json({ error: 'Failed to delete quiz.' });
     }
 });
-
 
 // POST /quizzes/:id/submit - Submit quiz answers
 router.post('/:id/submit', protect, async (req, res) => {
@@ -236,7 +235,6 @@ router.post('/:id/submit', protect, async (req, res) => {
             };
         }).filter(a => a !== null);
 
-
         const quizAttempt = await prisma.quizAttempt.create({
             data: {
                 score,
@@ -256,10 +254,9 @@ router.post('/:id/submit', protect, async (req, res) => {
 
         res.status(201).json(quizAttempt);
     } catch (error) {
-        console.error('Quiz submission error:', error);
+        
         res.status(500).json({ error: 'Failed to submit quiz.' });
     }
 });
-
 
 export default router;

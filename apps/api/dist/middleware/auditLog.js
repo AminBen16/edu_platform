@@ -1,201 +1,63 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getSecurityStats = exports.cleanupOldAuditLogs = exports.invitationAuditLog = exports.deletionAuditLog = exports.registrationAuditLog = exports.loginAuditLog = exports.logSecurityEvent = exports.logAudit = exports.auditLog = void 0;
+exports.cleanupOldAuditLogs = exports.logSecurityEvent = exports.logAudit = void 0;
 const database_1 = require("../config/database");
-// Audit logging middleware factory
-const auditLog = (options) => {
-    return async (req, res, next) => {
-        // Store original res.json method
-        const originalJson = res.json;
-        const originalSend = res.send;
-        let responseData;
-        let statusCode;
-        // Override res.json to capture response data
-        res.json = function (data) {
-            responseData = data;
-            statusCode = statusCode || res.statusCode;
-            return originalJson.call(this, data);
-        };
-        // Override res.send to capture response data
-        res.send = function (data) {
-            responseData = data;
-            statusCode = statusCode || res.statusCode;
-            return originalSend.call(this, data);
-        };
-        // Continue to next middleware
-        const originalEnd = res.end;
-        res.end = function (chunk, encoding, cb) {
-            statusCode = statusCode || res.statusCode;
-            // Log the request/response
-            logAuditEntry(req, res, {
-                action: options.action,
-                resource: options.resource,
-                details: options.details,
-                responseData,
-                statusCode
-            });
-            return originalEnd.call(this, chunk, encoding, cb);
-        };
-        next();
-    };
-};
-exports.auditLog = auditLog;
-// Function to log audit entries
-const logAuditEntry = async (req, res, options) => {
-    try {
-        const auditData = {
-            userId: req.user?.id,
-            action: options.action,
-            resource: options.resource,
-            details: {
-                ...options.details,
-                method: req.method,
-                url: req.originalUrl,
-                statusCode: options.statusCode,
-                responseTime: Date.now(),
-                userAgent: req.get('User-Agent'),
-                ipAddress: req.ip,
-                ...(options.responseData && { responseData: options.responseData })
-            },
-            ipAddress: req.ip,
-            userAgent: req.get('User-Agent')
-        };
-        await database_1.prisma.auditLog.create({
-            data: auditData
-        });
-        console.log(`Audit log: ${options.action} by ${req.user?.email || 'anonymous'} from ${req.ip}`);
-    }
-    catch (error) {
-        console.error('Failed to create audit log:', error);
-        // Don't fail the request if audit logging fails
-    }
-};
-// Manual audit logging function
-const logAudit = async (userId, action, resource, details, ipAddress, userAgent) => {
+/**
+ * Manually logs an audit entry.
+ * @param userId - The ID of the user performing the action.
+ * @param action - A string describing the action (e.g., 'USER_LOGIN', 'LESSON_UPDATED').
+ * @param resource - The resource being affected (e.g., 'user', 'lesson').
+ * @param details - Any additional JSON data to log.
+ * @param req - The Express request object to capture IP and User-Agent.
+ */
+const logAudit = async (userId, action, resource, details, req) => {
     try {
         await database_1.prisma.auditLog.create({
             data: {
                 userId,
                 action,
                 resource,
-                details,
-                ipAddress,
-                userAgent
-            }
+                details: details ? JSON.stringify(details) : null,
+                ipAddress: req?.ip,
+                userAgent: req?.get('User-Agent'),
+            },
         });
     }
     catch (error) {
         console.error('Failed to create manual audit log:', error);
+        // Should not fail the request if audit logging fails.
     }
 };
 exports.logAudit = logAudit;
-// Security event logging
+/**
+ * Logs a security-related event.
+ * @param event - A string describing the security event (e.g., 'FAILED_LOGIN', 'PASSWORD_RESET_REQUEST').
+ * @param details - Any additional JSON data.
+ * @param req - The Express request object.
+ */
 const logSecurityEvent = async (event, details, req) => {
-    try {
-        await database_1.prisma.auditLog.create({
-            data: {
-                userId: req && req.user?.id,
-                action: `SECURITY_${event}`,
-                resource: 'security',
-                details: {
-                    ...details,
-                    method: req?.method,
-                    url: req?.originalUrl,
-                    userAgent: req?.get('User-Agent'),
-                    ipAddress: req?.ip || 'unknown'
-                },
-                ipAddress: req?.ip || 'unknown',
-                userAgent: req?.get('User-Agent')
-            }
-        });
-        console.warn(`Security event: ${event} - ${JSON.stringify(details)}`);
-    }
-    catch (error) {
-        console.error('Failed to create security audit log:', error);
-    }
+    const user = req.user;
+    await (0, exports.logAudit)(user?.id || null, `SECURITY_${event.toUpperCase()}`, 'security', details, req);
+    console.warn(`Security Event: ${event}`, { details, ip: req.ip });
 };
 exports.logSecurityEvent = logSecurityEvent;
-// Pre-configured audit loggers
-exports.loginAuditLog = (0, exports.auditLog)({
-    action: 'LOGIN_ATTEMPT',
-    resource: 'authentication'
-});
-exports.registrationAuditLog = (0, exports.auditLog)({
-    action: 'REGISTRATION_ATTEMPT',
-    resource: 'authentication'
-});
-exports.deletionAuditLog = (0, exports.auditLog)({
-    action: 'DELETION_ATTEMPT',
-    resource: 'account'
-});
-exports.invitationAuditLog = (0, exports.auditLog)({
-    action: 'INVITATION_ATTEMPT',
-    resource: 'invitation'
-});
-// Cleanup old audit logs (should be run periodically)
+/**
+ * Periodically cleans up old audit logs from the database.
+ * @param daysToKeep - The number of days to retain audit logs.
+ */
 const cleanupOldAuditLogs = async (daysToKeep = 90) => {
     try {
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
-        const result = await database_1.prisma.auditLog.deleteMany({
-            where: {
-                createdAt: {
-                    lt: cutoffDate
-                }
-            }
+        const { count } = await database_1.prisma.auditLog.deleteMany({
+            where: { createdAt: { lt: cutoffDate } },
         });
-        console.log(`Cleaned up ${result.count} old audit log records (older than ${daysToKeep} days)`);
+        if (count > 0) {
+            console.log(`Cleaned up ${count} old audit log records (older than ${daysToKeep} days).`);
+        }
     }
     catch (error) {
         console.error('Error cleaning up audit logs:', error);
     }
 };
 exports.cleanupOldAuditLogs = cleanupOldAuditLogs;
-// Get security statistics
-const getSecurityStats = async () => {
-    try {
-        const now = new Date();
-        const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-        const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        const [totalLogs, last24hLogs, last7dLogs, securityEvents, failedLogins, successfulLogins] = await Promise.all([
-            database_1.prisma.auditLog.count(),
-            database_1.prisma.auditLog.count({
-                where: { createdAt: { gte: last24Hours } }
-            }),
-            database_1.prisma.auditLog.count({
-                where: { createdAt: { gte: last7Days } }
-            }),
-            database_1.prisma.auditLog.count({
-                where: { action: { startsWith: 'SECURITY_' } }
-            }),
-            database_1.prisma.auditLog.count({
-                where: {
-                    action: 'LOGIN_FAILED',
-                    createdAt: { gte: last24Hours }
-                }
-            }),
-            database_1.prisma.auditLog.count({
-                where: {
-                    action: 'LOGIN_SUCCESS',
-                    createdAt: { gte: last24Hours }
-                }
-            })
-        ]);
-        return {
-            totalLogs,
-            last24hLogs,
-            last7dLogs,
-            securityEvents,
-            failedLogins,
-            successfulLogins,
-            successRate: successfulLogins + failedLogins > 0
-                ? (successfulLogins / (successfulLogins + failedLogins) * 100).toFixed(2) + '%'
-                : 'N/A'
-        };
-    }
-    catch (error) {
-        console.error('Error getting security stats:', error);
-        return null;
-    }
-};
-exports.getSecurityStats = getSecurityStats;

@@ -19,7 +19,7 @@ class WebSocketService {
 
   // Mock implementation for development
   initialize(server: any) {
-    console.log('WebSocket service initialized (mock mode)');
+    ');
     // In production, this would initialize actual Socket.IO server
     // this.io = new SocketIOServer(server);
     // this.setupEventHandlers();
@@ -29,7 +29,6 @@ class WebSocketService {
     if (!this.io) return;
 
     this.io.on('connection', (socket) => {
-      console.log('User connected:', socket.id);
 
       socket.on('authenticate', (data) => {
         const { userId, role, schoolId } = data;
@@ -49,7 +48,7 @@ class WebSocketService {
       });
 
       socket.on('disconnect', () => {
-        console.log('User disconnected:', socket.id);
+        
         this.connectedUsers.delete(socket.id);
       });
     });
@@ -57,8 +56,7 @@ class WebSocketService {
 
   // Emit to all users in a school
   emitToAll(schoolId: string, event: string, data: any) {
-    console.log(`Emitting to all users in school ${schoolId}:`, { event, data });
-    
+
     if (this.io) {
       this.io.to(`school_${schoolId}`).emit(event, data);
     } else {
@@ -69,8 +67,7 @@ class WebSocketService {
 
   // Emit to specific role in a school
   emitToRole(schoolId: string, role: string, event: string, data: any) {
-    console.log(`Emitting to ${role} in school ${schoolId}:`, { event, data });
-    
+
     if (this.io) {
       this.io.to(`school_${schoolId}`).to(`role_${role}`).emit(event, data);
     } else {
@@ -81,8 +78,7 @@ class WebSocketService {
 
   // Emit to specific user
   emitToUser(userId: string, event: string, data: any) {
-    console.log(`Emitting to user ${userId}:`, { event, data });
-    
+
     if (this.io) {
       // Find user's socket and emit
       const user = Array.from(this.connectedUsers.values())
@@ -101,11 +97,10 @@ class WebSocketService {
   private mockEmit(target: string, event: string, data: any) {
     // In development, we'll just log the event
     // In production, this would actually emit via WebSocket
-    console.log(`[MOCK WEBSOCKET] Target: ${target}, Event: ${event}, Data:`, data);
-    
+
     // Simulate real-time delivery with a small delay
     setTimeout(() => {
-      console.log(`[MOCK WEBSOCKET] Delivered to ${target}`);
+      
     }, 100);
   }
 

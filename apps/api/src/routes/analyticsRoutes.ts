@@ -108,7 +108,7 @@ router.get('/dashboard', protect, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Failed to fetch dashboard analytics:', error);
+    
     res.status(500).json({ message: 'Failed to fetch dashboard analytics' });
   }
 });

@@ -3,6 +3,7 @@
 import { Router, Response, Request } from 'express';
 import { protect, authorize, requirePermission } from '../middleware/auth';
 import { prisma } from '../config/database';
+import { Role } from '../lib/database';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -109,13 +110,13 @@ router.get('/', protect, async (req: Request, res: Response) => {
       total: resources.length
     });
   } catch (error) {
-    console.error('Files error:', error);
+    
     res.status(500).json({ error: 'Failed to load files' });
   }
 });
 
 // POST /files - Upload files
-router.post('/', protect, authorize('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), requirePermission('files.write'), upload.single('file'), async (req: Request, res: Response) => {
+router.post('/', protect, authorize(Role.TEACHER, Role.ADMIN, Role.SCHOOL_ADMIN), requirePermission('files.write'), upload.single('file'), async (req: Request, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -160,7 +161,7 @@ router.post('/', protect, authorize('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), require
       }
     });
   } catch (error) {
-    console.error('File upload error:', error);
+    
     res.status(500).json({ error: 'Failed to upload file' });
   }
 });
@@ -185,13 +186,13 @@ router.get('/:id', protect, async (req: Request, res: Response) => {
 
     res.json(resource);
   } catch (error) {
-    console.error('Get file error:', error);
+    
     res.status(500).json({ error: 'Failed to get file' });
   }
 });
 
 // DELETE /files/:id - Delete file
-router.delete('/:id', protect, authorize('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), requirePermission('files.delete'), async (req: Request, res: Response) => {
+router.delete('/:id', protect, authorize(Role.TEACHER, Role.ADMIN, Role.SCHOOL_ADMIN), requirePermission('files.delete'), async (req: Request, res: Response) => {
   const { id } = req.params;
 
   try {
@@ -208,9 +209,9 @@ router.delete('/:id', protect, authorize('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), re
     const deleted = await StorageService.deleteFile(resource.url);
     
     if (deleted) {
-      console.log('File deleted from storage:', resource.url);
+      
     } else {
-      console.log('File deletion failed, but continuing with database cleanup');
+      
     }
 
     // Delete from database
@@ -220,7 +221,7 @@ router.delete('/:id', protect, authorize('TEACHER', 'ADMIN', 'SCHOOL_ADMIN'), re
 
     res.json({ message: 'File deleted successfully' });
   } catch (error) {
-    console.error('Delete file error:', error);
+    
     res.status(500).json({ error: 'Failed to delete file' });
   }
 });

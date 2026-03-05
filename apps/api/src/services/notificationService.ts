@@ -31,7 +31,6 @@ class NotificationService {
       };
       
       notificationsStore.push(notification);
-      console.log(`Notification stored in memory: ${options.title} for user ${options.userId}`);
 
       // Send email notification
       // Note: In a real implementation, you would fetch user data from database
@@ -45,7 +44,7 @@ class NotificationService {
 
       return emailSent;
     } catch (error) {
-      console.error('Failed to send notification:', error);
+      
       return false;
     }
   }

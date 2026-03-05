@@ -26,7 +26,6 @@ export function handleWebRTCSignaling(io: SocketIOServer) {
   });
 
   io.of('/webrtc').on('connection', (socket: ExtendedSocket) => {
-    console.log('WebRTC client connected:', socket.id);
 
     // Join room
     socket.on('join-room', (data: { roomId: string; userId: string }) => {
@@ -42,8 +41,6 @@ export function handleWebRTCSignaling(io: SocketIOServer) {
       rooms.get(roomId)!.add(userId);
       peers.set(userId, socket);
 
-      console.log(`User ${userId} joined room ${roomId}`);
-      
       // Notify others in the room
       socket.to(roomId).emit('user-joined', { userId });
       
@@ -77,7 +74,7 @@ export function handleWebRTCSignaling(io: SocketIOServer) {
         peers.delete(userId);
         
         socket.to(roomId).emit('user-left', { userId });
-        console.log(`User ${userId} left room ${roomId}`);
+        
       }
     });
 
@@ -91,7 +88,7 @@ export function handleWebRTCSignaling(io: SocketIOServer) {
         peers.delete(userId);
         
         socket.to(roomId).emit('user-left', { userId });
-        console.log(`User ${userId} disconnected from room ${roomId}`);
+        
       }
     });
   });
@@ -115,7 +112,7 @@ router.post('/rooms', protect, async (req, res) => {
       createdAt: new Date().toISOString()
     });
   } catch (error) {
-    console.error(error);
+    
     res.status(500).json({ error: 'Failed to create room' });
   }
 });
@@ -132,7 +129,7 @@ router.get('/rooms/:roomId', protect, async (req, res) => {
       isActive: participants.length > 0
     });
   } catch (error) {
-    console.error(error);
+    
     res.status(500).json({ error: 'Failed to get room info' });
   }
 });

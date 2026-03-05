@@ -53,7 +53,7 @@ router.get('/', async (req: RequestWithUser, res: Response) => {
 
     res.json(transformedSchedules);
   } catch (error) {
-    console.error('Error fetching schedule:', error);
+    
     res.status(500).json({ error: 'Failed to fetch schedule records' });
   }
 });
@@ -105,7 +105,7 @@ router.post(
         isRecurring: schedule.isRecurring,
       });
     } catch (error) {
-      console.error('Error creating schedule:', error);
+      
       res.status(500).json({ error: 'Failed to create schedule record' });
     }
   }
@@ -153,7 +153,7 @@ router.put(
         isRecurring: schedule.isRecurring,
       });
     } catch (error) {
-      console.error('Error updating schedule:', error);
+      
       res.status(500).json({ error: 'Failed to update schedule record' });
     }
   }
@@ -175,7 +175,7 @@ router.delete(
 
       res.status(204).send();
     } catch (error) {
-      console.error('Error deleting schedule:', error);
+      
       res.status(500).json({ error: 'Failed to delete schedule record' });
     }
   }

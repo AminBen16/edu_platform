@@ -18,5 +18,20 @@ export interface AuthenticatedUser {
 }
 
 export interface RequestWithUser extends Request {
-  user?: AuthenticatedUser;
+  user?: {
+    id: string;
+    schoolId: string;
+    createdAt: Date;
+    updatedAt: Date;
+    name: string;
+    email: string;
+    password: string | null;
+    avatarUrl: string | null;
+    role: string;
+    emailVerified: Date | null;
+    lastLoginAt: Date | null;
+    isActive: boolean;
+    deletedAt: Date | null;
+    deletionRequestedAt: Date | null;
+  };
 }

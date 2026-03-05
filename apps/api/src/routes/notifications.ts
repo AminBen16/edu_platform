@@ -6,15 +6,15 @@ import axios from 'axios';
 
 // Mock WebSocket functions for development
 const emitToAll = (schoolId: string, event: string, data: any) => {
-  console.log(`[MOCK WEBSOCKET] Emit to all in school ${schoolId}:`, { event, data });
+  
 };
 
 const emitToRole = (schoolId: string, role: string, event: string, data: any) => {
-  console.log(`[MOCK WEBSOCKET] Emit to ${role} in school ${schoolId}:`, { event, data });
+  
 };
 
 const emitToUser = (userId: string, event: string, data: any) => {
-  console.log(`[MOCK WEBSOCKET] Emit to user ${userId}:`, { event, data });
+  
 };
 
 const router = Router();
@@ -267,7 +267,7 @@ router.post('/send', protect, async (req, res) => {
       message: `Notifications sent to ${targetUsers.length} users.` 
     });
   } catch (error) {
-    console.error('Notification sending error:', error);
+    
     res.status(500).json({ error: 'Failed to send notifications.' });
   }
 });
@@ -333,7 +333,7 @@ async function _sendPushNotifications(title: string, message: string, targetUser
     const onesignalApiKey = process.env.ONESIGNAL_API_KEY;
     
     if (!onesignalAppId || !onesignalApiKey) {
-      console.log('OneSignal not configured, skipping push notifications');
+      
       return;
     }
 
@@ -350,7 +350,7 @@ async function _sendPushNotifications(title: string, message: string, targetUser
       },
     });
   } catch (error) {
-    console.error('Push notification error:', error);
+    
   }
 }
 
@@ -366,7 +366,7 @@ router.patch('/:id/read', protect, async (req, res) => {
       });
     } else {
       // Mock update
-      console.log(`Marked notification ${id} as read`);
+      
     }
 
     res.status(200).json({ success: true });
@@ -387,7 +387,7 @@ router.patch('/read-all', protect, async (req, res) => {
       });
     } else {
       // Mock update
-      console.log(`Marked all notifications as read for user ${req.user!.id}`);
+      
     }
 
     res.status(200).json({ success: true });

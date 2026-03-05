@@ -59,7 +59,7 @@ router.get('/', async (req: RequestWithUser, res: Response) => {
 
     res.json(transformedSessions);
   } catch (error) {
-    console.error('Error fetching live sessions:', error);
+    
     res.status(500).json({ error: 'Failed to fetch live sessions' });
   }
 });
@@ -122,7 +122,7 @@ router.post(
         message: 'Live session created successfully',
       });
     } catch (error) {
-      console.error('Error creating live session:', error);
+      
       res.status(500).json({ error: 'Failed to create live session' });
     }
   }
@@ -166,7 +166,7 @@ router.get('/:roomCode', async (req: RequestWithUser, res: Response) => {
       maxParticipants: session.maxParticipants,
     });
   } catch (error) {
-    console.error('Error fetching live session:', error);
+    
     res.status(500).json({ error: 'Failed to fetch live session' });
   }
 });
@@ -213,7 +213,7 @@ router.post('/:roomCode/join', async (req: RequestWithUser, res: Response) => {
       ],
     });
   } catch (error) {
-    console.error('Error joining live session:', error);
+    
     res.status(500).json({ error: 'Failed to join live session' });
   }
 });
@@ -244,7 +244,7 @@ router.post('/:roomCode/leave', async (req: RequestWithUser, res: Response) => {
 
     res.json({ message: 'Left live session successfully' });
   } catch (error) {
-    console.error('Error leaving live session:', error);
+    
     res.status(500).json({ error: 'Failed to leave live session' });
   }
 });
@@ -276,7 +276,7 @@ router.post(
 
       res.json({ message: 'Live session ended successfully' });
     } catch (error) {
-      console.error('Error ending live session:', error);
+      
       res.status(500).json({ error: 'Failed to end live session' });
     }
   }

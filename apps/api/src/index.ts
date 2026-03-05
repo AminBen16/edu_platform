@@ -26,17 +26,21 @@ import reportsRoutes from './routes/reports';
 import attendanceRoutes from './routes/attendance';
 import scheduleRoutes from './routes/schedule';
 
+// Initialize Sentry
 Sentry.init({
   dsn: process.env.SENTRY_DSN || '',
   tracesSampleRate: 1.0,
 });
 
+// Create Express app
 const app: Express = express();
 
 // Middleware
 app.use(Sentry.Handlers.requestHandler());
 app.use(cors({
-  origin: '*', // Allow all origins for local development
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.ALLOWED_ORIGIN || 'https://your-project.vercel.app'
+    : '*',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -44,7 +48,17 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Health check
+// Health check endpoint
+app.get('/health', (req: Request, res: Response) => {
+  res.status(200).json({ 
+    status: 'ok',
+    message: 'Education Platform API - Running',
+    version: '1.0.0',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Root endpoint
 app.get('/', (req: Request, res: Response) => {
   res.status(200).json({ 
     message: 'Education Platform API - Production Ready',
@@ -180,7 +194,17 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
-// Export for Vercel serverless
-export default function handler(req: Request, res: Response) {
+// Export for Vercel serverless - handle both Express and Vercel request formats
+export default function handler(req: any, res: any) {
+  // Set CORS headers for serverless environment
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  
   return (app as any)(req, res);
 }

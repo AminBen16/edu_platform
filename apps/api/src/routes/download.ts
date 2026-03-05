@@ -44,7 +44,7 @@ router.get('/file/:bucket/:path(*)', protect, async (req, res) => {
             .download(path);
 
         if (error) {
-            console.error('Supabase download error:', error);
+            
             return res.status((error as any).statusCode || 500).json({ error: error.message });
         }
 
@@ -62,7 +62,7 @@ router.get('/file/:bucket/:path(*)', protect, async (req, res) => {
         
         res.send(buffer);
     } catch (err) {
-        console.error('Download file error:', err);
+        
         res.status(500).json({ error: 'Failed to download file.' });
     }
 });
@@ -94,14 +94,13 @@ router.get('/lesson/:id', protect, async (req, res) => {
             return res.status(403).json({ error: 'You are not the teacher of this lesson.' });
         }
 
-
         const pdfBuffer = await generateLessonPDF(lesson);
         
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="${lesson.title.replace(/\s/g, '_')}.pdf"`);
         res.send(pdfBuffer);
     } catch (err) {
-        console.error('Lesson PDF generation error:', err);
+        
         res.status(500).json({ error: 'Failed to generate lesson PDF.' });
     }
 });
@@ -139,7 +138,7 @@ router.get('/quiz/:id', protect, async (req, res) => {
         res.setHeader('Content-Disposition', `attachment; filename="${quiz.title.replace(/\s/g, '_')}.pdf"`);
         res.send(pdfBuffer);
     } catch (err) {
-        console.error('Quiz PDF generation error:', err);
+        
         res.status(500).json({ error: 'Failed to generate quiz PDF.' });
     }
 });
@@ -177,7 +176,7 @@ router.get('/assignment/:id', protect, async (req, res) => {
         res.setHeader('Content-Disposition', `attachment; filename="${assignment.title.replace(/\s/g, '_')}.pdf"`);
         res.send(pdfBuffer);
     } catch (err) {
-        console.error('Assignment PDF generation error:', err);
+        
         res.status(500).json({ error: 'Failed to generate assignment PDF.' });
     }
 });
@@ -212,7 +211,7 @@ router.get('/submissions/:assignmentId', protect, authorize(Role.TEACHER, Role.A
         res.setHeader('Content-Disposition', `attachment; filename="${assignment.title.replace(/\s/g, '_')}_submissions.zip"`);
         res.send(zipBuffer);
     } catch (err) {
-        console.error('Submissions ZIP generation error:', err);
+        
         res.status(500).json({ error: 'Failed to generate submissions ZIP.' });
     }
 });

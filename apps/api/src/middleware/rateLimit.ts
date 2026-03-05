@@ -77,7 +77,7 @@ export const rateLimit = (options: RateLimitOptions) => {
 
       next();
     } catch (error) {
-      console.error('Rate limiting error:', error);
+      
       // Fail open - allow request if rate limiting fails
       next();
     }
@@ -119,8 +119,8 @@ export const cleanupExpiredRateLimits = async () => {
         }
       }
     });
-    console.log(`Cleaned up ${result.count} expired rate limit records`);
+    
   } catch (error) {
-    console.error('Error cleaning up rate limits:', error);
+    
   }
 };

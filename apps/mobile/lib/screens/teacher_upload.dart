@@ -113,7 +113,7 @@ class _TeacherUploadState extends State<TeacherUploadScreen> {
               Text('No quizzes available for content', style: TextStyle(color: Colors.grey[600]))
             else
               DropdownButtonFormField<String>(
-                value: _selectedQuizId,
+                initialValue: _selectedQuizId,
                 decoration: const InputDecoration(labelText: 'Select Quiz/Lesson', border: OutlineInputBorder()),
                 items: _quizzes.map((quiz) => DropdownMenuItem<String>(value: quiz['id']?.toString(), child: Text(quiz['title'] ?? ''))).toList(),
                 onChanged: (value) => setState(() => _selectedQuizId = value),

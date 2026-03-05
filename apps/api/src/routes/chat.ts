@@ -34,7 +34,7 @@ router.get('/messages/:classId', protect, async (req, res) => {
         });
         res.json(messages);
     } catch (error) {
-        console.error('Failed to fetch messages:', error);
+        
         res.status(500).json({ error: 'Failed to fetch messages.' });
     }
 });
@@ -78,7 +78,7 @@ router.post('/message', protect, async (req, res) => {
         });
         res.status(201).json(message);
     } catch (error) {
-        console.error('Failed to send message:', error);
+        
         res.status(500).json({ error: 'Failed to send message.' });
     }
 });

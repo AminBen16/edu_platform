@@ -30,3 +30,5 @@ apps/**/.env
 apps/**/.env.*
 packages/**/.env
 packages/**/.env.*
+
+.vercel

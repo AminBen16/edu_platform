@@ -2,16 +2,28 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../config/database';
-import { User } from '@prisma/client';
 import { Role } from '../lib/database';
 
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'a-fallback-secret-that-is-long-and-secure';
+
+// Define User type based on Prisma schema
+interface UserType {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  schoolId: string;
+  isActive: boolean;
+  password: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 // Augment the Express Request type to include the user object
 declare global {
   namespace Express {
     interface Request {
-      user?: User;
+      user?: UserType;
     }
   }
 }
@@ -43,7 +55,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
     req.user = user;
     next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
+    
     return res.status(401).json({ error: 'Not authorized, token failed.' });
   }
 };
@@ -56,6 +68,32 @@ export const authorize = (...roles: Role[]) => {
               error: `Forbidden. User role '${req.user?.role}' is not authorized. Required roles: ${roles.join(', ')}.`,
             });
         }
+        next();
+    };
+};
+
+// Middleware to check specific permissions
+export const requirePermission = (permission: string) => {
+    return (req: Request, res: Response, next: NextFunction) => {
+        // For now, we'll implement a basic permission check
+        // In a real implementation, you'd check against a user's permissions
+        if (!req.user) {
+            return res.status(401).json({ error: 'Not authorized' });
+        }
+        
+        // Basic role-based permissions for demo
+        const userRole = req.user.role;
+        const hasPermission = 
+            userRole === 'ADMIN' || 
+            (userRole === 'TEACHER' && permission.includes('files.')) ||
+            (userRole === 'SCHOOL_ADMIN' && !permission.includes('system.'));
+            
+        if (!hasPermission) {
+            return res.status(403).json({ 
+                error: `Forbidden. Insufficient permissions for '${permission}'.` 
+            });
+        }
+        
         next();
     };
 };

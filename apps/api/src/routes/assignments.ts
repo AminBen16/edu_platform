@@ -52,7 +52,7 @@ router.get('/', protect, async (req, res) => {
         }
         res.json(assignments);
     } catch (error) {
-        console.error('Failed to fetch assignments:', error);
+        
         res.status(500).json({ error: 'Failed to fetch assignments.' });
     }
 });
@@ -74,11 +74,10 @@ router.get('/:id', protect, async (req, res) => {
         }
         res.json(assignment);
     } catch (error) {
-        console.error('Get assignment error:', error);
+        
         res.status(500).json({ error: 'Failed to load assignment' });
     }
 });
-
 
 // POST /assignments - Create a new assignment (Teachers and Admins)
 router.post('/', protect, async (req, res) => {
@@ -112,7 +111,7 @@ router.post('/', protect, async (req, res) => {
 
         res.status(201).json(newAssignment);
     } catch (error) {
-        console.error('Create assignment error:', error);
+        
         res.status(500).json({ error: 'Failed to create assignment.' });
     }
 });
@@ -143,7 +142,7 @@ router.post('/:id/submit', protect, async (req, res) => {
         });
         res.status(201).json(submission);
     } catch (error) {
-        console.error('Assignment submission error:', error);
+        
         res.status(500).json({ error: 'Failed to submit assignment.' });
     }
 });
@@ -172,7 +171,7 @@ router.get('/:id/submissions', protect, async (req, res) => {
         });
         res.json(submissions);
     } catch (error) {
-        console.error('Failed to get submissions:', error);
+        
         res.status(500).json({ error: 'Failed to get submissions.' });
     }
 });
@@ -199,7 +198,7 @@ router.put('/submissions/:submissionId/grade', protect, async (req, res) => {
 
         res.json(updatedSubmission);
     } catch (error) {
-        console.error('Failed to grade submission:', error);
+        
         res.status(500).json({ error: 'Failed to grade submission.' });
     }
 });

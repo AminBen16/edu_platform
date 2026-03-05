@@ -2,69 +2,101 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 // apps/api/src/routes/analytics.ts
 const express_1 = require("express");
+const database_1 = require("../config/database");
+const auth_1 = require("../middleware/auth");
+const database_2 = require("../lib/database");
 const router = (0, express_1.Router)();
-// GET /analytics/overview - Get analytics overview
+// Middleware to authorize only Admins and Super Admins for analytics
+router.use(auth_1.protect, (0, auth_1.authorize)(database_2.Role.ADMIN, database_2.Role.SUPER_ADMIN));
+// GET /analytics/overview - Get analytics overview for the school
 router.get('/overview', async (req, res) => {
+    const { schoolId } = req.user;
     try {
-        // Mock analytics data
-        const overview = {
-            totalUsers: 1250,
-            activeUsers: 342,
-            totalLessons: 45,
-            totalQuizzes: 23,
-            totalLiveSessions: 12,
-            averageEngagement: 78.5,
-            topSubjects: [
-                { name: 'Mathematics', engagement: 92 },
-                { name: 'Physics', engagement: 78 },
-                { name: 'Chemistry', engagement: 65 },
-            ],
-            weeklyActivity: [
-                { day: 'Monday', users: 289, lessons: 12 },
-                { day: 'Tuesday', users: 312, lessons: 15 },
-                { day: 'Wednesday', users: 298, lessons: 8 },
-                { day: 'Thursday', users: 334, lessons: 18 },
-                { day: 'Friday', users: 301, lessons: 11 },
-            ],
-        };
-        res.json(overview);
+        const [totalUsers, totalStudents, totalTeachers, totalLessons, totalQuizzes, totalClasses,] = await database_1.prisma.$transaction([
+            database_1.prisma.user.count({ where: { schoolId } }),
+            database_1.prisma.user.count({ where: { schoolId, role: "STUDENT" } }),
+            database_1.prisma.user.count({ where: { schoolId, role: "TEACHER" } }),
+            database_1.prisma.lesson.count({ where: { schoolId, isPublished: true } }),
+            database_1.prisma.quiz.count({ where: { schoolId, isPublished: true } }),
+            database_1.prisma.class.count({ where: { schoolId } }),
+        ]);
+        // Simplified weekly activity (last 7 days counts)
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const weeklyActivity = await database_1.prisma.auditLog.groupBy({
+            by: ['action'],
+            where: {
+                createdAt: { gte: sevenDaysAgo },
+                userId: { in: (await database_1.prisma.user.findMany({
+                        where: { schoolId },
+                        select: { id: true }
+                    })).map(u => u.id) }
+            },
+            _count: true
+        });
+        res.json({
+            totalUsers,
+            totalStudents,
+            totalTeachers,
+            totalLessons,
+            totalQuizzes,
+            totalClasses,
+            weeklyActivity: weeklyActivity.map((item) => ({
+                date: new Date().toISOString().split('T')[0],
+                count: item._count || 0,
+            })),
+        });
     }
     catch (error) {
-        res.status(500).json({ error: 'Failed to fetch analytics' });
+        console.error('Failed to fetch analytics overview:', error);
+        res.status(500).json({ error: 'Failed to fetch analytics overview.' });
     }
 });
-// GET /analytics/users - Get user analytics
+// GET /analytics/users - Get detailed user analytics for the school
 router.get('/users', async (req, res) => {
+    const { schoolId } = req.user;
     try {
-        // Mock user analytics
-        const userAnalytics = [
-            {
-                id: 'student-1',
-                name: 'John Doe',
-                email: 'john@school.com',
-                role: 'STUDENT',
-                lessonsCompleted: 23,
-                quizzesTaken: 18,
-                averageScore: 85.4,
-                lastActive: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-                totalTimeSpent: 4560,
-            },
-            {
-                id: 'student-2',
-                name: 'Jane Smith',
-                email: 'jane@school.com',
-                role: 'STUDENT',
-                lessonsCompleted: 31,
-                quizzesTaken: 24,
-                averageScore: 91.2,
-                lastActive: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-                totalTimeSpent: 5230,
-            },
-        ];
+        const users = await database_1.prisma.user.findMany({
+            where: { schoolId },
+            include: {
+                studentProfile: {
+                    include: {
+                        enrollments: true,
+                        quizAttempts: true
+                    }
+                },
+                teacherProfile: true
+            }
+        });
+        const userAnalytics = users.map(user => {
+            let lessonsCompleted = 0;
+            let quizzesTaken = 0;
+            let averageScore = 0;
+            if (user.studentProfile) {
+                const studentProfile = user.studentProfile;
+                lessonsCompleted = studentProfile.enrollments?.length || 0;
+                quizzesTaken = studentProfile.quizAttempts?.length || 0;
+                averageScore = quizzesTaken > 0
+                    ? studentProfile.quizAttempts.reduce((sum, qa) => sum + (qa.score || 0), 0) / quizzesTaken
+                    : 0;
+            }
+            return {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                createdAt: user.createdAt,
+                lastActive: user.lastLoginAt,
+                lessonsCompleted,
+                quizzesTaken,
+                averageScore: parseFloat(averageScore.toFixed(2)),
+            };
+        });
         res.json(userAnalytics);
     }
     catch (error) {
-        res.status(500).json({ error: 'Failed to fetch user analytics' });
+        console.error('Failed to fetch user analytics:', error);
+        res.status(500).json({ error: 'Failed to fetch user analytics.' });
     }
 });
 exports.default = router;

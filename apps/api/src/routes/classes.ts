@@ -21,7 +21,7 @@ router.get('/', protect, async (req, res) => {
         });
         res.json(classes);
     } catch (error) {
-        console.error('Failed to fetch classes:', error);
+        
         res.status(500).json({ error: 'Failed to fetch classes' });
     }
 });
@@ -59,7 +59,7 @@ router.get('/:id', protect, async (req, res) => {
         }
         res.json(classData);
     } catch (error) {
-        console.error(`Failed to fetch class ${id}:`, error);
+        
         res.status(500).json({ error: 'Failed to fetch class details' });
     }
 });
@@ -94,7 +94,7 @@ router.post('/', protect, async (req, res) => {
         });
         res.status(201).json(newClass);
     } catch (error) {
-        console.error('Failed to create class:', error);
+        
         res.status(500).json({ error: 'Failed to create class' });
     }
 });
@@ -119,7 +119,7 @@ router.put('/:id', protect, async (req, res) => {
         });
         res.json(updatedClass);
     } catch (error) {
-        console.error(`Failed to update class ${id}:`, error);
+        
         res.status(500).json({ error: 'Failed to update class' });
     }
 });
@@ -138,7 +138,7 @@ router.delete('/:id', protect, async (req, res) => {
         });
         res.status(204).send();
     } catch (error) {
-        console.error(`Failed to delete class ${id}:`, error);
+        
         res.status(500).json({ error: 'Failed to delete class' });
     }
 });
@@ -165,7 +165,7 @@ router.post('/:id/enroll', protect, async (req, res) => {
         });
         res.status(201).json({ message: `${enrollments.count} students enrolled successfully.` });
     } catch (error) {
-        console.error(`Failed to enroll students in class ${classId}:`, error);
+        
         res.status(500).json({ error: 'Failed to enroll students' });
     }
 });
@@ -183,7 +183,7 @@ router.delete('/:classId/enrollments/:enrollmentId', protect, async (req, res) =
         });
         res.status(204).send();
     } catch (error) {
-        console.error(`Failed to delete enrollment ${enrollmentId}:`, error);
+        
         res.status(500).json({ error: 'Failed to remove student from class' });
     }
 });

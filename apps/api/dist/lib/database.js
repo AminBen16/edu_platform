@@ -4,7 +4,7 @@
 // This avoids TypeScript rootDir issues
 var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.prisma = exports.DatabaseService = exports.Role = void 0;
+exports.prisma = exports.DatabaseService = exports.AuditLogAction = exports.Role = void 0;
 var Role;
 (function (Role) {
     Role["SUPER_ADMIN"] = "SUPER_ADMIN";
@@ -14,6 +14,12 @@ var Role;
     Role["PARENT"] = "PARENT";
     Role["SCHOOL_ADMIN"] = "SCHOOL_ADMIN";
 })(Role || (exports.Role = Role = {}));
+var AuditLogAction;
+(function (AuditLogAction) {
+    AuditLogAction["USER_LOGIN"] = "USER_LOGIN";
+    AuditLogAction["LESSON_VIEWED"] = "LESSON_VIEWED";
+    AuditLogAction["QUIZ_ATTEMPTED"] = "QUIZ_ATTEMPTED";
+})(AuditLogAction || (exports.AuditLogAction = AuditLogAction = {}));
 // Mock database implementation for now
 // In production, this would connect to real PostgreSQL
 class DatabaseService {

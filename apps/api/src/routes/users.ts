@@ -25,7 +25,7 @@ router.get('/profile', protect, async (req, res) => {
         const { password, ...userWithoutPassword } = user;
         res.json(userWithoutPassword);
     } catch (error) {
-        console.error('Failed to fetch profile:', error);
+        
         res.status(500).json({ error: 'Failed to fetch profile' });
     }
 });
@@ -44,7 +44,7 @@ router.put('/profile', protect, async (req, res) => {
         const { password, ...userWithoutPassword } = updatedUser;
         res.json(userWithoutPassword);
     } catch (error) {
-        console.error('Failed to update profile:', error);
+        
         res.status(500).json({ error: 'Failed to update profile' });
     }
 });
@@ -72,7 +72,7 @@ router.get('/', protect, async (req, res) => {
         });
         res.json(users);
     } catch (error) {
-        console.error('Failed to fetch users:', error);
+        
         res.status(500).json({ error: 'Failed to fetch users' });
     }
 });
@@ -96,7 +96,7 @@ router.get('/:id', protect, async (req, res) => {
         }
         res.json(user);
     } catch (error) {
-        console.error(`Failed to fetch user ${id}:`, error);
+        
         res.status(500).json({ error: 'Failed to fetch user' });
     }
 });
@@ -134,7 +134,7 @@ router.post('/', protect, async (req, res) => {
         const { password, ...userWithoutPassword } = newUser;
         res.status(201).json(userWithoutPassword);
     } catch (error) {
-        console.error('Failed to create user:', error);
+        
         // @ts-ignore
         if (error.code === 'P2002') { // Prisma unique constraint violation
             return res.status(409).json({ error: 'A user with this email already exists.' });
@@ -159,7 +159,7 @@ router.put('/:id', protect, async (req, res) => {
         const { password, ...userWithoutPassword } = updatedUser;
         res.json(userWithoutPassword);
     } catch (error) {
-        console.error(`Failed to update user ${id}:`, error);
+        
         res.status(500).json({ error: 'Failed to update user' });
     }
 });
@@ -183,10 +183,9 @@ router.delete('/:id', protect, async (req, res) => {
         });
         res.status(204).send();
     } catch (error) {
-        console.error(`Failed to delete user ${id}:`, error);
+        
         res.status(500).json({ error: 'Failed to delete user' });
     }
 });
-
 
 export default router;

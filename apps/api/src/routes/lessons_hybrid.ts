@@ -55,7 +55,7 @@ router.get('/', protect, async (req, res) => {
       res.json(lessonsStore);
     }
   } catch (error) {
-    console.error('Error fetching lessons:', error);
+    
     res.status(500).json({ error: 'Failed to fetch lessons' });
   }
 });
@@ -123,7 +123,7 @@ router.post('/', protect, async (req, res) => {
     
     res.status(201).json(lesson);
   } catch (error) {
-    console.error('Error creating lesson:', error);
+    
     res.status(500).json({ error: 'Failed to create lesson' });
   }
 });
@@ -171,7 +171,7 @@ router.get('/:id', protect, async (req, res) => {
       res.json(lesson);
     }
   } catch (error) {
-    console.error('Error fetching lesson:', error);
+    
     res.status(500).json({ error: 'Failed to fetch lesson' });
   }
 });
@@ -234,7 +234,7 @@ router.put('/:id', protect, async (req, res) => {
       res.json(lessonsStore[lessonIndex]);
     }
   } catch (error) {
-    console.error('Error updating lesson:', error);
+    
     res.status(500).json({ error: 'Failed to update lesson' });
   }
 });
@@ -259,7 +259,7 @@ router.delete('/:id', protect, async (req, res) => {
 
     res.json({ message: 'Lesson deleted successfully' });
   } catch (error) {
-    console.error('Error deleting lesson:', error);
+    
     res.status(500).json({ error: 'Failed to delete lesson' });
   }
 });
