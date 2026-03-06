@@ -30,7 +30,7 @@ router.get('/overview', async (req, res) => {
                 userId: { in: (await database_1.prisma.user.findMany({
                         where: { schoolId },
                         select: { id: true }
-                    })).map(u => u.id) }
+                    })).map((u) => u.id) }
             },
             _count: true
         });
@@ -68,7 +68,7 @@ router.get('/users', async (req, res) => {
                 teacherProfile: true
             }
         });
-        const userAnalytics = users.map(user => {
+        const userAnalytics = users.map((user) => {
             let lessonsCompleted = 0;
             let quizzesTaken = 0;
             let averageScore = 0;

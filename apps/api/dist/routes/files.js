@@ -46,7 +46,7 @@ router.get('/', auth_1.protect, async (req, res) => {
                     },
                     select: { id: true }
                 });
-                const lessonIds = teacherLessons.map(l => l.id);
+                const lessonIds = teacherLessons.map((l) => l.id);
                 resources = await database_1.prisma.lessonResource.findMany({
                     where: {
                         lessonId: { in: lessonIds }
@@ -81,7 +81,7 @@ router.get('/', auth_1.protect, async (req, res) => {
                     select: { lessonId: true }
                 });
                 const enrolledLessonIds = studentEnrollments
-                    .map(e => e.lessonId)
+                    .map((e) => e.lessonId)
                     .filter((id) => id !== null);
                 if (enrolledLessonIds.length > 0) {
                     resources = await database_1.prisma.lessonResource.findMany({

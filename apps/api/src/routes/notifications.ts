@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { prisma } from '../config/database';
 import { protect } from '../middleware/auth';
 import axios from 'axios';
+import { Role } from '../lib/database';
 
 // Mock WebSocket functions for development
 const emitToAll = (schoolId: string, event: string, data: any) => {
@@ -19,51 +20,35 @@ const emitToUser = (userId: string, event: string, data: any) => {
 
 const router = Router();
 
-// Mock notifications data for fallback
-const mockNotifications = [
-  {
-    id: 'notif-1',
-    title: 'New Lesson Available',
-    message: 'Introduction to Mathematics has been published',
-    type: 'content_created',
-    contentType: 'lesson',
-    contentId: 'lesson-1',
-    createdAt: new Date().toISOString(),
-    isRead: false,
-    userId: 'student-1',
-    schoolId: 'school123',
-  },
-  {
-    id: 'notif-2',
-    title: 'Quiz Available',
-    message: 'Math Basics Quiz is now available',
-    type: 'quiz_available',
-    contentType: 'quiz',
-    contentId: 'quiz-1',
-    createdAt: new Date().toISOString(),
-    isRead: false,
-    userId: 'student-1',
-    schoolId: 'school123',
-  },
+const rolesAllowedToSendNotifications: Role[] = [
+  Role.SUPER_ADMIN,
+  Role.ADMIN,
+  Role.SCHOOL_ADMIN,
+  Role.TEACHER,
 ];
+
+const hasDatabase = Boolean(process.env.DATABASE_URL) && Boolean(prisma);
+
+function canSendNotifications(role?: string): boolean {
+  return role ? rolesAllowedToSendNotifications.includes(role as Role) : false;
+}
 
 // GET /notifications - Get user notifications
 router.get('/', protect, async (req, res) => {
   try {
-    // Use real database if available, fallback to mock data
-    if (process.env.DATABASE_URL && prisma) {
-      const notifications = await prisma.notification.findMany({
-        where: { 
-          userId: req.user!.id,
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 50,
-      });
-      res.json(notifications);
-    } else {
-      // Fallback to mock data for demo
-      res.json(mockNotifications);
+    if (!hasDatabase) {
+      return res.status(503).json({ error: 'Notification service is not configured.' });
     }
+
+    const notifications = await prisma.notification.findMany({
+      where: {
+        userId: req.user!.id,
+        schoolId: req.user!.schoolId,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    res.json(notifications);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch notifications.' });
   }
@@ -75,23 +60,19 @@ router.get('/new', protect, async (req, res) => {
     const lastCheck = req.query.lastCheck as string;
     const lastCheckDate = lastCheck ? new Date(lastCheck) : new Date(Date.now() - 5000); // Last 5 seconds
 
-    // Use real database if available, fallback to mock data
-    if (process.env.DATABASE_URL && prisma) {
-      const newNotifications = await prisma.notification.findMany({
-        where: { 
-          userId: req.user!.id,
-          createdAt: { gt: lastCheckDate },
-        },
-        orderBy: { createdAt: 'desc' },
-      });
-      res.json(newNotifications);
-    } else {
-      // Fallback to mock data for demo
-      const newNotifications = mockNotifications.filter(
-        notif => new Date(notif.createdAt) > lastCheckDate
-      );
-      res.json(newNotifications);
+    if (!hasDatabase) {
+      return res.status(503).json({ error: 'Notification service is not configured.' });
     }
+
+    const newNotifications = await prisma.notification.findMany({
+      where: {
+        userId: req.user!.id,
+        schoolId: req.user!.schoolId,
+        createdAt: { gt: lastCheckDate },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(newNotifications);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch new notifications.' });
   }
@@ -124,6 +105,18 @@ router.post('/send', protect, async (req, res) => {
       error: 'Title, message, and type are required.' 
     });
   }
+
+  if (!canSendNotifications(req.user?.role)) {
+    return res.status(403).json({ error: 'You are not authorized to send notifications.' });
+  }
+
+  if (!Array.isArray(recipients) || recipients.length === 0) {
+    return res.status(400).json({ error: 'Recipients must be a non-empty array.' });
+  }
+
+  if (!hasDatabase) {
+    return res.status(503).json({ error: 'Notification service is not configured.' });
+  }
   
   try {
     const notificationData = {
@@ -142,41 +135,31 @@ router.post('/send', protect, async (req, res) => {
     // Get target users based on recipients
     let targetUsers: any[] = [];
     
-    if (process.env.DATABASE_URL && prisma) {
-      if (recipients.includes('all')) {
-        targetUsers = await prisma.user.findMany({
-          where: { schoolId: req.user!.schoolId },
-        });
-      } else if (recipients.includes('students')) {
-        targetUsers = await prisma.user.findMany({
-          where: { 
-            schoolId: req.user!.schoolId,
-            role: 'STUDENT',
-          },
-        });
-      } else if (recipients.includes('parents')) {
-        targetUsers = await prisma.user.findMany({
-          where: { 
-            schoolId: req.user!.schoolId,
-            role: 'PARENT',
-          },
-        });
-      } else if (recipients.includes('admin')) {
-        targetUsers = await prisma.user.findMany({
-          where: { 
-            schoolId: req.user!.schoolId,
-            role: { in: ['ADMIN', 'SUPER_ADMIN'] },
-          },
-        });
-      }
-    } else {
-      // Mock users for demo
-      targetUsers = [
-        { id: 'student-1', role: 'STUDENT' },
-        { id: 'student-2', role: 'STUDENT' },
-        { id: 'parent-1', role: 'PARENT' },
-        { id: 'admin-1', role: 'ADMIN' },
-      ];
+    if (recipients.includes('all')) {
+      targetUsers = await prisma.user.findMany({
+        where: { schoolId: req.user!.schoolId },
+      });
+    } else if (recipients.includes('students')) {
+      targetUsers = await prisma.user.findMany({
+        where: {
+          schoolId: req.user!.schoolId,
+          role: 'STUDENT',
+        },
+      });
+    } else if (recipients.includes('parents')) {
+      targetUsers = await prisma.user.findMany({
+        where: {
+          schoolId: req.user!.schoolId,
+          role: 'PARENT',
+        },
+      });
+    } else if (recipients.includes('admin')) {
+      targetUsers = await prisma.user.findMany({
+        where: {
+          schoolId: req.user!.schoolId,
+          role: { in: ['ADMIN', 'SUPER_ADMIN', 'SCHOOL_ADMIN'] },
+        },
+      });
     }
 
     // Create notifications for each target user
@@ -189,26 +172,14 @@ router.post('/send', protect, async (req, res) => {
         isRead: false,
       };
 
-      if (process.env.DATABASE_URL && prisma) {
-        const created = await prisma.notification.create({
-          data: notification,
-        });
-        createdNotifications.push(created);
-      } else {
-        // Mock notification
-        const mockNotification = {
-          id: `notif-${Date.now()}-${user.id}`,
-          ...notification,
-          createdAt: new Date().toISOString(),
-        };
-        createdNotifications.push(mockNotification);
-      }
+      const created = await prisma.notification.create({
+        data: notification,
+      });
+      createdNotifications.push(created);
 
       // Send real-time notification
       if (sendImmediately) {
-        const notificationId = process.env.DATABASE_URL && prisma 
-          ? createdNotifications[createdNotifications.length - 1]?.id
-          : `notif-${Date.now()}-${user.id}`;
+        const notificationId = createdNotifications[createdNotifications.length - 1]?.id;
           
         emitToUser(user.id, 'notification', {
           id: notificationId,
@@ -275,6 +246,25 @@ router.post('/send', protect, async (req, res) => {
 // Helper function for legacy single user notifications
 async function _sendSingleUserNotification(req: any, res: any, toUserId: string, title: string, message: string) {
   try {
+    if (!canSendNotifications(req.user?.role)) {
+      return res.status(403).json({ error: 'You are not authorized to send notifications.' });
+    }
+
+    if (!hasDatabase) {
+      return res.status(503).json({ error: 'Notification service is not configured.' });
+    }
+
+    const targetUser = await prisma.user.findFirst({
+      where: {
+        id: toUserId,
+        schoolId: req.user!.schoolId,
+      },
+    });
+
+    if (!targetUser) {
+      return res.status(404).json({ error: 'Target user not found in your school.' });
+    }
+
     // OneSignal REST API integration (requires ONESIGNAL_APP_ID and ONESIGNAL_API_KEY in env)
     const onesignalAppId = process.env.ONESIGNAL_APP_ID;
     const onesignalApiKey = process.env.ONESIGNAL_API_KEY;
@@ -306,11 +296,9 @@ async function _sendSingleUserNotification(req: any, res: any, toUserId: string,
       createdAt: new Date(),
     };
 
-    if (process.env.DATABASE_URL && prisma) {
-      await prisma.notification.create({
-        data: notificationData,
-      });
-    }
+    await prisma.notification.create({
+      data: notificationData,
+    });
 
     // Send real-time notification
     emitToUser(toUserId, 'notification', {
@@ -359,14 +347,21 @@ router.patch('/:id/read', protect, async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (process.env.DATABASE_URL && prisma) {
-      await prisma.notification.update({
-        where: { id },
-        data: { isRead: true },
-      });
-    } else {
-      // Mock update
-      console.log(`Marked notification ${id} as read`);
+    if (!hasDatabase) {
+      return res.status(503).json({ error: 'Notification service is not configured.' });
+    }
+
+    const updated = await prisma.notification.updateMany({
+      where: {
+        id,
+        userId: req.user!.id,
+        schoolId: req.user!.schoolId,
+      },
+      data: { isRead: true },
+    });
+
+    if (updated.count === 0) {
+      return res.status(404).json({ error: 'Notification not found.' });
     }
 
     res.status(200).json({ success: true });
@@ -378,17 +373,17 @@ router.patch('/:id/read', protect, async (req, res) => {
 // PATCH /notifications/read-all - Mark all notifications as read
 router.patch('/read-all', protect, async (req, res) => {
   try {
-    if (process.env.DATABASE_URL && prisma) {
-      await prisma.notification.updateMany({
-        where: { 
-          userId: req.user!.id,
-        },
-        data: { isRead: true },
-      });
-    } else {
-      // Mock update
-      console.log(`Marked all notifications as read for user ${req.user!.id}`);
+    if (!hasDatabase) {
+      return res.status(503).json({ error: 'Notification service is not configured.' });
     }
+
+    await prisma.notification.updateMany({
+      where: {
+        userId: req.user!.id,
+        schoolId: req.user!.schoolId,
+      },
+      data: { isRead: true },
+    });
 
     res.status(200).json({ success: true });
   } catch (error) {

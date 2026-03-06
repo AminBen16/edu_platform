@@ -44,7 +44,7 @@ async function getStudentDashboard(userId, schoolId) {
         where: { studentId: student.id },
         select: { classId: true }
     });
-    const classIds = enrollments.map(e => e.classId).filter(Boolean);
+    const classIds = enrollments.map((e) => e.classId).filter(Boolean);
     const assignments = await database_1.prisma.assignment.findMany({
         where: { lesson: { classId: { in: classIds } } },
         include: { submissions: { where: { studentId: student.id } } }
@@ -52,7 +52,7 @@ async function getStudentDashboard(userId, schoolId) {
     const quizAttempts = await database_1.prisma.quizAttempt.findMany({
         where: { studentId: student.id },
     });
-    const completedAssignments = assignments.filter(a => a.submissions.length > 0).length;
+    const completedAssignments = assignments.filter((a) => a.submissions.length > 0).length;
     const totalAssignments = assignments.length;
     const averageGrade = quizAttempts.length > 0
         ? quizAttempts.reduce((sum, attempt) => sum + (attempt.score || 0), 0) / quizAttempts.length

@@ -2,8 +2,8 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../config/database';
-import { User } from '@prisma/client';
 import { Role } from '../lib/database';
+import { AuthenticatedUser } from '../types/auth';
 
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'a-fallback-secret-that-is-long-and-secure';
 
@@ -11,7 +11,7 @@ const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'a-fallback-secret-that-is-lon
 declare global {
   namespace Express {
     interface Request {
-      user?: User;
+      user?: AuthenticatedUser;
     }
   }
 }

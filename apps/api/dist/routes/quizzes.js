@@ -183,8 +183,8 @@ router.post('/:id/submit', auth_1.protect, async (req, res) => {
         const quizQuestions = quiz.questions;
         let score = 0;
         let maxScore = 0;
-        const answerRecords = answers.map(answer => {
-            const question = quizQuestions.find(q => q.id === answer.questionId);
+        const answerRecords = answers.map((answer) => {
+            const question = quizQuestions.find((q) => q.id === answer.questionId);
             if (!question)
                 return null; // Or handle error
             let isCorrect = false;

@@ -21,7 +21,7 @@ router.get('/', protect, async (req, res) => {
                 where: { studentId: student.id },
                 select: { classId: true }
             });
-            const classIds = enrollments.map(e => e.classId).filter(id => id !== null);
+            const classIds = enrollments.map((e: { classId: string | null }) => e.classId).filter((id: string | null): id is string => id !== null);
 
             // Get all lessons assigned to those classes, then get assignments for those lessons
             assignments = await prisma.assignment.findMany({

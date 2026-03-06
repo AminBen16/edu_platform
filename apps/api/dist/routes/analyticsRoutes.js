@@ -65,7 +65,7 @@ router.get('/dashboard', auth_1.protect, async (req, res) => {
             })
         ]);
         // Process lessons completed and quizzes taken for each user
-        const userAnalytics = usersWithEnrollmentData.map(user => {
+        const userAnalytics = usersWithEnrollmentData.map((user) => {
             let lessonsCompleted = 0;
             let quizzesTaken = 0;
             let averageQuizScore = 0;

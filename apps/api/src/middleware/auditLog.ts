@@ -1,7 +1,6 @@
 // apps/api/src/middleware/auditLog.ts
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/database';
-import { User } from '@prisma/client';
 
 /**
  * Manually logs an audit entry.
@@ -46,7 +45,7 @@ export const logSecurityEvent = async (
   details: object,
   req: Request
 ) => {
-    const user = req.user as User | undefined;
+    const user = req.user as { id: string } | undefined;
     await logAudit(
         user?.id || null,
         `SECURITY_${event.toUpperCase()}`,

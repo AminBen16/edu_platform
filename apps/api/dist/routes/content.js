@@ -26,8 +26,8 @@ router.get('/recent', async (req, res) => {
             select: { id: true, title: true, description: true, createdAt: true, updatedAt: true, isPublished: true, type: true }
         });
         const combinedContent = [
-            ...lessons.map(item => ({ ...item, contentType: 'lesson' })),
-            ...quizzes.map(item => ({ ...item, contentType: 'quiz' }))
+            ...lessons.map((item) => ({ ...item, contentType: 'lesson' })),
+            ...quizzes.map((item) => ({ ...item, contentType: 'quiz' }))
         ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         res.json(combinedContent);
     }
@@ -52,8 +52,8 @@ router.get('/drafts', async (req, res) => {
             select: { id: true, title: true, description: true, createdAt: true, updatedAt: true, isPublished: true, type: true }
         });
         const combinedDrafts = [
-            ...lessons.map(item => ({ ...item, contentType: 'lesson' })),
-            ...quizzes.map(item => ({ ...item, contentType: 'quiz' }))
+            ...lessons.map((item) => ({ ...item, contentType: 'lesson' })),
+            ...quizzes.map((item) => ({ ...item, contentType: 'quiz' }))
         ].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
         res.json(combinedDrafts);
     }

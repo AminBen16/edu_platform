@@ -30,8 +30,8 @@ router.get('/recent', async (req, res) => {
         });
 
         const combinedContent = [
-            ...lessons.map(item => ({ ...item, contentType: 'lesson' })),
-            ...quizzes.map(item => ({ ...item, contentType: 'quiz' }))
+            ...lessons.map((item: any) => ({ ...item, contentType: 'lesson' })),
+            ...quizzes.map((item: any) => ({ ...item, contentType: 'quiz' }))
         ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
         res.json(combinedContent);
@@ -60,8 +60,8 @@ router.get('/drafts', async (req, res) => {
         });
 
         const combinedDrafts = [
-            ...lessons.map(item => ({ ...item, contentType: 'lesson' })),
-            ...quizzes.map(item => ({ ...item, contentType: 'quiz' }))
+            ...lessons.map((item: any) => ({ ...item, contentType: 'lesson' })),
+            ...quizzes.map((item: any) => ({ ...item, contentType: 'quiz' }))
         ].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
         res.json(combinedDrafts);

@@ -44,7 +44,7 @@ async function getStudentDashboard(userId: string, schoolId: string) {
         where: { studentId: student.id },
         select: { classId: true }
     });
-    const classIds = enrollments.map(e => e.classId).filter(Boolean) as string[];
+    const classIds = enrollments.map((e: { classId: string | null }) => e.classId).filter(Boolean) as string[];
     
     const assignments = await prisma.assignment.findMany({
         where: { lesson: { classId: { in: classIds } } },
@@ -55,11 +55,11 @@ async function getStudentDashboard(userId: string, schoolId: string) {
         where: { studentId: student.id },
     });
 
-    const completedAssignments = assignments.filter(a => a.submissions.length > 0).length;
+    const completedAssignments = assignments.filter((a: any) => a.submissions.length > 0).length;
     const totalAssignments = assignments.length;
     
     const averageGrade = quizAttempts.length > 0 
-        ? quizAttempts.reduce((sum, attempt) => sum + (attempt.score || 0), 0) / quizAttempts.length
+        ? quizAttempts.reduce((sum: number, attempt: any) => sum + (attempt.score || 0), 0) / quizAttempts.length
         : 0;
 
     return {
@@ -82,14 +82,14 @@ async function getTeacherDashboard(userId: string, schoolId: string) {
         select: { id: true, _count: { select: { enrollments: true } } }
     });
 
-    const totalStudents = classes.reduce((sum, c) => sum + c._count.enrollments, 0);
+    const totalStudents = classes.reduce((sum: number, c: any) => sum + c._count.enrollments, 0);
     
     const assignments = await prisma.assignment.findMany({
         where: { teacherId: teacher.id },
         select: { _count: { select: { submissions: true } } }
     });
 
-    const submissions = assignments.reduce((sum, a) => sum + a._count.submissions, 0);
+    const submissions = assignments.reduce((sum: number, a: any) => sum + a._count.submissions, 0);
 
     return {
         stats: {
