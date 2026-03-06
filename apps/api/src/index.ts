@@ -38,6 +38,9 @@ import termRoutes from './routes/terms';
 import reportCardRoutes from './routes/reportCards';
 import competencyProgressRoutes from './routes/competencyProgress';
 
+// WebRTC Signaling Route
+import webrtcRoutes from './routes/webrtc';
+
 Sentry.init({
   dsn: process.env.SENTRY_DSN || '',
   tracesSampleRate: 1.0,
@@ -121,6 +124,9 @@ app.use('/api/v1/assessments', assessmentRoutes);
 app.use('/api/v1/terms', termRoutes);
 app.use('/api/v1/report-cards', reportCardRoutes);
 app.use('/api/v1/progress', competencyProgressRoutes);
+
+// WebRTC Signaling Route
+app.use('/api/v1/webrtc', webrtcRoutes);
 
 // Error handling
 app.use(Sentry.Handlers.errorHandler());

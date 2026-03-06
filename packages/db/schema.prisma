@@ -271,6 +271,7 @@ model Class {
   curriculumLevelId String?
   Assessment        Assessment[]
   ReportCard        ReportCard[]
+  LiveSession       LiveSession[]
 }
 
 // Lesson content management
@@ -531,6 +532,7 @@ model LiveSession {
 
   // Relations
   teacher      Teacher?                 @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  class        Class?                   @relation(fields: [classId], references: [id], onDelete: SetNull)
   participants LiveSessionParticipant[]
   school       School                   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 

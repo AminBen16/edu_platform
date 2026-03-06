@@ -18,16 +18,15 @@ router.get('/', async (req: RequestWithUser, res: Response) => {
   const { classId, studentId, startDate, endDate, status } = req.query;
 
   try {
-    const db = prisma as any;
     const where: any = { schoolId };
 
     // Students can only see their own attendance
     if (role === Role.STUDENT) {
-      const studentProfile = await db.studentProfile.findUnique({
+      const student = await prisma.student.findFirst({
         where: { userId },
       });
-      if (studentProfile) {
-        where.studentId = studentProfile.id;
+      if (student) {
+        where.studentId = student.id;
       } else {
         return res.json([]);
       }
@@ -50,13 +49,13 @@ router.get('/', async (req: RequestWithUser, res: Response) => {
       where.status = status as string;
     }
 
-    const attendance = await db.attendance.findMany({
+    const attendance = await prisma.attendance.findMany({
       where,
       include: {
         student: {
           select: { id: true, name: true, email: true },
         },
-        class_: {
+        class: {
           select: { id: true, name: true },
         },
       },
@@ -64,16 +63,14 @@ router.get('/', async (req: RequestWithUser, res: Response) => {
     });
 
     // Transform the response
-    const transformedAttendance = attendance.map((record: any) => ({
+    const transformedAttendance = attendance.map((record) => ({
       id: record.id,
       studentName: record.student.name,
       studentEmail: record.student.email,
       classId: record.classId,
-      className: record.class_.name,
+      className: record.class?.name,
       date: record.date.toISOString().split('T')[0],
       status: record.status,
-      checkInTime: record.checkInTime,
-      checkOutTime: record.checkOutTime,
       notes: record.notes,
     }));
 
@@ -90,7 +87,7 @@ router.post(
   authorize(Role.TEACHER, Role.ADMIN, Role.SUPER_ADMIN),
   async (req: RequestWithUser, res: Response) => {
     const { schoolId } = req.user!;
-    const { studentId, classId, date, status, checkInTime, checkOutTime, notes } =
+    const { studentId, classId, date, status, notes } =
       req.body;
 
     if (!studentId || !classId || !date || !status) {
@@ -100,8 +97,7 @@ router.post(
     }
 
     try {
-      const db = prisma as any;
-      const attendance = await db.attendance.upsert({
+      const attendance = await prisma.attendance.upsert({
         where: {
           studentId_classId_date: {
             studentId,
@@ -111,8 +107,6 @@ router.post(
         },
         update: {
           status,
-          checkInTime,
-          checkOutTime,
           notes,
         },
         create: {
@@ -121,15 +115,13 @@ router.post(
           classId,
           date: new Date(date),
           status,
-          checkInTime,
-          checkOutTime,
           notes,
         },
         include: {
           student: {
             select: { id: true, name: true, email: true },
           },
-          class_: {
+          class: {
             select: { id: true, name: true },
           },
         },
@@ -138,11 +130,9 @@ router.post(
       res.status(201).json({
         id: attendance.id,
         studentName: attendance.student.name,
-        className: attendance.class_.name,
+        className: attendance.class?.name,
         date: attendance.date.toISOString().split('T')[0],
         status: attendance.status,
-        checkInTime: attendance.checkInTime,
-        checkOutTime: attendance.checkOutTime,
         notes: attendance.notes,
       });
     } catch (error) {
@@ -165,10 +155,9 @@ router.post(
     }
 
     try {
-      const db = prisma as any;
       const results = await Promise.all(
         records.map(async (record: any) => {
-          return db.attendance.upsert({
+          return prisma.attendance.upsert({
             where: {
               studentId_classId_date: {
                 studentId: record.studentId,
@@ -178,8 +167,6 @@ router.post(
             },
             update: {
               status: record.status,
-              checkInTime: record.checkInTime,
-              checkOutTime: record.checkOutTime,
               notes: record.notes,
             },
             create: {
@@ -188,8 +175,6 @@ router.post(
               classId: record.classId,
               date: new Date(record.date),
               status: record.status,
-              checkInTime: record.checkInTime,
-              checkOutTime: record.checkOutTime,
               notes: record.notes,
             },
           });
@@ -215,15 +200,14 @@ router.get(
     const { classId, startDate, endDate } = req.query;
 
     try {
-      const db = prisma as any;
       const where: any = { schoolId };
 
       if (role === Role.STUDENT) {
-        const studentProfile = await db.studentProfile.findUnique({
+        const student = await prisma.student.findFirst({
           where: { userId },
         });
-        if (studentProfile) {
-          where.studentId = studentProfile.id;
+        if (student) {
+          where.studentId = student.id;
         }
       }
 
@@ -238,12 +222,12 @@ router.get(
         };
       }
 
-      const attendance = await db.attendance.findMany({ where });
+      const attendance = await prisma.attendance.findMany({ where });
 
       const totalRecords = attendance.length;
-      const presentCount = attendance.filter((a: any) => a.status === 'present').length;
-      const absentCount = attendance.filter((a: any) => a.status === 'absent').length;
-      const lateCount = attendance.filter((a: any) => a.status === 'late').length;
+      const presentCount = attendance.filter((a) => a.status === 'present').length;
+      const absentCount = attendance.filter((a) => a.status === 'absent').length;
+      const lateCount = attendance.filter((a) => a.status === 'late').length;
 
       const attendanceRate =
         totalRecords > 0 ? (presentCount / totalRecords) * 100 : 0;

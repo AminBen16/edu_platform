@@ -81,9 +81,30 @@ async function main() {
     create: {
       userId: studentUser.id,
       schoolId: school.id,
+      grade: 'P5',
+      section: 'A',
+      parentEmail: 'parent@kavuma.com', // Link to parent
     },
   });
   console.log(`Created student: ${studentUser.email}`);
+
+  // Create Parent User and Profile
+  const parentPassword = await bcrypt.hash('password', 10);
+  const parentUser = await prisma.user.upsert({
+    where: { email_schoolId: { email: 'parent@kavuma.com', schoolId: school.id } },
+    update: {},
+    create: {
+      email: 'parent@kavuma.com',
+      name: 'Parent Guardian',
+      password: parentPassword,
+      role: 'PARENT',
+      schoolId: school.id,
+      emailVerified: new Date(),
+      lastLoginAt: new Date(),
+    },
+  });
+  // Parent doesn't need a separate profile, uses parentEmail to link to students
+  console.log(`Created parent: ${parentUser.email}`);
 
   // Create Subject
   let subject = await prisma.subject.findFirst({
@@ -179,40 +200,128 @@ async function main() {
         classId: classEntity.id,
         lessonId: lesson1.id,
         userId: studentUser.id,
+        schoolId: school.id,
       },
     });
   }
   console.log('Enrollment created');
 
-  // Create Quiz Attempt
-  let quizAttempt = await prisma.quizAttempt.findFirst({
-    where: { studentId: student.id, quizId: quiz.id },
-  });
-  if (!quizAttempt) {
-    quizAttempt = await prisma.quizAttempt.create({
-      data: {
-        maxScore: 100,
+  // Create Quiz Attempts with scores
+  const quizAttempts = [
+    { score: 85, maxScore: 100 },
+    { score: 92, maxScore: 100 },
+    { score: 78, maxScore: 100 },
+  ];
+  
+  for (const attemptData of quizAttempts) {
+    const existingAttempt = await prisma.quizAttempt.findFirst({
+      where: { studentId: student.id, quizId: quiz.id },
+    });
+    if (!existingAttempt) {
+      await prisma.quizAttempt.create({
+        data: {
+          maxScore: attemptData.maxScore,
+          score: attemptData.score,
+          completedAt: new Date(),
+          studentId: student.id,
+          quizId: quiz.id,
+          userId: studentUser.id,
+          schoolId: school.id,
+        },
+      });
+    }
+  }
+  console.log('Quiz attempts created');
+
+  // Create Attendance Records
+  const attendanceStatuses = ['PRESENT', 'PRESENT', 'PRESENT', 'ABSENT', 'PRESENT'];
+  for (let i = 0; i < attendanceStatuses.length; i++) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    
+    const existingAttendance = await prisma.attendance.findFirst({
+      where: {
         studentId: student.id,
-        quizId: quiz.id,
-        userId: studentUser.id,
+        classId: classEntity.id,
+      },
+    });
+    
+    if (!existingAttendance) {
+      await prisma.attendance.create({
+        data: {
+          studentId: student.id,
+          classId: classEntity.id,
+          lessonId: lesson1.id,
+          status: attendanceStatuses[i],
+          date: date,
+          schoolId: school.id,
+        },
+      });
+    }
+  }
+  console.log('Attendance records created');
+
+  // Create Live Session
+  const liveSession = await prisma.liveSession.findFirst({
+    where: { title: 'Live Math Class', schoolId: school.id },
+  });
+  if (!liveSession) {
+    await prisma.liveSession.create({
+      data: {
+        title: 'Live Math Class',
+        description: 'Interactive math session',
+        roomCode: 'LIVE-MATH-001',
+        schoolId: school.id,
+        teacherId: teacher.id,
+        classId: classEntity.id,
+        isActive: true,
+        startTime: new Date(),
+        maxParticipants: 50,
       },
     });
   }
-  console.log('Quiz attempt created');
+  console.log('Live session created');
 
   // Create Audit Logs
   await prisma.auditLog.createMany({
     data: [
-      { userId: admin.id, action: 'USER_LOGIN' },
-      { userId: teacherUser.id, action: 'USER_LOGIN' },
-      { userId: studentUser.id, action: 'USER_LOGIN' },
-      { userId: studentUser.id, action: 'LESSON_VIEWED', resource: lesson1.id.toString() },
-      { userId: studentUser.id, action: 'QUIZ_ATTEMPTED', resource: quiz.id.toString() },
+      { userId: admin.id, action: 'USER_LOGIN', schoolId: school.id },
+      { userId: teacherUser.id, action: 'USER_LOGIN', schoolId: school.id },
+      { userId: studentUser.id, action: 'USER_LOGIN', schoolId: school.id },
+      { userId: studentUser.id, action: 'LESSON_VIEWED', resource: lesson1.id.toString(), schoolId: school.id },
+      { userId: studentUser.id, action: 'QUIZ_ATTEMPTED', resource: quiz.id.toString(), schoolId: school.id },
     ],
   });
   console.log('Created audit logs');
 
-  console.log('Seeding finished.');
+  // Create Term for assessments
+  const term = await prisma.term.findFirst({
+    where: { name: 'Term 1', schoolId: school.id },
+  });
+  if (!term) {
+    await prisma.term.create({
+      data: {
+        name: 'Term 1',
+        startDate: new Date('2024-01-01'),
+        endDate: new Date('2024-04-01'),
+        academicYear: '2024',
+        schoolId: school.id,
+        isActive: true,
+      },
+    });
+  }
+  console.log('Term created');
+
+  console.log('');
+  console.log('✅ Seeding completed successfully!');
+  console.log('');
+  console.log('Test Accounts:');
+  console.log('  Admin:    admin@kavuma.com / password');
+  console.log('  Teacher:  teacher@kavuma.com / password');
+  console.log('  Student:  student@kavuma.com / password');
+  console.log('  Parent:   parent@kavuma.com / password');
+  console.log('');
+  console.log('Parent can view student progress via parentEmail link');
 }
 
 main()

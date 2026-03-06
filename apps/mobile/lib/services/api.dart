@@ -20,6 +20,11 @@ class ApiService {
     return url;
   }
 
+  // Retry configuration
+  static const int _maxRetries = 3;
+  static const int _initialDelayMs = 1000;
+  static const int _timeoutSeconds = 30;
+
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('authToken');
@@ -35,12 +40,64 @@ class ApiService {
     await prefs.remove('authToken');
   }
 
-  // Helper to wrap HTTP calls with error handling for network issues.
+  /// Helper to wrap HTTP calls with retry logic and exponential backoff.
+  /// Designed for low-bandwidth Uganda network conditions.
   static Future<http.Response> _fetch(
+    Future<http.Response> Function() call, {
+    bool useRetry = true,
+  }) async {
+    if (!useRetry) {
+      return _fetchOnce(call);
+    }
+
+    int attempt = 0;
+    int delayMs = _initialDelayMs;
+
+    while (true) {
+      try {
+        return await call().timeout(const Duration(seconds: _timeoutSeconds));
+      } on SocketException catch (e) {
+        // Network unreachable - retry with backoff
+        if (attempt < _maxRetries) {
+          attempt++;
+          await Future.delayed(Duration(milliseconds: delayMs));
+          delayMs *= 2; // Exponential backoff
+          continue;
+        }
+        throw Exception(
+          'No Internet connection. Please check your network and try again.',
+        );
+      } on TimeoutException {
+        // Connection timeout - retry with backoff
+        if (attempt < _maxRetries) {
+          attempt++;
+          await Future.delayed(Duration(milliseconds: delayMs));
+          delayMs *= 2;
+          continue;
+        }
+        throw Exception('The connection timed out. Please try again.');
+      } on FormatException catch (e) {
+        // JSON parsing error - don't retry, throw immediately
+        throw Exception('Server response error. Please try again later.');
+      } catch (e) {
+        // Other errors - check if it's retryable
+        if (attempt < _maxRetries && _isRetryableError(e)) {
+          attempt++;
+          await Future.delayed(Duration(milliseconds: delayMs));
+          delayMs *= 2;
+          continue;
+        }
+        rethrow;
+      }
+    }
+  }
+
+  /// Single fetch without retry (for critical operations like login)
+  static Future<http.Response> _fetchOnce(
     Future<http.Response> Function() call,
   ) async {
     try {
-      return await call().timeout(const Duration(seconds: 30));
+      return await call().timeout(const Duration(seconds: _timeoutSeconds));
     } on SocketException {
       throw Exception(
         'No Internet connection. Please check your network and try again.',
@@ -48,6 +105,16 @@ class ApiService {
     } on TimeoutException {
       throw Exception('The connection timed out. Please try again.');
     }
+  }
+
+  /// Check if error is retryable
+  static bool _isRetryableError(dynamic error) {
+    if (error is http.ClientException) return true;
+    if (error.toString().contains('SocketException')) return true;
+    if (error.toString().contains('TimeoutException')) return true;
+    if (error.toString().contains('Connection refused')) return true;
+    if (error.toString().contains('Connection reset')) return true;
+    return false;
   }
 
   // Login method
@@ -1972,7 +2039,10 @@ class ApiService {
   // ============ Live Sessions API Methods ============
 
   /// Fetch all live sessions
-  static Future<List<Map<String, dynamic>>> fetchLiveSessions({String? classId, bool? isActive}) async {
+  static Future<List<Map<String, dynamic>>> fetchLiveSessions({
+    String? classId,
+    bool? isActive,
+  }) async {
     final token = await getToken();
     if (token == null) throw Exception('Not authenticated');
 
@@ -1980,13 +2050,14 @@ class ApiService {
     var queryParams = <String, String>{};
     if (classId != null) queryParams['classId'] = classId;
     if (isActive != null) queryParams['isActive'] = isActive.toString();
-    
+
     if (queryParams.isNotEmpty) {
       url += '?${Uri(queryParameters: queryParams).query}';
     }
 
     final response = await _fetch(
-      () => http.get(Uri.parse(url), headers: {'Authorization': 'Bearer $token'}),
+      () =>
+          http.get(Uri.parse(url), headers: {'Authorization': 'Bearer $token'}),
     );
 
     if (response.statusCode == 200) {
@@ -2050,7 +2121,10 @@ class ApiService {
   }
 
   /// Join a live session
-  static Future<Map<String, dynamic>> joinLiveSession(String roomCode, {String? userName}) async {
+  static Future<Map<String, dynamic>> joinLiveSession(
+    String roomCode, {
+    String? userName,
+  }) async {
     final token = await getToken();
     if (token == null) throw Exception('Not authenticated');
 

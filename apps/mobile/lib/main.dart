@@ -25,8 +25,15 @@ import 'screens/audit_logs_screen.dart';
 import 'screens/attendance_screen.dart';
 import 'screens/messages_screen.dart';
 import 'screens/schedule_screen.dart';
+import 'services/cache_service.dart';
+import 'services/socket_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize cache service for offline support
+  await CacheService.init();
+
   runApp(const ProviderScope(child: EduApp()));
 }
 
@@ -36,7 +43,7 @@ class EduApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Education Platform',
+      title: 'Kavuma',
       theme: appTheme,
       debugShowCheckedModeBanner: false,
       initialRoute: '/login',

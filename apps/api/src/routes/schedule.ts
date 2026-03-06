@@ -31,7 +31,7 @@ router.get('/', async (req: RequestWithUser, res: Response) => {
     const schedules = await db.schedule.findMany({
       where,
       include: {
-        class_: {
+        class: {
           select: { id: true, name: true },
         },
       },
@@ -42,7 +42,7 @@ router.get('/', async (req: RequestWithUser, res: Response) => {
     const transformedSchedules = schedules.map((record: any) => ({
       id: record.id,
       classId: record.classId,
-      className: record.class_.name,
+      className: record.class?.name,
       dayOfWeek: record.dayOfWeek,
       startTime: record.startTime,
       endTime: record.endTime,
@@ -87,7 +87,7 @@ router.post(
           isRecurring: isRecurring ?? true,
         },
         include: {
-          class_: {
+          class: {
             select: { id: true, name: true },
           },
         },
@@ -96,7 +96,7 @@ router.post(
       res.status(201).json({
         id: schedule.id,
         classId: schedule.classId,
-        className: schedule.class_.name,
+        className: schedule.class?.name,
         dayOfWeek: schedule.dayOfWeek,
         startTime: schedule.startTime,
         endTime: schedule.endTime,
@@ -135,7 +135,7 @@ router.put(
           isRecurring,
         },
         include: {
-          class_: {
+          class: {
             select: { id: true, name: true },
           },
         },
@@ -144,7 +144,7 @@ router.put(
       res.json({
         id: schedule.id,
         classId: schedule.classId,
-        className: schedule.class_.name,
+        className: schedule.class?.name,
         dayOfWeek: schedule.dayOfWeek,
         startTime: schedule.startTime,
         endTime: schedule.endTime,

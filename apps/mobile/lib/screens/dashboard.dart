@@ -14,6 +14,7 @@ class DashboardScreen extends ConsumerStatefulWidget {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Map<String, dynamic>? userData;
+  Map<String, dynamic>? stats;
   bool _isLoading = true;
   List<dynamic> courses = [];
   List<dynamic> upcomingClasses = [];
@@ -49,6 +50,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   'role': 'STUDENT',
                   'schoolId': 'default-school',
                 };
+            stats = data['stats'] ?? {};
             courses = data['courses'] ?? [];
             upcomingClasses = data['upcomingClasses'] ?? [];
           });
@@ -235,7 +237,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             Expanded(
               child: _buildStatCard(
                 'My Classes',
-                '${courses.length}',
+                '${stats?['classCount'] ?? 0}',
                 Icons.class_,
                 Colors.green,
               ),
@@ -244,7 +246,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             Expanded(
               child: _buildStatCard(
                 'Total Students',
-                '45',
+                '${stats?['totalStudents'] ?? 0}',
                 Icons.people,
                 Colors.blue,
               ),
@@ -253,7 +255,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             Expanded(
               child: _buildStatCard(
                 'Pending Grades',
-                '8',
+                '${stats?['totalSubmissions'] ?? 0}',
                 Icons.pending,
                 Colors.orange,
               ),
@@ -267,7 +269,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             Expanded(
               child: _buildStatCard(
                 'Total Users',
-                '234',
+                '${stats?['totalUsers'] ?? 0}',
                 Icons.people,
                 Colors.purple,
               ),
@@ -275,8 +277,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: _buildStatCard(
-                'Active Schools',
-                '12',
+                'Active Users',
+                '${stats?['activeUsers'] ?? 0}',
                 Icons.school,
                 Colors.indigo,
               ),
@@ -284,9 +286,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: _buildStatCard(
-                'System Health',
-                '98%',
-                Icons.health_and_safety,
+                'Classes',
+                '${stats?['classCount'] ?? 0}',
+                Icons.class_,
                 Colors.green,
               ),
             ),
@@ -298,7 +300,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             Expanded(
               child: _buildStatCard(
                 'Children',
-                '2',
+                '${stats?['childrenCount'] ?? 0}',
                 Icons.family_restroom,
                 Colors.orange,
               ),
@@ -307,7 +309,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             Expanded(
               child: _buildStatCard(
                 'Avg Grade',
-                '85%',
+                '${stats?['averageGrade'] ?? 0}%',
                 Icons.trending_up,
                 Colors.cyan,
               ),
@@ -316,7 +318,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             Expanded(
               child: _buildStatCard(
                 'Attendance',
-                '92%',
+                '${stats?['totalAttendance'] ?? 0}%',
                 Icons.calendar_today,
                 Colors.lightGreen,
               ),
@@ -330,7 +332,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             Expanded(
               child: _buildStatCard(
                 'Courses Enrolled',
-                '${courses.length}',
+                '${stats?['enrolledCourses'] ?? courses.length}',
                 Icons.book,
                 Colors.blue,
               ),
@@ -338,8 +340,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: _buildStatCard(
-                'Avg Progress',
-                '68%',
+                'Avg Grade',
+                '${stats?['averageGrade'] ?? 0}%',
                 Icons.trending_up,
                 Colors.green,
               ),
@@ -348,7 +350,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             Expanded(
               child: _buildStatCard(
                 'Completed',
-                '12',
+                '${stats?['completedAssignments'] ?? 0}',
                 Icons.check_circle,
                 Colors.orange,
               ),

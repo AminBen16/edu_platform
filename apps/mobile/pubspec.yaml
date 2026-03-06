@@ -1,5 +1,5 @@
 name: mobile
-description: The mobile application for the Edu Platform.
+description: "Kavuma - Education Platform for Uganda"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -74,3 +74,13 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  
+  # App Assets - Organisation Logo
+  assets:
+    - assets/
+    
+  # App name configuration
+  # Note: The actual app name on device is set in:
+  # - Android: android/app/build.gradle.kts (android:label)
+  # - iOS: ios/Runner/Info.plist (CFBundleDisplayName)
+  # - Desktop: windows/runner/main.dart (flutterDimensions)
