@@ -27,7 +27,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Future<void> _loadUserData() async {
     try {
       final token = await ApiService.getToken();
-      
+
       if (token != null) {
         final response = await http.get(
           Uri.parse('${ApiService.baseUrl}/dashboard'),
@@ -36,17 +36,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             'Authorization': 'Bearer $token',
           },
         );
-        
+
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
           setState(() {
             _isLoading = false;
-            userData = data['user'] ?? {
-              'name': 'User',
-              'email': 'user@example.com',
-              'role': 'STUDENT',
-              'schoolId': 'default-school'
-            };
+            userData =
+                data['user'] ??
+                {
+                  'name': 'User',
+                  'email': 'user@example.com',
+                  'role': 'STUDENT',
+                  'schoolId': 'default-school',
+                };
             courses = data['courses'] ?? [];
             upcomingClasses = data['upcomingClasses'] ?? [];
           });
@@ -191,13 +193,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                   Text(
                     userData?['email'] ?? '',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 4),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: _getRoleColor(userData?['role']),
                       borderRadius: BorderRadius.circular(12),
@@ -222,7 +227,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   Widget _buildStatsCards() {
     final role = userData?['role'];
-    
+
     switch (role) {
       case 'TEACHER':
         return Row(
@@ -353,7 +358,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     }
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -377,10 +387,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             const SizedBox(height: 8),
             Text(
               title,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
           ],
         ),
@@ -390,7 +397,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   Widget _buildRoleSpecificContent() {
     final role = userData?['role'];
-    
+
     switch (role) {
       case 'TEACHER':
         return _buildTeacherContent();
@@ -409,13 +416,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'My Learning',
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
+        Text('My Learning', style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 12),
         Row(
           children: [
+            Expanded(
+              child: _buildActionCard(
+                'Lessons',
+                'Browse all lessons',
+                Icons.menu_book,
+                Colors.purple,
+                () => Navigator.pushNamed(context, '/lessons'),
+              ),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: _buildActionCard(
                 'Assignments',
@@ -425,7 +439,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 () => Navigator.pushNamed(context, '/assignments'),
               ),
             ),
-            const SizedBox(width: 12),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
             Expanded(
               child: _buildActionCard(
                 'Quizzes',
@@ -433,6 +451,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 Icons.quiz,
                 Colors.green,
                 () => Navigator.pushNamed(context, '/quizzes'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildActionCard(
+                'My Classes',
+                'View your enrolled classes',
+                Icons.school,
+                Colors.orange,
+                () => Navigator.pushNamed(context, '/my-classes'),
               ),
             ),
           ],
@@ -621,7 +649,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildActionCard(String title, String description, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildActionCard(
+    String title,
+    String description,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return Card(
       child: InkWell(
         onTap: onTap,
@@ -644,10 +678,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               const SizedBox(height: 4),
               Text(
                 description,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -662,10 +693,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'My Courses',
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
+        Text('My Courses', style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 12),
         SizedBox(
           height: 200,
@@ -680,7 +708,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 child: Card(
                   child: InkWell(
                     onTap: () {
-                      Navigator.pushNamed(context, '/course-details', arguments: course['id']);
+                      Navigator.pushNamed(
+                        context,
+                        '/course-details',
+                        arguments: course['id'],
+                      );
                     },
                     borderRadius: BorderRadius.circular(8),
                     child: Padding(
@@ -699,7 +731,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                   width: 80,
                                   height: 80,
                                   color: Colors.grey[300],
-                                  child: const Icon(Icons.book, color: Colors.grey),
+                                  child: const Icon(
+                                    Icons.book,
+                                    color: Colors.grey,
+                                  ),
                                 );
                               },
                             ),
@@ -777,19 +812,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           style: Theme.of(context).textTheme.headlineSmall,
         ),
         const SizedBox(height: 12),
-        ...upcomingClasses.map((classData) => Card(
-          child: ListTile(
-            leading: const Icon(Icons.video_camera_front, color: Colors.red),
-            title: Text(classData['title'] ?? ''),
-            subtitle: Text(classData['time'] ?? ''),
-            trailing: ElevatedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/live-class', arguments: classData['id']);
-              },
-              child: const Text('Join'),
+        ...upcomingClasses.map(
+          (classData) => Card(
+            child: ListTile(
+              leading: const Icon(Icons.video_camera_front, color: Colors.red),
+              title: Text(classData['title'] ?? ''),
+              subtitle: Text(classData['time'] ?? ''),
+              trailing: ElevatedButton(
+                onPressed: () {
+                  Navigator.pushNamed(
+                    context,
+                    '/live-class',
+                    arguments: classData['id'],
+                  );
+                },
+                child: const Text('Join'),
+              ),
             ),
           ),
-        )),
+        ),
       ],
     );
   }
@@ -810,9 +851,34 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Future<void> _logout() async {
+    // Show confirmation dialog before logging out
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
     try {
       await ApiService.logout();
-      
+
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const LoginScreen()),

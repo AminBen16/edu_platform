@@ -4,25 +4,21 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import '../api_config.dart';
 
 class ApiService {
-  static String get baseUrl {
-    // Check if running in debug mode (local development)
-    // For Flutter web, check the debug flag more reliably
-    const bool isDebugMode =
-        bool.fromEnvironment('debug', defaultValue: false) ||
-        bool.fromEnvironment('dart.vm.product') == false;
+  // Use ApiConfig for base URL
+  static String get baseUrl => ApiConfig.apiBaseUrl;
 
-    if (isDebugMode) {
-      // Local development
-      return "http://localhost:3000/api/v1";
-    } else {
-      // Production
-      return "https://api-32v26rbb4-ainamanipro.vercel.app/api/v1";
+  static String get _baseUrl {
+    final String url = baseUrl;
+    if (url.isEmpty) {
+      throw Exception(
+        'API URL not configured. Set API_URL environment variable.',
+      );
     }
+    return url;
   }
-
-  static String get _baseUrl => baseUrl;
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -336,6 +332,96 @@ class ApiService {
     }
   }
 
+  // Fetch Subjects
+  static Future<List<dynamic>> fetchSubjects() async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await _fetch(
+      () => http.get(
+        Uri.parse('$_baseUrl/subjects'),
+        headers: {'Authorization': 'Bearer $token'},
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load subjects');
+    }
+  }
+
+  // Create Subject
+  static Future<Map<String, dynamic>> createSubject(
+    Map<String, dynamic> subjectData,
+  ) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await _fetch(
+      () => http.post(
+        Uri.parse('$_baseUrl/subjects'),
+        headers: {
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(subjectData),
+      ),
+    );
+
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Failed to create subject');
+    }
+  }
+
+  // Fetch Classes
+  static Future<List<dynamic>> fetchClasses() async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await _fetch(
+      () => http.get(
+        Uri.parse('$_baseUrl/classes'),
+        headers: {'Authorization': 'Bearer $token'},
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load classes');
+    }
+  }
+
+  // Create Class
+  static Future<Map<String, dynamic>> createClass(
+    Map<String, dynamic> classData,
+  ) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await _fetch(
+      () => http.post(
+        Uri.parse('$_baseUrl/classes'),
+        headers: {
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(classData),
+      ),
+    );
+
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Failed to create class');
+    }
+  }
+
   static Future<String> createCheckout(String course, int amount) async {
     try {
       final response = await _fetch(
@@ -554,25 +640,6 @@ class ApiService {
     } else {
       final errorData = jsonDecode(response.body);
       throw Exception(errorData['error'] ?? 'Failed to submit quiz');
-    }
-  }
-
-  // Fetch Classes
-  static Future<List<dynamic>> fetchClasses() async {
-    final token = await getToken();
-    if (token == null) throw Exception('Not authenticated');
-
-    final response = await _fetch(
-      () => http.get(
-        Uri.parse('$_baseUrl/classes'),
-        headers: {'Authorization': 'Bearer $token'},
-      ),
-    );
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Failed to load classes');
     }
   }
 
@@ -1448,7 +1515,9 @@ class ApiService {
     if (limit != null) queryParams['limit'] = limit.toString();
     if (offset != null) queryParams['offset'] = offset.toString();
 
-    final uri = Uri.parse('$_baseUrl/audit-logs').replace(queryParameters: queryParams);
+    final uri = Uri.parse(
+      '$_baseUrl/audit-logs',
+    ).replace(queryParameters: queryParams);
 
     final response = await _fetch(
       () => http.get(uri, headers: {'Authorization': 'Bearer $token'}),
@@ -1478,7 +1547,9 @@ class ApiService {
     if (endDate != null) queryParams['endDate'] = endDate;
     queryParams['format'] = format;
 
-    final uri = Uri.parse('$_baseUrl/audit-logs/export').replace(queryParameters: queryParams);
+    final uri = Uri.parse(
+      '$_baseUrl/audit-logs/export',
+    ).replace(queryParameters: queryParams);
 
     final response = await _fetch(
       () => http.get(uri, headers: {'Authorization': 'Bearer $token'}),
@@ -1488,6 +1559,552 @@ class ApiService {
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to export audit logs');
+    }
+  }
+
+  // ============ Notifications API Methods ============
+
+  /// Fetch all notifications for the current user
+  static Future<List<Map<String, dynamic>>> fetchNotifications() async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await _fetch(
+      () => http.get(
+        Uri.parse('$_baseUrl/notifications'),
+        headers: {'Authorization': 'Bearer $token'},
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data is List) {
+        return List<Map<String, dynamic>>.from(data);
+      }
+      return [];
+    } else {
+      throw Exception('Failed to fetch notifications');
+    }
+  }
+
+  /// Fetch new notifications since last check
+  static Future<List<Map<String, dynamic>>> fetchNewNotifications({
+    String? lastCheck,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    var url = '$_baseUrl/notifications/new';
+    if (lastCheck != null) {
+      url += '?lastCheck=$lastCheck';
+    }
+
+    final response = await _fetch(
+      () =>
+          http.get(Uri.parse(url), headers: {'Authorization': 'Bearer $token'}),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data is List) {
+        return List<Map<String, dynamic>>.from(data);
+      }
+      return [];
+    } else {
+      throw Exception('Failed to fetch new notifications');
+    }
+  }
+
+  /// Mark a single notification as read
+  static Future<void> markNotificationAsRead(String notificationId) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await _fetch(
+      () => http.patch(
+        Uri.parse('$_baseUrl/notifications/$notificationId/read'),
+        headers: {'Authorization': 'Bearer $token'},
+      ),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to mark notification as read');
+    }
+  }
+
+  /// Mark all notifications as read
+  static Future<void> markAllNotificationsAsRead() async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await _fetch(
+      () => http.patch(
+        Uri.parse('$_baseUrl/notifications/read-all'),
+        headers: {'Authorization': 'Bearer $token'},
+      ),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to mark all notifications as read');
+    }
+  }
+
+  /// Send a notification to users (Teacher/Admin only)
+  static Future<Map<String, dynamic>> sendNotification({
+    required String title,
+    required String message,
+    required String type,
+    List<String>? recipients,
+    String? contentId,
+    String? contentType,
+    bool sendImmediately = true,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await _fetch(
+      () => http.post(
+        Uri.parse('$_baseUrl/notifications/send'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'title': title,
+          'message': message,
+          'type': type,
+          'recipients': recipients ?? ['all'],
+          'contentId': contentId,
+          'contentType': contentType,
+          'sendImmediately': sendImmediately,
+        }),
+      ),
+    );
+
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Failed to send notification');
+    }
+  }
+
+  // ============ Curriculum/Levels API Methods ============
+
+  /// Fetch all curriculum levels
+  static Future<List<Map<String, dynamic>>> fetchLevels() async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await _fetch(
+      () => http.get(
+        Uri.parse('$_baseUrl/levels'),
+        headers: {'Authorization': 'Bearer $token'},
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to fetch levels');
+    }
+  }
+
+  /// Fetch a specific level by ID
+  static Future<Map<String, dynamic>> fetchLevel(String levelId) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await _fetch(
+      () => http.get(
+        Uri.parse('$_baseUrl/levels/$levelId'),
+        headers: {'Authorization': 'Bearer $token'},
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to fetch level');
+    }
+  }
+
+  // ============ Topics API Methods ============
+
+  /// Fetch topics by subject or level
+  static Future<List<Map<String, dynamic>>> fetchTopics({
+    String? subjectId,
+    String? levelId,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    var url = '$_baseUrl/topics';
+    var queryParams = <String, String>{};
+    if (subjectId != null) queryParams['subjectId'] = subjectId;
+    if (levelId != null) queryParams['levelId'] = levelId;
+
+    if (queryParams.isNotEmpty) {
+      url += '?${Uri(queryParameters: queryParams).query}';
+    }
+
+    final response = await _fetch(
+      () =>
+          http.get(Uri.parse(url), headers: {'Authorization': 'Bearer $token'}),
+    );
+
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to fetch topics');
+    }
+  }
+
+  // ============ Competencies API Methods ============
+
+  /// Fetch competencies by topic, subject, or level
+  static Future<List<Map<String, dynamic>>> fetchCompetencies({
+    String? topicId,
+    String? subjectId,
+    String? levelId,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    var queryParams = <String, String>{};
+    if (topicId != null) queryParams['topicId'] = topicId;
+    if (subjectId != null) queryParams['subjectId'] = subjectId;
+    if (levelId != null) queryParams['levelId'] = levelId;
+
+    final uri = Uri.parse(
+      '$_baseUrl/competencies',
+    ).replace(queryParameters: queryParams);
+
+    final response = await _fetch(
+      () => http.get(uri, headers: {'Authorization': 'Bearer $token'}),
+    );
+
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to fetch competencies');
+    }
+  }
+
+  // ============ Terms API Methods ============
+
+  /// Fetch all terms for the school
+  static Future<List<Map<String, dynamic>>> fetchTerms() async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await _fetch(
+      () => http.get(
+        Uri.parse('$_baseUrl/terms'),
+        headers: {'Authorization': 'Bearer $token'},
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to fetch terms');
+    }
+  }
+
+  /// Fetch active term
+  static Future<Map<String, dynamic>> fetchActiveTerm() async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await _fetch(
+      () => http.get(
+        Uri.parse('$_baseUrl/terms/active'),
+        headers: {'Authorization': 'Bearer $token'},
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to fetch active term');
+    }
+  }
+
+  // ============ Report Cards API Methods ============
+
+  /// Fetch report cards for a student
+  static Future<List<Map<String, dynamic>>> fetchReportCards({
+    String? studentId,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    var url = '$_baseUrl/report-cards';
+    if (studentId != null) {
+      url += '?studentId=$studentId';
+    }
+
+    final response = await _fetch(
+      () =>
+          http.get(Uri.parse(url), headers: {'Authorization': 'Bearer $token'}),
+    );
+
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to fetch report cards');
+    }
+  }
+
+  /// Fetch a specific report card by ID
+  static Future<Map<String, dynamic>> fetchReportCard(
+    String reportCardId,
+  ) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await _fetch(
+      () => http.get(
+        Uri.parse('$_baseUrl/report-cards/$reportCardId'),
+        headers: {'Authorization': 'Bearer $token'},
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to fetch report card');
+    }
+  }
+
+  /// Create or update a report card (Teacher/Admin only)
+  static Future<Map<String, dynamic>> createReportCard(
+    Map<String, dynamic> data,
+  ) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await _fetch(
+      () => http.post(
+        Uri.parse('$_baseUrl/report-cards'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(data),
+      ),
+    );
+
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Failed to create report card');
+    }
+  }
+
+  // ============ Competency Progress API Methods ============
+
+  /// Fetch competency progress for a student
+  static Future<List<Map<String, dynamic>>> fetchCompetencyProgress({
+    String? studentId,
+    String? competencyId,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    var queryParams = <String, String>{};
+    if (studentId != null) queryParams['studentId'] = studentId;
+    if (competencyId != null) queryParams['competencyId'] = competencyId;
+
+    final uri = Uri.parse(
+      '$_baseUrl/progress',
+    ).replace(queryParameters: queryParams);
+
+    final response = await _fetch(
+      () => http.get(uri, headers: {'Authorization': 'Bearer $token'}),
+    );
+
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to fetch competency progress');
+    }
+  }
+
+  /// Update competency progress for a student
+  static Future<Map<String, dynamic>> updateCompetencyProgress(
+    String competencyId,
+    String studentId,
+    String masteryLevel, {
+    String? notes,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await _fetch(
+      () => http.post(
+        Uri.parse('$_baseUrl/progress'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'competencyId': competencyId,
+          'studentId': studentId,
+          'masteryLevel': masteryLevel,
+          'notes': notes,
+        }),
+      ),
+    );
+
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(
+        errorData['error'] ?? 'Failed to update competency progress',
+      );
+    }
+  }
+
+  // ============ Live Sessions API Methods ============
+
+  /// Fetch all live sessions
+  static Future<List<Map<String, dynamic>>> fetchLiveSessions({String? classId, bool? isActive}) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    var url = '$_baseUrl/live-sessions';
+    var queryParams = <String, String>{};
+    if (classId != null) queryParams['classId'] = classId;
+    if (isActive != null) queryParams['isActive'] = isActive.toString();
+    
+    if (queryParams.isNotEmpty) {
+      url += '?${Uri(queryParameters: queryParams).query}';
+    }
+
+    final response = await _fetch(
+      () => http.get(Uri.parse(url), headers: {'Authorization': 'Bearer $token'}),
+    );
+
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to fetch live sessions');
+    }
+  }
+
+  /// Get a specific live session by room code
+  static Future<Map<String, dynamic>> fetchLiveSession(String roomCode) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await _fetch(
+      () => http.get(
+        Uri.parse('$_baseUrl/live-sessions/$roomCode'),
+        headers: {'Authorization': 'Bearer $token'},
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to fetch live session');
+    }
+  }
+
+  /// Create a new live session (Teacher/Admin only)
+  static Future<Map<String, dynamic>> createLiveSession({
+    required String title,
+    String? description,
+    required String classId,
+    int? maxParticipants,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await _fetch(
+      () => http.post(
+        Uri.parse('$_baseUrl/live-sessions'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'title': title,
+          'description': description,
+          'classId': classId,
+          'maxParticipants': maxParticipants ?? 50,
+        }),
+      ),
+    );
+
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Failed to create live session');
+    }
+  }
+
+  /// Join a live session
+  static Future<Map<String, dynamic>> joinLiveSession(String roomCode, {String? userName}) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await _fetch(
+      () => http.post(
+        Uri.parse('$_baseUrl/live-sessions/$roomCode/join'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'userName': userName}),
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Failed to join live session');
+    }
+  }
+
+  /// Leave a live session
+  static Future<void> leaveLiveSession(String roomCode) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await _fetch(
+      () => http.post(
+        Uri.parse('$_baseUrl/live-sessions/$roomCode/leave'),
+        headers: {'Authorization': 'Bearer $token'},
+      ),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to leave live session');
+    }
+  }
+
+  /// End a live session (Teacher/Admin only)
+  static Future<void> endLiveSession(String roomCode) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await _fetch(
+      () => http.post(
+        Uri.parse('$_baseUrl/live-sessions/$roomCode/end'),
+        headers: {'Authorization': 'Bearer $token'},
+      ),
+    );
+
+    if (response.statusCode != 200) {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Failed to end live session');
     }
   }
 }

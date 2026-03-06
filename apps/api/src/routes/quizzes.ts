@@ -60,6 +60,7 @@ router.post('/', protect, async (req, res) => {
         description,
         type,
         timeLimit,
+        duration,
         maxAttempts,
         passingScore,
         isPublished,
@@ -73,29 +74,36 @@ router.post('/', protect, async (req, res) => {
     }
 
     try {
+        // Get teacher profile ID
+        const teacher = await prisma.teacher.findUnique({
+            where: { userId: req.user!.id }
+        });
+
         const newQuiz = await prisma.quiz.create({
             data: {
                 title,
                 description,
-                type,
-                timeLimit: timeLimit ? parseInt(timeLimit) : null,
+                type: type || 'ASSIGNMENT',
+                timeLimit: timeLimit ? parseInt(timeLimit) : duration ? parseInt(duration) : null,
                 maxAttempts: maxAttempts ? parseInt(maxAttempts) : 1,
                 passingScore: passingScore ? parseFloat(passingScore) : null,
                 isPublished: isPublished || false,
                 difficulty,
                 schoolId: req.user!.schoolId,
-                teacherId: req.user!.id,
+                teacherId: teacher?.id,
                 subjectId,
                 questions: {
                     create: questions.map((q: any, index: number) => ({
                         text: q.text,
-                        type: q.type,
+                        type: q.type || 'MULTIPLE_CHOICE',
                         order: q.order || index,
                         points: q.points || 1.0,
+                        schoolId: req.user!.schoolId,
                         options: q.options ? {
                             create: q.options.map((opt: any) => ({
                                 text: opt.text,
-                                isCorrect: opt.isCorrect || false
+                                isCorrect: opt.isCorrect || false,
+                                schoolId: req.user!.schoolId
                             }))
                         } : undefined
                     }))
@@ -128,7 +136,17 @@ router.put('/:id', protect, async (req, res) => {
             return res.status(404).json({ error: 'Quiz not found' });
         }
 
-        if (req.user!.role !== "ADMIN" && quiz.teacherId !== req.user!.id) {
+        // Check if user is admin or the teacher who created the quiz
+        let isAuthorized = req.user!.role === "ADMIN";
+        
+        if (!isAuthorized && req.user!.role === "TEACHER") {
+            const teacher = await prisma.teacher.findUnique({
+                where: { userId: req.user!.id }
+            });
+            isAuthorized = teacher?.id === quiz.teacherId;
+        }
+
+        if (!isAuthorized) {
             return res.status(403).json({ error: 'You are not authorized to update this quiz.' });
         }
 
@@ -155,7 +173,17 @@ router.delete('/:id', protect, async (req, res) => {
             return res.status(404).json({ error: 'Quiz not found' });
         }
 
-        if (req.user!.role !== "ADMIN" && quiz.teacherId !== req.user!.id) {
+        // Check if user is admin or the teacher who created the quiz
+        let isAuthorized = req.user!.role === "ADMIN";
+        
+        if (!isAuthorized && req.user!.role === "TEACHER") {
+            const teacher = await prisma.teacher.findUnique({
+                where: { userId: req.user!.id }
+            });
+            isAuthorized = teacher?.id === quiz.teacherId;
+        }
+
+        if (!isAuthorized) {
             return res.status(403).json({ error: 'You are not authorized to delete this quiz.' });
         }
 
@@ -206,7 +234,14 @@ router.post('/:id/submit', protect, async (req, res) => {
             return res.status(403).json({ error: 'User is not a student.' });
         }
 
-        // TODO: Add logic to check maxAttempts
+        // Check max attempts
+        const existingAttempts = await prisma.quizAttempt.count({
+            where: { studentId: student.id, quizId }
+        });
+        
+        if (quiz.maxAttempts && existingAttempts >= quiz.maxAttempts) {
+            return res.status(403).json({ error: 'Maximum attempts reached for this quiz.' });
+        }
 
         const quizQuestions = quiz.questions;
         let score = 0;
@@ -214,7 +249,7 @@ router.post('/:id/submit', protect, async (req, res) => {
 
         const answerRecords = answers.map(answer => {
             const question = quizQuestions.find(q => q.id === answer.questionId);
-            if (!question) return null; // Or handle error
+            if (!question) return null;
 
             let isCorrect = false;
             maxScore += (question.points || 1.0);
@@ -226,7 +261,6 @@ router.post('/:id/submit', protect, async (req, res) => {
                     score += (question.points || 1.0);
                 }
             }
-            // Add scoring for other question types (TRUE_FALSE, SHORT_ANSWER, etc.) here
 
             return {
                 questionId: answer.questionId,

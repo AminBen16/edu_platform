@@ -25,6 +25,18 @@ import schoolSettingsRoutes from './routes/school-settings';
 import reportsRoutes from './routes/reports';
 import attendanceRoutes from './routes/attendance';
 import scheduleRoutes from './routes/schedule';
+import ticketRoutes from './routes/tickets';
+import announcementRoutes from './routes/announcements';
+import subjectRoutes from './routes/subjects';
+
+// Uganda Curriculum Routes
+import levelRoutes from './routes/levels';
+import topicRoutes from './routes/topics';
+import competencyRoutes from './routes/competencies';
+import assessmentRoutes from './routes/assessments';
+import termRoutes from './routes/terms';
+import reportCardRoutes from './routes/reportCards';
+import competencyProgressRoutes from './routes/competencyProgress';
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN || '',
@@ -35,12 +47,17 @@ const app: Express = express();
 
 // Middleware
 app.use(Sentry.Handlers.requestHandler());
-app.use(cors({
-  origin: '*', // Allow all origins for local development
+const corsOptions = {
+  origin: process.env.ALLOWED_ORIGINS 
+    ? process.env.ALLOWED_ORIGINS.split(',') 
+    : process.env.NODE_ENV === 'production' 
+      ? false  // In production, only allow same-origin
+      : '*',   // Allow all in development
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
+};
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -92,6 +109,18 @@ app.use('/api/v1/school-settings', schoolSettingsRoutes);
 app.use('/api/v1/reports', reportsRoutes);
 app.use('/api/v1/attendance', attendanceRoutes);
 app.use('/api/v1/schedule', scheduleRoutes);
+app.use('/api/v1/tickets', ticketRoutes);
+app.use('/api/v1/announcements', announcementRoutes);
+app.use('/api/v1/subjects', subjectRoutes);
+
+// Uganda Curriculum Routes
+app.use('/api/v1/levels', levelRoutes);
+app.use('/api/v1/topics', topicRoutes);
+app.use('/api/v1/competencies', competencyRoutes);
+app.use('/api/v1/assessments', assessmentRoutes);
+app.use('/api/v1/terms', termRoutes);
+app.use('/api/v1/report-cards', reportCardRoutes);
+app.use('/api/v1/progress', competencyProgressRoutes);
 
 // Error handling
 app.use(Sentry.Handlers.errorHandler());
@@ -116,7 +145,7 @@ app.use('*', (req: Request, res: Response) => {
       '/api/v1/upload',
       '/api/v1/download',
       '/api/v1/content',
-'/api/v1/notifications',
+      '/api/v1/notifications',
       '/api/v1/school-settings',
       '/api/v1/reports',
       '/api/v1/attendance',

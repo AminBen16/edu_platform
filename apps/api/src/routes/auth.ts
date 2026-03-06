@@ -5,15 +5,61 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { prisma } from '../config/database';
 import { protect } from '../middleware/auth';
-// import EmailService from '../services/emailService'; // Assuming this service exists
 
 const router = Router();
 
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'a-fallback-secret-that-is-long-and-secure';
+const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'dev-only-secret-do-not-use-in-prod';
 
-if (JWT_SECRET === 'a-fallback-secret-that-is-long-and-secure') {
-    console.warn('Warning: Using fallback JWT secret. Set NEXTAUTH_SECRET in your environment for production.');
+if (!process.env.NEXTAUTH_SECRET) {
+    console.warn('WARNING: NEXTAUTH_SECRET not set. Using fallback secret for development only.');
 }
+
+// GET /auth/validate/:code - Validate invitation code
+router.get('/validate/:code', async (req, res) => {
+    const { code } = req.params;
+    const { email } = req.query;
+
+    if (!code) {
+        return res.status(400).json({ error: 'Invitation code is required.' });
+    }
+
+    try {
+        const invitation = await prisma.invitation.findUnique({
+            where: { code },
+            include: {
+                school: { select: { name: true, id: true } }
+            }
+        });
+
+        if (!invitation) {
+            return res.status(404).json({ error: 'Invalid invitation code.' });
+        }
+
+        if (invitation.used) {
+            return res.status(400).json({ error: 'This invitation code has already been used.' });
+        }
+
+        if (invitation.expiresAt < new Date()) {
+            return res.status(400).json({ error: 'This invitation code has expired.' });
+        }
+
+        // If email is provided, verify it matches
+        if (email && invitation.email !== email) {
+            return res.status(400).json({ error: 'This invitation code is for a different email address.' });
+        }
+
+        res.json({
+            valid: true,
+            name: invitation.name,
+            role: invitation.role,
+            email: invitation.email,
+            school: invitation.school
+        });
+    } catch (error) {
+        console.error('Validate invitation error:', error);
+        res.status(500).json({ error: 'Failed to validate invitation.' });
+    }
+});
 
 // POST /auth/login - Production-ready login
 router.post('/login', async (req, res) => {

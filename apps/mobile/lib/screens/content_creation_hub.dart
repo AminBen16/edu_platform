@@ -18,7 +18,7 @@ class _ContentCreationHubState extends ConsumerState<ContentCreationHub>
   late TabController _tabController;
   List<Map<String, dynamic>> _recentContent = [];
   List<Map<String, dynamic>> _drafts = [];
-  final List<Map<String, dynamic>> _scheduled = [];
+  List<Map<String, dynamic>> _scheduled = [];
 
   @override
   void initState() {
@@ -37,12 +37,13 @@ class _ContentCreationHubState extends ConsumerState<ContentCreationHub>
     try {
       final recentContent = await ApiService.fetchRecentContent();
       final drafts = await ApiService.fetchDrafts();
-      // final scheduled = await ApiService.fetchScheduledContent(); // Scheduled content is not implemented yet in API
+      final scheduled =
+          await ApiService.fetchScheduledContent(); // Scheduled content is not implemented yet in API
 
       setState(() {
         _recentContent = recentContent;
         _drafts = drafts;
-        // _scheduled = scheduled;
+        _scheduled = scheduled;
       });
     } catch (e) {
       // Optionally show an error message to the user
@@ -126,8 +127,8 @@ class _ContentCreationHubState extends ConsumerState<ContentCreationHub>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Content Creation Hub'),
-        backgroundColor: Colors.blue[800],
-        foregroundColor: Colors.white,
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         actions: [
           IconButton(
             icon: const Icon(Icons.analytics),
@@ -142,8 +143,8 @@ class _ContentCreationHubState extends ConsumerState<ContentCreationHub>
         ],
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
+          indicatorColor: Theme.of(context).colorScheme.onPrimary,
+          labelColor: Theme.of(context).colorScheme.onPrimary,
           unselectedLabelColor: Colors.white70,
           tabs: const [
             Tab(text: 'Create', icon: Icon(Icons.add)),
@@ -175,7 +176,7 @@ class _ContentCreationHubState extends ConsumerState<ContentCreationHub>
             'Create New Content',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.blue[800],
+              color: Theme.of(context).primaryColor,
             ),
           ),
           const SizedBox(height: 8),
@@ -236,7 +237,7 @@ class _ContentCreationHubState extends ConsumerState<ContentCreationHub>
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.speed, color: Colors.blue[800]),
+                      const Icon(Icons.speed, color: Colors.blue),
                       const SizedBox(width: 8),
                       Text(
                         'Real-time Features',
@@ -541,6 +542,20 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
   final _dueDateController = TextEditingController();
   bool _isSubmitting = false;
 
+  Future<void> _selectDueDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null) {
+      setState(
+        () => _dueDateController.text = "${picked.toLocal()}".split(' ')[0],
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -591,6 +606,8 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                   border: OutlineInputBorder(),
                   suffixIcon: Icon(Icons.calendar_today),
                 ),
+                readOnly: true,
+                onTap: () => _selectDueDate(context),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter a due date';
@@ -638,7 +655,9 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
       final assignmentData = {
         'title': _titleController.text.trim(),
         'description': _descriptionController.text.trim(),
-        'dueDate': _dueDateController.text.trim().isNotEmpty ? DateTime.parse(_dueDateController.text.trim()).toIso8601String() : null,
+        'dueDate': _dueDateController.text.trim().isNotEmpty
+            ? DateTime.parse(_dueDateController.text.trim()).toIso8601String()
+            : null,
         // Add other fields as per your backend schema for assignments, e.g., lessonId, maxScore
       };
       await ApiService.createAssignment(assignmentData);

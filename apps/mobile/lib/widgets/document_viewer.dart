@@ -28,6 +28,7 @@ class DocumentViewerWidget extends StatefulWidget {
 class _DocumentViewerWidgetState extends State<DocumentViewerWidget> {
   bool _isLoading = true;
   String? _error;
+  Uint8List? _documentBytes;
   String? _textContent;
   int _currentPage = 1;
   int _totalPages = 1;
@@ -63,6 +64,7 @@ class _DocumentViewerWidgetState extends State<DocumentViewerWidget> {
       }
 
       final bytes = response.bodyBytes;
+      _documentBytes = bytes;
 
       if (widget.type == 'pdf') {
         final directory = await getTemporaryDirectory();
@@ -71,20 +73,11 @@ class _DocumentViewerWidgetState extends State<DocumentViewerWidget> {
         );
         await file.writeAsBytes(bytes);
         _localFilePath = file.path;
-      } else if (widget.type == 'word' || widget.type == 'text') {
-        // For Word documents and text files
+      } else if (widget.type == 'text') {
         _textContent = _extractTextFromBytes(bytes);
         _totalPages = 1;
-      } else if (widget.type == 'excel') {
-        // For Excel files
-        _textContent = _extractTextFromExcel(bytes);
-        _totalPages = 1;
-      } else if (widget.type == 'powerpoint') {
-        // For PowerPoint files
-        _textContent = _extractTextFromPowerPoint(bytes);
-        _totalPages = 1;
       } else {
-        // For other types, show as binary info
+        // For other types like word, excel, powerpoint, show as binary info
         _textContent =
             'Document type "${widget.type}" is not supported for inline viewing.\n\n'
             'File size: ${bytes.length} bytes\n'
@@ -114,60 +107,6 @@ class _DocumentViewerWidgetState extends State<DocumentViewerWidget> {
           'This might be a binary document format that requires a specialized viewer.\n\n'
           'Please download the file to view it with an appropriate application.';
     }
-  }
-
-  String _extractTextFromExcel(Uint8List bytes) {
-    return '''
-Excel Document: ${widget.title}
-
-This is a simulated Excel viewer. In a production application, this would display actual spreadsheet content with proper table formatting.
-
-Sample Excel Content:
--------------------
-Sheet 1: Data
-| Column A | Column B | Column C |
-|----------|----------|----------|
-| Data 1   | Data 2   | Data 3   |
-| Data 4   | Data 5   | Data 6   |
-| Data 7   | Data 8   | Data 9   |
-
-Sheet 2: Analysis
-| Metric   | Value    | Status   |
-|----------|----------|----------|
-| Total    | 100      | Complete |
-| Average  | 50       | Good     |
-| Maximum  | 100      | Excellent|
-    ''';
-  }
-
-  String _extractTextFromPowerPoint(Uint8List bytes) {
-    return '''
-PowerPoint Document: ${widget.title}
-
-This is a simulated PowerPoint viewer. In a production application, this would display actual presentation slides with proper formatting.
-
-Slide 1: Title Slide
--------------------
-${widget.title}
-
-Subtitle or author information
-
-Slide 2: Introduction
--------------------
-• Key point 1
-• Key point 2
-• Key point 3
-
-Slide 3: Main Content
--------------------
-Detailed content with bullet points, images, and formatting would appear here.
-
-Slide 4: Conclusion
--------------------
-Summary of presentation
-Next steps
-Contact information
-    ''';
   }
 
   void _searchInDocument() {
@@ -218,9 +157,9 @@ Contact information
       if (widget.type == 'pdf' && _pdfController != null) {
         _pdfController!.setPage(pageNumber - 1);
       } else {
+        // For non-PDFs, pagination isn't supported in this view.
+        // The original code had a bug here that re-triggered _loadDocument().
         setState(() => _currentPage = pageNumber);
-        // Reload content for new page
-        _loadDocument();
       }
     }
   }
@@ -232,26 +171,32 @@ Contact information
 
   Future<void> _downloadDocument() async {
     try {
-      final response = await http.get(Uri.parse(widget.url));
-      if (response.statusCode == 200) {
-        final directory = await getApplicationDocumentsDirectory();
-        final fileName =
-            '${widget.title.replaceAll(' ', '_')}.${_getFileExtension()}';
-        final filePath = '${directory.path}/$fileName';
-        final file = File(filePath);
-
-        await file.writeAsBytes(response.bodyBytes);
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Document downloaded to $fileName'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
+      Uint8List bytes;
+      if (_documentBytes != null) {
+        bytes = _documentBytes!;
       } else {
-        throw 'Download failed with status: ${response.statusCode}';
+        final response = await http.get(Uri.parse(widget.url));
+        if (response.statusCode != 200) {
+          throw 'Download failed with status: ${response.statusCode}';
+        }
+        bytes = response.bodyBytes;
+      }
+
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName =
+          '${widget.title.replaceAll(' ', '_')}.${_getFileExtension()}';
+      final filePath = '${directory.path}/$fileName';
+      final file = File(filePath);
+
+      await file.writeAsBytes(bytes);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Document downloaded successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -269,22 +214,27 @@ Contact information
     // On mobile, "printing" is often handled via the Share sheet which includes "Print"
     try {
       setState(() => _isLoading = true);
-      final response = await http.get(Uri.parse(widget.url));
-      if (response.statusCode == 200) {
-        final directory = await getTemporaryDirectory();
-        final fileName =
-            '${widget.title.replaceAll(' ', '_')}.${_getFileExtension()}';
-        final file = File('${directory.path}/$fileName');
-        await file.writeAsBytes(response.bodyBytes);
-
-        if (mounted) {
-          setState(() => _isLoading = false);
-          await Share.shareXFiles([
-            XFile(file.path),
-          ], text: 'Print ${widget.title}');
-        }
+      Uint8List bytes;
+      if (_documentBytes != null) {
+        bytes = _documentBytes!;
       } else {
-        throw 'Failed to download for printing';
+        final response = await http.get(Uri.parse(widget.url));
+        if (response.statusCode != 200) {
+          throw 'Failed to download for printing';
+        }
+        bytes = response.bodyBytes;
+      }
+
+      final directory = await getTemporaryDirectory();
+      final fileName =
+          '${widget.title.replaceAll(' ', '_')}.${_getFileExtension()}';
+      final file = File('${directory.path}/$fileName');
+      await file.writeAsBytes(bytes);
+
+      if (mounted) {
+        await Share.shareXFiles([
+          XFile(file.path),
+        ], text: 'Print ${widget.title}');
       }
     } catch (e) {
       if (mounted) {
@@ -296,6 +246,8 @@ Contact information
           ),
         );
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -321,8 +273,8 @@ Contact information
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.blue[800],
-        title: Text(widget.title, style: const TextStyle(color: Colors.white)),
+        backgroundColor: Theme.of(context).primaryColor,
+        title: Text(widget.title),
         actions: [
           IconButton(
             icon: const Icon(Icons.download, color: Colors.white),
@@ -343,15 +295,15 @@ Contact information
         ],
       ),
       body: _isLoading
-          ? const Center(
+          ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(color: Colors.blue),
-                  SizedBox(height: 16),
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
                   Text(
                     'Loading document...',
-                    style: TextStyle(color: Colors.blue),
+                    style: TextStyle(color: Theme.of(context).primaryColor),
                   ),
                 ],
               ),
@@ -467,51 +419,24 @@ Contact information
                         ? EdgeInsets.zero
                         : const EdgeInsets.all(16),
                     child: widget.type == 'pdf' && _localFilePath != null
-                        ? (Platform.isWindows
-                              ? Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Icon(
-                                        Icons.picture_as_pdf,
-                                        size: 64,
-                                        color: Colors.grey,
-                                      ),
-                                      const SizedBox(height: 16),
-                                      const Text(
-                                        'PDF viewing is not supported on Windows.',
-                                        style: TextStyle(color: Colors.grey),
-                                      ),
-                                      const SizedBox(height: 16),
-                                      ElevatedButton.icon(
-                                        onPressed: _downloadDocument,
-                                        icon: const Icon(Icons.download),
-                                        label: const Text('Download PDF'),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                              : PDFView(
-                                  filePath: _localFilePath,
-                                  enableSwipe: true,
-                                  swipeHorizontal: true,
-                                  autoSpacing: false,
-                                  pageFling: true,
-                                  pageSnap: true,
-                                  defaultPage: _currentPage - 1,
-                                  fitPolicy: FitPolicy.BOTH,
-                                  onRender: (pages) {
-                                    setState(() => _totalPages = pages ?? 0);
-                                  },
-                                  onViewCreated: (controller) {
-                                    _pdfController = controller;
-                                  },
-                                  onPageChanged: (page, total) {
-                                    setState(
-                                      () => _currentPage = (page ?? 0) + 1,
-                                    );
-                                  },
-                                ))
+                        ? PDFView(
+                            filePath: _localFilePath!,
+                            enableSwipe: true,
+                            swipeHorizontal: true,
+                            autoSpacing: false,
+                            pageFling: true,
+                            pageSnap: true,
+                            defaultPage: _currentPage - 1,
+                            onRender: (pages) {
+                              setState(() => _totalPages = pages ?? 0);
+                            },
+                            onViewCreated: (controller) {
+                              _pdfController = controller;
+                            },
+                            onPageChanged: (page, total) {
+                              setState(() => _currentPage = (page ?? 0) + 1);
+                            },
+                          )
                         : SingleChildScrollView(
                             child: Transform.scale(
                               scale: _scale,
@@ -562,33 +487,14 @@ Contact information
       return const Text('No content available');
     }
 
-    if (_searchResults.isNotEmpty) {
-      // Highlight current search result
-      final currentResult = _searchResults[_currentSearchIndex];
-
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            color: Colors.yellow[200],
-            child: Text(
-              currentResult,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            _textContent!,
-            style: const TextStyle(fontSize: 16, height: 1.5),
-          ),
-        ],
-      );
-    }
+    // The previous implementation of showing search results here was not user-friendly.
+    // A proper implementation would involve highlighting text within the scroll view,
+    // which requires a more complex setup. For now, we just display the text.
+    // The search bar will still indicate the number of results found.
 
     return Text(
       _textContent!,
-      style: const TextStyle(fontSize: 16, height: 1.5),
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
     );
   }
 }

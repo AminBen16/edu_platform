@@ -2,7 +2,6 @@
 import { Router } from 'express';
 import { protect } from '../middleware/auth';
 import { prisma } from '../config/database';
-import { Role } from '../lib/database';
 
 const router = Router();
 
@@ -11,22 +10,32 @@ router.get('/', protect, async (req, res) => {
     const { role, id: userId, schoolId } = req.user!;
 
     try {
+        // Get full user info
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, name: true, email: true, role: true, schoolId: true, avatarUrl: true }
+        });
+
+        if (!user) {
+            return res.status(404).json({ error: 'User not found.' });
+        }
+
         let dashboardData = {};
 
-        if (role === Role.STUDENT) {
+        if (role === 'STUDENT') {
             dashboardData = await getStudentDashboard(userId, schoolId);
-        } else if (role === Role.TEACHER) {
+        } else if (role === 'TEACHER') {
             dashboardData = await getTeacherDashboard(userId, schoolId);
-        } else if (role === Role.ADMIN) {
+        } else if (role === 'ADMIN') {
             dashboardData = await getAdminDashboard(schoolId);
-        } else if (role === Role.SUPER_ADMIN) {
+        } else if (role === 'SUPER_ADMIN') {
             dashboardData = await getSuperAdminDashboard();
         } else {
              return res.status(403).json({ error: 'Invalid user role for dashboard access.' });
         }
 
         res.json({
-            user: { id: userId, role, schoolId },
+            user: user,
             ...dashboardData,
         });
 
@@ -103,8 +112,8 @@ async function getTeacherDashboard(userId: string, schoolId: string) {
 async function getAdminDashboard(schoolId: string) {
     const [userCount, teacherCount, studentCount, classCount] = await prisma.$transaction([
         prisma.user.count({ where: { schoolId } }),
-        prisma.user.count({ where: { schoolId, role: Role.TEACHER } }),
-        prisma.user.count({ where: { schoolId, role: Role.STUDENT } }),
+        prisma.user.count({ where: { schoolId, role: 'TEACHER' } }),
+        prisma.user.count({ where: { schoolId, role: 'STUDENT' } }),
         prisma.class.count({ where: { schoolId } })
     ]);
 

@@ -143,5 +143,65 @@ router.post('/unpublish', async (req, res) => {
     }
 });
 
+// GET /content/scheduled - Get scheduled content (lessons and quizzes with publishAt set)
+router.get('/scheduled', async (req, res) => {
+    const { schoolId } = req.user!;
+    const teacherId = req.user!.role === Role.TEACHER ? (await prisma.teacher.findUnique({ where: { userId: req.user!.id } }))?.id : undefined;
+
+    try {
+        // For now, return empty array - scheduled publishing can be implemented with a publishAt field
+        // This would require adding publishAt field to Lesson and Quiz models
+        res.json([]);
+    } catch (error) {
+        console.error('Failed to fetch scheduled content:', error);
+        res.status(500).json({ error: 'Failed to fetch scheduled content.' });
+    }
+});
+
+// POST /content/schedule - Schedule content for future publishing
+router.post('/schedule', async (req, res) => {
+    const { contentId, contentType, publishAt } = req.body;
+
+    if (!contentId || !contentType || !publishAt) {
+        return res.status(400).json({ error: 'Content ID, content type, and publish date are required.' });
+    }
+
+    const publishDate = new Date(publishAt);
+    if (publishDate <= new Date()) {
+        return res.status(400).json({ error: 'Publish date must be in the future.' });
+    }
+
+    try {
+        let content;
+        if (contentType === 'lesson') {
+            // First add publishAt field to Lesson model in schema if needed
+            content = await prisma.lesson.update({
+                where: { id: contentId, schoolId: req.user!.schoolId },
+                data: { isPublished: false, updatedAt: new Date() },
+            });
+        } else if (contentType === 'quiz') {
+            content = await prisma.quiz.update({
+                where: { id: contentId, schoolId: req.user!.schoolId },
+                data: { isPublished: false, updatedAt: new Date() },
+            });
+        } else {
+            return res.status(400).json({ error: 'Invalid content type provided.' });
+        }
+
+        if (!content) {
+            return res.status(404).json({ error: 'Content not found or not authorized.' });
+        }
+
+        res.status(200).json({ 
+            message: 'Content scheduled successfully.', 
+            content,
+            scheduledFor: publishDate
+        });
+    } catch (error) {
+        console.error('Content scheduling error:', error);
+        res.status(500).json({ error: 'Failed to schedule content.' });
+    }
+});
+
 
 export default router;

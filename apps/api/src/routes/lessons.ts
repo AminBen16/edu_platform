@@ -12,7 +12,11 @@ router.get('/', protect, async (req, res) => {
             where: { schoolId: req.user!.schoolId },
             orderBy: { createdAt: 'desc' },
             include: {
-                teacher: true,
+                teacher: {
+                    include: {
+                        user: { select: { name: true, email: true } }
+                    }
+                },
                 subject: true,
                 class: true,
             },
@@ -31,7 +35,11 @@ router.get('/:id', protect, async (req, res) => {
         const lesson = await prisma.lesson.findUnique({
             where: { id, schoolId: req.user!.schoolId },
             include: {
-                teacher: true,
+                teacher: {
+                    include: {
+                        user: { select: { name: true, email: true } }
+                    }
+                },
                 subject: true,
                 class: true,
                 resources: true,
@@ -76,21 +84,26 @@ router.post('/', protect, async (req, res) => {
     }
 
     try {
+        // Get teacher profile ID
+        const teacher = await prisma.teacher.findUnique({
+            where: { userId: req.user!.id }
+        });
+
         const newLesson = await prisma.lesson.create({
             data: {
                 title,
                 description,
                 content,
-                type,
+                type: type || 'LESSON',
                 videoUrl,
                 documentUrl,
                 duration: duration ? parseInt(duration) : undefined,
                 order: order ? parseInt(order) : undefined,
                 isPublished: isPublished || false,
                 difficulty,
-                tags,
+                tags: tags ? JSON.stringify(tags) : undefined,
                 schoolId: req.user!.schoolId,
-                teacherId: req.user!.id,
+                teacherId: teacher?.id,
                 subjectId,
                 classId,
             },
@@ -122,6 +135,11 @@ router.put('/:id', protect, async (req, res) => {
     } = req.body;
 
     try {
+        // Get teacher profile ID for authorization check
+        const teacher = await prisma.teacher.findUnique({
+            where: { userId: req.user!.id }
+        });
+
         const lesson = await prisma.lesson.findUnique({
             where: { id, schoolId: req.user!.schoolId },
         });
@@ -130,7 +148,7 @@ router.put('/:id', protect, async (req, res) => {
             return res.status(404).json({ error: 'Lesson not found' });
         }
 
-        if (req.user!.role !== "ADMIN" && lesson.teacherId !== req.user!.id) {
+        if (req.user!.role !== "ADMIN" && lesson.teacherId !== teacher?.id) {
             return res.status(403).json({ error: 'You are not authorized to update this lesson.' });
         }
 
@@ -147,7 +165,7 @@ router.put('/:id', protect, async (req, res) => {
                 order: order ? parseInt(order) : undefined,
                 isPublished,
                 difficulty,
-                tags,
+                tags: tags ? (Array.isArray(tags) ? JSON.stringify(tags) : tags) : undefined,
                 subjectId,
                 classId,
                 updatedAt: new Date(),
@@ -165,6 +183,11 @@ router.delete('/:id', protect, async (req, res) => {
     const { id } = req.params;
 
     try {
+        // Get teacher profile ID for authorization check
+        const teacher = await prisma.teacher.findUnique({
+            where: { userId: req.user!.id }
+        });
+
         const lesson = await prisma.lesson.findUnique({
             where: { id, schoolId: req.user!.schoolId },
         });
@@ -173,7 +196,7 @@ router.delete('/:id', protect, async (req, res) => {
             return res.status(404).json({ error: 'Lesson not found' });
         }
 
-        if (req.user!.role !== 'ADMIN' && lesson.teacherId !== req.user!.id) {
+        if (req.user!.role !== 'ADMIN' && lesson.teacherId !== teacher?.id) {
             return res.status(403).json({ error: 'You are not authorized to delete this lesson.' });
         }
 

@@ -15,6 +15,7 @@ import 'screens/analytics_screen.dart';
 import 'screens/user_management_screen.dart';
 import 'screens/progress_reports_screen.dart';
 import 'screens/assignments_screen.dart';
+import 'screens/lessons.dart';
 import 'screens/quizzes_screen.dart';
 import 'screens/create_lesson_screen.dart';
 import 'screens/my_classes_screen.dart';
@@ -55,6 +56,7 @@ class EduApp extends StatelessWidget {
         // Student routes
         '/assignments': (context) => const AssignmentsScreen(),
         '/quizzes': (context) => const QuizzesScreen(),
+        '/lessons': (context) => const LessonsScreen(),
         // Teacher routes
         '/create-lesson': (context) => const CreateLessonScreen(),
         '/grading': (context) => const GradingScreen(),

@@ -45,9 +45,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading users: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading users: $e')));
       }
     }
   }
@@ -56,47 +56,51 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     String action,
     Map<String, dynamic> user,
   ) async {
+    final userName = user['name'] ?? '';
+    final userEmail = user['email'] ?? '';
+
     switch (action) {
       case 'view':
         if (!mounted) return;
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Viewing ${user['name']}')));
+        ).showSnackBar(SnackBar(content: Text('Viewing $userName')));
         break;
       case 'edit':
         if (!mounted) return;
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Editing ${user['name']}')));
+        ).showSnackBar(SnackBar(content: Text('Editing $userName')));
         break;
       case 'reset_password':
         try {
-          await ApiService.requestPasswordReset(user['email']);
+          await ApiService.requestPasswordReset(userEmail);
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Password reset sent to ${user['email']}')),
+            SnackBar(content: Text('Password reset sent to $userEmail')),
           );
         } catch (e) {
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error: $e')));
         }
         break;
       case 'toggle_status':
         try {
-          final newStatus = user['status'] == 'active' ? 'inactive' : 'active';
+          final currentStatus = user['status'] ?? 'inactive';
+          final newStatus = currentStatus == 'active' ? 'inactive' : 'active';
           await ApiService.updateUser(user['id'], {'status': newStatus});
           _loadUsers();
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Status updated for ${user['name']}')),
+            SnackBar(content: Text('Status updated for $userName')),
           );
         } catch (e) {
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error updating status: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error updating status: $e')));
         }
         break;
       case 'delete':
@@ -104,14 +108,14 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
           await ApiService.deleteUser(user['id']);
           _loadUsers();
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${user['name']} deleted')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('$userName deleted')));
         } catch (e) {
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error deleting user: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error deleting user: $e')));
         }
         break;
     }
@@ -122,7 +126,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
       'ID,Name,Email,Role,Status,Last Login,School,Join Date',
       ..._users.map(
         (u) =>
-            '${u['id']},${u['name']},${u['email']},${u['role']},${u['status']},${u['lastLogin']},${u['school']},${u['joinDate']}',
+            '${u['id']},${u['name'] ?? ""},${u['email'] ?? ""},${u['role'] ?? ""},${u['status'] ?? ""},${u['lastLogin'] ?? ""},${u['school'] ?? ""},${u['joinDate'] ?? ""}',
       ),
     ].join('\n');
 
@@ -393,13 +397,23 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                           itemCount: _users.length,
                           itemBuilder: (context, index) {
                             final user = _users[index];
+                            final userName = user['name'] ?? 'Unknown';
+                            final userEmail = user['email'] ?? '';
+                            final userRole = user['role'] ?? 'STUDENT';
+                            final userStatus = user['status'] ?? 'inactive';
+                            final userSchool = user['school'] ?? 'N/A';
+                            final userJoinDate = user['joinDate'] ?? 'N/A';
+                            final userLastLogin = user['lastLogin'] ?? 'Never';
+
                             return Card(
                               margin: const EdgeInsets.only(bottom: 8),
                               child: ListTile(
                                 leading: CircleAvatar(
-                                  backgroundColor: _getRoleColor(user['role']),
+                                  backgroundColor: _getRoleColor(userRole),
                                   child: Text(
-                                    user['name'][0].toUpperCase(),
+                                    userName.isNotEmpty
+                                        ? userName[0].toUpperCase()
+                                        : '?',
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
@@ -411,7 +425,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      user['name'],
+                                      userName,
                                       style: const TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
@@ -419,7 +433,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      user['email'],
+                                      userEmail,
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: Colors.grey[600],
@@ -438,15 +452,13 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                                             vertical: 4,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: _getStatusColor(
-                                              user['status'],
-                                            ),
+                                            color: _getStatusColor(userStatus),
                                             borderRadius: BorderRadius.circular(
                                               12,
                                             ),
                                           ),
                                           child: Text(
-                                            user['status'].toUpperCase(),
+                                            userStatus.toUpperCase(),
                                             style: const TextStyle(
                                               color: Colors.white,
                                               fontSize: 10,
@@ -456,7 +468,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
-                                          user['role'],
+                                          userRole,
                                           style: TextStyle(
                                             fontSize: 12,
                                             color: Colors.grey[600],
@@ -466,7 +478,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'School: ${user['school']}',
+                                      'School: $userSchool',
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: Colors.grey[600],
@@ -474,7 +486,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'Joined: ${user['joinDate']}',
+                                      'Joined: $userJoinDate',
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: Colors.grey[600],
@@ -482,7 +494,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'Last Login: ${user['lastLogin']}',
+                                      'Last Login: $userLastLogin',
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: Colors.grey[600],

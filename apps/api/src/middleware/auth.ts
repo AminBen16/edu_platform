@@ -3,7 +3,6 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../config/database';
 import { User } from '@prisma/client';
-import { Role } from '../lib/database';
 
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'a-fallback-secret-that-is-long-and-secure';
 
@@ -49,9 +48,9 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
 };
 
 // Middleware to authorize based on role
-export const authorize = (...roles: Role[]) => {
+export const authorize = (...roles: string[]) => {
     return (req: Request, res: Response, next: NextFunction) => {
-        if (!req.user || !roles.includes(req.user.role as Role)) {
+        if (!req.user || !roles.includes(req.user.role)) {
             return res.status(403).json({ 
               error: `Forbidden. User role '${req.user?.role}' is not authorized. Required roles: ${roles.join(', ')}.`,
             });

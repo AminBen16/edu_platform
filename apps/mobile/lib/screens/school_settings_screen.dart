@@ -609,21 +609,26 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                           const Divider(),
                           SwitchListTile(
                             title: const Text('Online Grading'),
-                            value: _settings['features']['onlineGrading'],
+                            value:
+                                _settings['features']?['onlineGrading'] ??
+                                false,
                             onChanged: (bool value) async {
                               await _updateFeature('onlineGrading', value);
                             },
                           ),
                           SwitchListTile(
                             title: const Text('Digital Library'),
-                            value: _settings['features']['digitalLibrary'],
+                            value:
+                                _settings['features']?['digitalLibrary'] ??
+                                false,
                             onChanged: (bool value) async {
                               await _updateFeature('digitalLibrary', value);
                             },
                           ),
                           SwitchListTile(
                             title: const Text('Parent Portal'),
-                            value: _settings['features']['parentPortal'],
+                            value:
+                                _settings['features']?['parentPortal'] ?? false,
                             onChanged: (bool value) async {
                               await _updateFeature('parentPortal', value);
                             },

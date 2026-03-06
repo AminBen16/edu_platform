@@ -2,7 +2,6 @@
 import { Router } from 'express';
 import { prisma } from '../config/database';
 import { protect } from '../middleware/auth';
-import { Role } from '../lib/database';
 
 const router = Router();
 
@@ -13,7 +12,9 @@ router.get('/', protect, async (req, res) => {
             where: { schoolId: req.user!.schoolId },
             include: {
                 teacher: {
-                    select: { user: { select: { id: true, name: true, email: true } } }
+                    include: {
+                        user: { select: { id: true, name: true, email: true } }
+                    }
                 },
                 _count: { select: { enrollments: true } }
             },
@@ -34,7 +35,9 @@ router.get('/:id', protect, async (req, res) => {
             where: { id, schoolId: req.user!.schoolId },
             include: {
                 teacher: {
-                    select: { user: { select: { id: true, name: true, email: true } } }
+                    include: {
+                        user: { select: { id: true, name: true, email: true } }
+                    }
                 },
                 enrollments: {
                     include: {
@@ -66,7 +69,7 @@ router.get('/:id', protect, async (req, res) => {
 
 // POST /classes - Create new class (Admins only)
 router.post('/', protect, async (req, res) => {
-    if (req.user!.role !== Role.ADMIN) {
+    if (req.user!.role !== 'ADMIN') {
         return res.status(403).json({ error: 'You are not authorized to create classes.' });
     }
 
@@ -88,7 +91,9 @@ router.post('/', protect, async (req, res) => {
             },
             include: {
                 teacher: {
-                    select: { user: { select: { id: true, name: true, email: true } } }
+                    include: {
+                        user: { select: { id: true, name: true, email: true } }
+                    }
                 }
             }
         });
@@ -101,7 +106,7 @@ router.post('/', protect, async (req, res) => {
 
 // PUT /classes/:id - Update class (Admins only)
 router.put('/:id', protect, async (req, res) => {
-    if (req.user!.role !== Role.ADMIN) {
+    if (req.user!.role !== 'ADMIN') {
         return res.status(403).json({ error: 'You are not authorized to update classes.' });
     }
     const { id } = req.params;
@@ -113,7 +118,9 @@ router.put('/:id', protect, async (req, res) => {
             data: { name, code, grade, capacity: capacity ? parseInt(capacity) : undefined, teacherId },
             include: {
                 teacher: {
-                    select: { user: { select: { id: true, name: true, email: true } } }
+                    include: {
+                        user: { select: { id: true, name: true, email: true } }
+                    }
                 }
             }
         });
@@ -126,7 +133,7 @@ router.put('/:id', protect, async (req, res) => {
 
 // DELETE /classes/:id - Delete class (Admins only)
 router.delete('/:id', protect, async (req, res) => {
-    if (req.user!.role !== Role.ADMIN) {
+    if (req.user!.role !== 'ADMIN') {
         return res.status(403).json({ error: 'You are not authorized to delete classes.' });
     }
     const { id } = req.params;
@@ -145,7 +152,7 @@ router.delete('/:id', protect, async (req, res) => {
 
 // POST /classes/:id/enroll - Enroll students in a class (Admins and Teachers)
 router.post('/:id/enroll', protect, async (req, res) => {
-    if (req.user!.role !== Role.ADMIN && req.user!.role !== Role.TEACHER) {
+    if (req.user!.role !== 'ADMIN' && req.user!.role !== 'TEACHER') {
         return res.status(403).json({ error: 'You are not authorized to enroll students.' });
     }
     const { id: classId } = req.params;
@@ -160,7 +167,7 @@ router.post('/:id/enroll', protect, async (req, res) => {
             data: studentIds.map(studentId => ({
                 classId,
                 studentId,
-                userId: req.user?.id
+                schoolId: req.user!.schoolId
             })),
         });
         res.status(201).json({ message: `${enrollments.count} students enrolled successfully.` });
@@ -172,7 +179,7 @@ router.post('/:id/enroll', protect, async (req, res) => {
 
 // DELETE /classes/:classId/enrollments/:enrollmentId - Remove a student's enrollment from a class
 router.delete('/:classId/enrollments/:enrollmentId', protect, async (req, res) => {
-    if (req.user!.role !== Role.ADMIN && req.user!.role !== Role.TEACHER) {
+    if (req.user!.role !== 'ADMIN' && req.user!.role !== 'TEACHER') {
         return res.status(403).json({ error: 'You are not authorized to manage enrollments.' });
     }
     const { enrollmentId } = req.params;

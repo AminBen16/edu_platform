@@ -36,7 +36,10 @@ class QuizzesScreen extends StatelessWidget {
               title: const Text('Science Midterm'),
               subtitle: const Text('Completed • Score: 92/50'),
               trailing: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.blue,
                   borderRadius: BorderRadius.circular(12),
