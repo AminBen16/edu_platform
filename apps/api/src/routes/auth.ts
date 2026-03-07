@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { prisma } from '../config/database';
 import { protect } from '../middleware/auth';
+import { authRateLimit, invitationRateLimit, generalRateLimit } from '../middleware/rateLimit';
 
 const router = Router();
 
@@ -14,8 +15,8 @@ if (!process.env.NEXTAUTH_SECRET) {
     console.warn('WARNING: NEXTAUTH_SECRET not set. Using fallback secret for development only.');
 }
 
-// GET /auth/validate/:code - Validate invitation code
-router.get('/validate/:code', async (req, res) => {
+// GET /auth/validate/:code - Validate invitation code (rate limited)
+router.get('/validate/:code', generalRateLimit, async (req, res) => {
     const { code } = req.params;
     const { email } = req.query;
 
@@ -61,8 +62,8 @@ router.get('/validate/:code', async (req, res) => {
     }
 });
 
-// POST /auth/login - Production-ready login
-router.post('/login', async (req, res) => {
+// POST /auth/login - Production-ready login (rate limited for security)
+router.post('/login', authRateLimit, async (req, res) => {
     const { email, password, schoolId } = req.body;
 
     if (!email || !password) {
@@ -172,8 +173,8 @@ router.post('/register', async (req, res) => {
 });
 
 
-// POST /auth/invite - Generate invitation (Admin only)
-router.post('/invite', protect, async (req, res) => {
+// POST /auth/invite - Generate invitation (Admin only, rate limited)
+router.post('/invite', protect, invitationRateLimit, async (req, res) => {
     if (req.user!.role !== "ADMIN") {
         return res.status(403).json({ error: 'You are not authorized to invite users.' });
     }
@@ -230,8 +231,8 @@ router.get('/invitations', protect, async (req, res) => {
     }
 });
 
-// POST /auth/forgot-password - Request password reset
-router.post('/forgot-password', async (req, res) => {
+// POST /auth/forgot-password - Request password reset (rate limited)
+router.post('/forgot-password', authRateLimit, async (req, res) => {
     const { email } = req.body;
 
     if (!email) {
