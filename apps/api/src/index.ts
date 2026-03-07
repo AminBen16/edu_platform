@@ -155,7 +155,7 @@ app.use('*', (req: Request, res: Response) => {
 
 // Start server for local development
 if (process.env.NODE_ENV !== 'production') {
-  const PORT = process.env.PORT || 3000;
+  const PORT = parseInt(process.env.PORT || '3000', 10);
   const server = createServer(app);
   const io = new SocketIOServer(server, {
     cors: {
@@ -199,8 +199,8 @@ if (process.env.NODE_ENV !== 'production') {
     });
   });
 
-  server.listen(PORT, () => {
-    // Server started
+  server.listen(PORT, '0.0.0.0', () => {
+    // Server started - listening on all interfaces
   });
 }
 
