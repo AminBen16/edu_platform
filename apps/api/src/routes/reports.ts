@@ -138,22 +138,39 @@ router.get('/scheduled', protect, authorize(Role.ADMIN, Role.SCHOOL_ADMIN, Role.
 
 // Helper functions
 async function generateAdminReports(schoolId: string) {
+  // Get real data for reports
   const [
     totalUsers,
     totalLessons,
     totalQuizzes,
     totalAttempts,
-    averageScore
+    averageScore,
+    recentLogins
   ] = await Promise.all([
     prisma.user.count({ where: { schoolId } }),
-    prisma.lesson.count({ where: { schoolId } }),
-    prisma.quiz.count({ where: { schoolId } }),
-    (prisma as any).quizAttempt.count({ where: { schoolId } }),
-    (prisma as any).quizAttempt.aggregate({
+    prisma.lesson.count({ where: { schoolId, isPublished: true } }),
+    prisma.quiz.count({ where: { schoolId, isPublished: true } }),
+    prisma.quizAttempt.count({ where: { schoolId } }),
+    prisma.quizAttempt.aggregate({
       where: { schoolId },
       _avg: { score: true }
+    }),
+    prisma.auditLog.count({
+      where: { 
+        schoolId,
+        action: 'LOGIN',
+        createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+      }
     })
   ]);
+
+  // Get active users (logged in last 7 days)
+  const activeUsers = await prisma.user.count({
+    where: {
+      schoolId,
+      lastLoginAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+    }
+  });
 
   return [
     {
@@ -166,7 +183,7 @@ async function generateAdminReports(schoolId: string) {
         totalLessons,
         totalQuizzes,
         totalAttempts,
-        averageScore: (averageScore as any)?._avg?.score || 0,
+        averageScore: Math.round((averageScore._avg?.score || 0) * 100) / 100,
         generatedAt: new Date()
       }
     },
@@ -176,8 +193,8 @@ async function generateAdminReports(schoolId: string) {
       type: 'activity',
       description: 'Detailed user engagement and activity metrics',
       data: {
-        // In a real implementation, you'd query actual activity data
-        activeUsers: Math.floor(totalUsers * 0.7),
+        activeUsers,
+        totalLoginsThisWeek: recentLogins,
         averageLoginTime: '2.5 hours',
         topActiveUsers: [],
         generatedAt: new Date()
@@ -189,8 +206,8 @@ async function generateAdminReports(schoolId: string) {
       type: 'performance',
       description: 'Academic performance and completion rates',
       data: {
-        averageCompletionRate: 85,
-        averageGrade: (averageScore as any)?._avg?.score || 0,
+        averageCompletionRate: Math.round((totalLessons > 0 ? (totalAttempts / totalLessons) * 100 : 0) * 100) / 100,
+        averageGrade: Math.round((averageScore._avg?.score || 0) * 100) / 100,
         topPerformingSubjects: [],
         generatedAt: new Date()
       }
@@ -199,6 +216,16 @@ async function generateAdminReports(schoolId: string) {
 }
 
 async function generateTeacherReports(schoolId: string, teacherId: string) {
+    // Get teacher's lessons
+    const lessons = await prisma.lesson.findMany({
+      where: { teacherId },
+      select: { id: true, classId: true }
+    });
+    
+    const lessonIds = lessons.map(l => l.id);
+    const classIds = lessons.map(l => l.classId).filter(Boolean) as string[];
+    
+    // Get quiz attempts for teacher's quizzes
     const attempts = await (prisma as any).$queryRaw`
       SELECT 
         qa.id,
@@ -208,9 +235,26 @@ async function generateTeacherReports(schoolId: string, teacherId: string) {
         qa.createdAt
       FROM "QuizAttempt" qa
       JOIN "Quiz" q ON qa."quizId" = q.id
-      JOIN "Lesson" l ON q."lessonId" = l.id
-      WHERE l."authorId" = ${teacherId}
+      WHERE q."teacherId" = ${teacherId}
     ` as any[];
+    
+    // Get attendance for teacher's classes
+    const attendance = classIds.length > 0 
+      ? await prisma.attendance.findMany({
+          where: { classId: { in: classIds } },
+          select: { status: true }
+        })
+      : [];
+    
+    const totalPresent = attendance.filter(a => a.status === 'PRESENT').length;
+    const averageAttendance = attendance.length > 0 
+      ? Math.round((totalPresent / attendance.length) * 100) 
+      : 0;
+
+    // Calculate average score from attempts
+    const averageStudentScore = attempts.length > 0
+      ? attempts.reduce((sum: number, a: any) => sum + (a.score || 0), 0) / attempts.length
+      : 0;
 
   return [
     {
@@ -219,11 +263,11 @@ async function generateTeacherReports(schoolId: string, teacherId: string) {
       type: 'performance',
       description: 'Your teaching effectiveness and student engagement',
       data: {
-        totalLessons: 5, // Placeholder - calculate from actual lessons
+        totalLessons: lessons.length,
         totalStudents: new Set(
           attempts.map((attempt: any) => attempt.userId)
         ).size,
-        averageStudentScore: 0, // Calculate from attempts
+        averageStudentScore: Math.round(averageStudentScore * 100) / 100,
         generatedAt: new Date()
       }
     },
@@ -233,8 +277,8 @@ async function generateTeacherReports(schoolId: string, teacherId: string) {
       type: 'attendance',
       description: 'Attendance records for your classes',
       data: {
-        averageAttendance: 92,
-        totalClasses: 5, // Placeholder - calculate from actual lessons
+        averageAttendance,
+        totalClasses: classIds.length,
         generatedAt: new Date()
       }
     }
@@ -295,17 +339,58 @@ async function getReportById(reportId: string, schoolId: string) {
 }
 
 async function generatePDFReport(report: any): Promise<string> {
-  // For now, return a placeholder path
-  // In production, implement with a proper PDF library
-  return `/tmp/${report.id}.pdf`;
+  // Generate PDF using PDFKit
+  const fileName = `${report.id}_${Date.now()}.pdf`;
+  const filePath = path.join(tempDir, fileName);
+  
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument();
+      const stream = fs.createWriteStream(filePath);
+      
+      doc.pipe(stream);
+      
+      // Add report content
+      doc.fontSize(20).text(report.title || 'Report', { align: 'center' });
+      doc.moveDown();
+      doc.fontSize(12).text(`Generated: ${new Date().toISOString()}`);
+      doc.moveDown();
+      
+      // Add report data
+      if (report.data) {
+        doc.fontSize(14).text('Report Data:');
+        doc.fontSize(10);
+        
+        const data = report.data;
+        Object.entries(data).forEach(([key, value]) => {
+          if (key !== 'generatedAt' && key !== 'topActiveUsers' && key !== 'topPerformingSubjects' && key !== 'subjectBreakdown') {
+            doc.text(`${key}: ${JSON.stringify(value)}`);
+          }
+        });
+      }
+      
+      doc.end();
+      
+      stream.on('finish', () => {
+        resolve(filePath);
+      });
+      
+      stream.on('error', (err) => {
+        reject(err);
+      });
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 
 async function generateCSVReport(report: any): Promise<string> {
-  // Simple CSV conversion
-  const filePath = `/tmp/${report.id}.csv`;
+  const fileName = `${report.id}_${Date.now()}.csv`;
+  const filePath = path.join(tempDir, fileName);
   const csvContent = convertToCSV(report.data);
   
-  // In production, use fs.writeFileSync
+  // Write CSV to file
+  fs.writeFileSync(filePath, csvContent, 'utf-8');
   return filePath;
 }
 
