@@ -82,7 +82,7 @@ router.post('/login', async (req, res) => {
             if (!schoolId) {
                 return res.status(409).json({ error: 'Multiple accounts found. Please provide a school ID.' });
             }
-            user = users.find(u => u.schoolId === schoolId);
+            user = users.find((u: any) => u.schoolId === schoolId);
         } else {
             user = users[0];
         }

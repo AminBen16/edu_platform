@@ -62,7 +62,7 @@ async function getStudentDashboard(userId: string, schoolId: string) {
         }
     }) as any;
     
-    const classIds = enrollments.map((e: any) => e.classId).filter(Boolean) as string[];
+const classIds = enrollments.map((e: any) => e.classId).filter(Boolean) as string[];
     
     // Get enrolled classes with details (for courses list)
     const courses = enrollments.map((enrollment: any) => ({
@@ -94,11 +94,11 @@ async function getStudentDashboard(userId: string, schoolId: string) {
         where: { studentId: student.id },
     });
 
-    const completedAssignments = assignments.filter(a => a.submissions.length > 0).length;
+    const completedAssignments = assignments.filter((a: any) => a.submissions.length > 0).length;
     const totalAssignments = assignments.length;
     
     const averageGrade = quizAttempts.length > 0 
-        ? quizAttempts.reduce((sum, attempt) => sum + (attempt.score || 0), 0) / quizAttempts.length
+        ? quizAttempts.reduce((sum: number, attempt: any) => sum + (attempt.score || 0), 0) / quizAttempts.length
         : 0;
 
     return {

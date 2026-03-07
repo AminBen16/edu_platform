@@ -75,16 +75,16 @@ router.get('/dashboard', protect, async (req, res) => {
     ]);
 
     // Process lessons completed and quizzes taken for each user
-    const userAnalytics = usersWithEnrollmentData.map(user => {
+    const userAnalytics = usersWithEnrollmentData.map((user: any) => {
       let lessonsCompleted = 0;
       let quizzesTaken = 0;
       let averageQuizScore = 0;
 
       if (user.studentProfile) {
-        lessonsCompleted = user.studentProfile.enrollments.reduce((sum, e) => sum + ((e.Lesson || []) as Array<{ id: string }>).length, 0);
+        lessonsCompleted = user.studentProfile.enrollments.reduce((sum: number, e: any) => sum + ((e.Lesson || []) as Array<{ id: string }>).length, 0);
         quizzesTaken = user.studentProfile.quizAttempts.length;
         if (quizzesTaken > 0) {
-          averageQuizScore = user.studentProfile.quizAttempts.reduce((sum, qa) => sum + (qa.score || 0), 0) / quizzesTaken;
+          averageQuizScore = user.studentProfile.quizAttempts.reduce((sum: number, qa: any) => sum + (qa.score || 0), 0) / quizzesTaken;
         }
       }
 
