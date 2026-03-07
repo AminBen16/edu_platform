@@ -174,7 +174,7 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
     if (type == 'dropdown' && options != null) {
       return await showDialog<String>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (dialogContext) => AlertDialog(
           title: Text(title),
           content: DropdownButtonFormField<String>(
             initialValue: initialValue,
@@ -194,11 +194,11 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () => Navigator.pop(context, controller.text),
+              onPressed: () => Navigator.pop(dialogContext, controller.text),
               child: const Text('Save'),
             ),
           ],
@@ -208,7 +208,7 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
 
     return await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text(title),
         content: TextField(
           controller: controller,
@@ -224,11 +224,11 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context, controller.text),
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
             child: const Text('Save'),
           ),
         ],
@@ -309,7 +309,9 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
                 setState(() {
                   _settings['gradingScale'] = _formatGradingScale(gradingScale);
                 });
-                Navigator.of(context).pop(); // Pop dialog using screen context
+                // Use dialogContext to pop the dialog, then check mounted for SnackBar
+                Navigator.of(dialogContext).pop();
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Grading scale updated successfully'),
@@ -350,9 +352,10 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
       // Fallback or error handling
     }
 
+    if (!mounted) return;
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text(title),
         content: SizedBox(
           width: double.maxFinite,
@@ -367,7 +370,7 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Close'),
           ),
         ],

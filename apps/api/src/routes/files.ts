@@ -133,7 +133,8 @@ router.post('/', protect, authorize(Role.TEACHER, Role.ADMIN, Role.SCHOOL_ADMIN)
         type: (type as any) || 'DOCUMENT',
         url: '', // Will be updated by StorageService
         size: file.size,
-        lessonId: lessonId || null
+        lessonId: lessonId || null,
+        schoolId: user.schoolId,
       }
     });
 

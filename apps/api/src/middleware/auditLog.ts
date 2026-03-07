@@ -9,15 +9,25 @@ import { prisma } from '../config/database';
  * @param resource - The resource being affected (e.g., 'user', 'lesson').
  * @param details - Any additional JSON data to log.
  * @param req - The Express request object to capture IP and User-Agent.
+ * @param schoolId - The school ID for multi-tenancy (required).
  */
 export const logAudit = async (
   userId: string | null,
   action: string,
   resource?: string,
   details?: object,
-  req?: Request
+  req?: Request,
+  schoolId?: string
 ) => {
   try {
+    // If no schoolId provided, try to get from request user
+    const finalSchoolId = schoolId || (req?.user as { schoolId?: string })?.schoolId;
+    
+    if (!finalSchoolId) {
+      console.error('Cannot create audit log: schoolId is required');
+      return;
+    }
+
     await prisma.auditLog.create({
       data: {
         userId,
@@ -26,6 +36,7 @@ export const logAudit = async (
         details: details ? JSON.stringify(details) : null,
         ipAddress: req?.ip,
         userAgent: req?.get('User-Agent'),
+        schoolId: finalSchoolId,
       },
     });
   } catch (error) {

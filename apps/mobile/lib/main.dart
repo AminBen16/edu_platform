@@ -26,7 +26,6 @@ import 'screens/attendance_screen.dart';
 import 'screens/messages_screen.dart';
 import 'screens/schedule_screen.dart';
 import 'services/cache_service.dart';
-import 'services/socket_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

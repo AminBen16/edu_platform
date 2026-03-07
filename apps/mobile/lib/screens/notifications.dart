@@ -338,8 +338,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   void _handleNotificationTap(Map<String, dynamic> notification) {
-    final type = notification['type'] as String?;
-    final contentId = notification['contentId'] as String?;
     final contentType = notification['contentType'] as String?;
 
     // Navigate based on notification type
@@ -348,9 +346,11 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       case 'quiz':
       case 'assignment':
         // Could navigate to detail screen
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Opening ${contentType ?? 'content'}...')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Opening ${contentType ?? 'content'}...')),
+          );
+        }
         break;
       default:
         // Handle other types

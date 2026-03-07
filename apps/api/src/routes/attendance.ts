@@ -51,28 +51,41 @@ router.get('/', async (req: RequestWithUser, res: Response) => {
 
     const attendance = await prisma.attendance.findMany({
       where,
-      include: {
-        student: {
-          select: { id: true, name: true, email: true },
-        },
-        class: {
-          select: { id: true, name: true },
-        },
-      },
       orderBy: { date: 'desc' },
     });
 
+    // Get student and class info separately
+    const studentIds = [...new Set(attendance.map(a => a.studentId))];
+    const classIds = [...new Set(attendance.map(a => a.classId).filter(Boolean))];
+    
+    const students = await prisma.student.findMany({
+      where: { id: { in: studentIds } },
+      include: { user: { select: { name: true, email: true } } }
+    });
+    
+    const classes = await prisma.class.findMany({
+      where: { id: { in: classIds as string[] } },
+      select: { id: true, name: true }
+    });
+
+    const studentMap = new Map(students.map(s => [s.id, s]));
+    const classMap = new Map(classes.map(c => [c.id, c]));
+
     // Transform the response
-    const transformedAttendance = attendance.map((record) => ({
-      id: record.id,
-      studentName: record.student.name,
-      studentEmail: record.student.email,
-      classId: record.classId,
-      className: record.class?.name,
-      date: record.date.toISOString().split('T')[0],
-      status: record.status,
-      notes: record.notes,
-    }));
+    const transformedAttendance = attendance.map((record) => {
+      const student = studentMap.get(record.studentId);
+      const classInfo = classMap.get(record.classId || '');
+      return {
+        id: record.id,
+        studentName: student?.user.name,
+        studentEmail: student?.user.email,
+        classId: record.classId,
+        className: classInfo?.name,
+        date: record.date.toISOString().split('T')[0],
+        status: record.status,
+        notes: record.notes,
+      };
+    });
 
     res.json(transformedAttendance);
   } catch (error) {
@@ -97,40 +110,58 @@ router.post(
     }
 
     try {
-      const attendance = await prisma.attendance.upsert({
+      // Try to find existing record first
+      const existingRecord = await prisma.attendance.findFirst({
         where: {
-          studentId_classId_date: {
-            studentId,
-            classId,
-            date: new Date(date),
+          studentId,
+          classId,
+          date: {
+            gte: new Date(new Date(date).setHours(0, 0, 0, 0)),
+            lt: new Date(new Date(date).setHours(23, 59, 59, 999))
+          }
+        },
+        include: {
+          student: {
+            include: { user: { select: { name: true, email: true } } }
           },
-        },
-        update: {
-          status,
-          notes,
-        },
-        create: {
+          class: {
+            select: { id: true, name: true }
+          }
+        }
+      });
+
+      if (existingRecord) {
+        // Update existing record
+        const updated = await prisma.attendance.update({
+          where: { id: existingRecord.id },
+          data: { status, notes }
+        });
+        return res.status(200).json({
+          id: updated.id,
+          studentId: updated.studentId,
+          classId: updated.classId,
+          date: updated.date.toISOString().split('T')[0],
+          status: updated.status,
+          notes: updated.notes
+        });
+      }
+
+      // Create new record
+      const attendance = await prisma.attendance.create({
+        data: {
           schoolId,
           studentId,
           classId,
           date: new Date(date),
           status,
           notes,
-        },
-        include: {
-          student: {
-            select: { id: true, name: true, email: true },
-          },
-          class: {
-            select: { id: true, name: true },
-          },
-        },
+        }
       });
 
       res.status(201).json({
         id: attendance.id,
-        studentName: attendance.student.name,
-        className: attendance.class?.name,
+        studentId: attendance.studentId,
+        classId: attendance.classId,
         date: attendance.date.toISOString().split('T')[0],
         status: attendance.status,
         notes: attendance.notes,
@@ -157,26 +188,36 @@ router.post(
     try {
       const results = await Promise.all(
         records.map(async (record: any) => {
-          return prisma.attendance.upsert({
+          // Try to find existing record first
+          const existingRecord = await prisma.attendance.findFirst({
             where: {
-              studentId_classId_date: {
-                studentId: record.studentId,
-                classId: record.classId,
-                date: new Date(record.date),
-              },
-            },
-            update: {
-              status: record.status,
-              notes: record.notes,
-            },
-            create: {
+              studentId: record.studentId,
+              classId: record.classId,
+              date: {
+                gte: new Date(new Date(record.date).setHours(0, 0, 0, 0)),
+                lt: new Date(new Date(record.date).setHours(23, 59, 59, 999))
+              }
+            }
+          });
+
+          if (existingRecord) {
+            // Update existing record
+            return prisma.attendance.update({
+              where: { id: existingRecord.id },
+              data: { status: record.status, notes: record.notes }
+            });
+          }
+
+          // Create new record
+          return prisma.attendance.create({
+            data: {
               schoolId,
               studentId: record.studentId,
               classId: record.classId,
               date: new Date(record.date),
               status: record.status,
               notes: record.notes,
-            },
+            }
           });
         })
       );

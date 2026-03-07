@@ -113,6 +113,7 @@ router.post('/', protect, async (req, res) => {
                 maxScore: maxScore ? parseFloat(maxScore) : 100,
                 lessonId,
                 teacherId: teacher?.id,
+                schoolId: req.user!.schoolId,
             }
         });
 
@@ -154,6 +155,7 @@ router.post('/:id/submit', protect, async (req, res) => {
                 fileUrl,
                 studentId: student.id,
                 assignmentId,
+                schoolId: req.user!.schoolId,
             }
         });
         res.status(201).json(submission);

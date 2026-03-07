@@ -180,7 +180,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
-                      value: _selectedLessonId,
+                      initialValue: _selectedLessonId,
                       decoration: const InputDecoration(
                         labelText: 'Select Lesson *',
                         border: OutlineInputBorder(),

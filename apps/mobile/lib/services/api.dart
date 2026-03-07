@@ -56,38 +56,41 @@ class ApiService {
     while (true) {
       try {
         return await call().timeout(const Duration(seconds: _timeoutSeconds));
-      } on SocketException catch (e) {
-        // Network unreachable - retry with backoff
-        if (attempt < _maxRetries) {
-          attempt++;
-          await Future.delayed(Duration(milliseconds: delayMs));
-          delayMs *= 2; // Exponential backoff
-          continue;
-        }
-        throw Exception(
-          'No Internet connection. Please check your network and try again.',
-        );
-      } on TimeoutException {
-        // Connection timeout - retry with backoff
-        if (attempt < _maxRetries) {
-          attempt++;
-          await Future.delayed(Duration(milliseconds: delayMs));
-          delayMs *= 2;
-          continue;
-        }
-        throw Exception('The connection timed out. Please try again.');
-      } on FormatException catch (e) {
-        // JSON parsing error - don't retry, throw immediately
-        throw Exception('Server response error. Please try again later.');
       } catch (e) {
-        // Other errors - check if it's retryable
-        if (attempt < _maxRetries && _isRetryableError(e)) {
-          attempt++;
-          await Future.delayed(Duration(milliseconds: delayMs));
-          delayMs *= 2;
-          continue;
+        // Handle specific exception types
+        if (e is SocketException) {
+          // Network unreachable - retry with backoff
+          if (attempt < _maxRetries) {
+            attempt++;
+            await Future.delayed(Duration(milliseconds: delayMs));
+            delayMs *= 2; // Exponential backoff
+            continue;
+          }
+          throw Exception(
+            'No Internet connection. Please check your network and try again.',
+          );
+        } else if (e is TimeoutException) {
+          // Connection timeout - retry with backoff
+          if (attempt < _maxRetries) {
+            attempt++;
+            await Future.delayed(Duration(milliseconds: delayMs));
+            delayMs *= 2;
+            continue;
+          }
+          throw Exception('The connection timed out. Please try again.');
+        } else if (e is FormatException) {
+          // JSON parsing error - don't retry, throw immediately
+          throw Exception('Server response error. Please try again later.');
+        } else {
+          // Other errors - check if it's retryable
+          if (attempt < _maxRetries && _isRetryableError(e)) {
+            attempt++;
+            await Future.delayed(Duration(milliseconds: delayMs));
+            delayMs *= 2;
+            continue;
+          }
+          rethrow;
         }
-        rethrow;
       }
     }
   }

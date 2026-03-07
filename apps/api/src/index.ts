@@ -76,13 +76,6 @@ app.get('/', (req: Request, res: Response) => {
 
 // Test endpoint for debugging
 app.get('/test', (req: Request, res: Response) => {
-  console.log('Test endpoint hit:', {
-    method: req.method,
-    headers: req.headers,
-    body: req.body,
-    url: req.url
-  });
-  
   res.status(200).json({ 
     message: 'Test endpoint working',
     received: {
@@ -173,8 +166,6 @@ if (process.env.NODE_ENV !== 'production') {
 
   // Socket.IO for real-time features (local dev only)
   io.on('connection', (socket: any) => {
-    console.log('User connected:', socket.id);
-    
     // Join class rooms
     socket.on('join-class', (classId: any) => {
       socket.join(classId);
@@ -204,14 +195,12 @@ if (process.env.NODE_ENV !== 'production') {
     });
     
     socket.on('disconnect', () => {
-      console.log('User disconnected:', socket.id);
+      // User disconnected
     });
   });
 
   server.listen(PORT, () => {
-    console.log(`🚀 Education Platform API running on port ${PORT}`);
-    console.log(`📚 API Documentation: http://localhost:${PORT}/api/v1`);
-    console.log(`🔗 WebSocket server ready for real-time features`);
+    // Server started
   });
 }
 

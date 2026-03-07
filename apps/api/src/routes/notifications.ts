@@ -6,15 +6,15 @@ import axios from 'axios';
 
 // Mock WebSocket functions for development
 const emitToAll = (schoolId: string, event: string, data: any) => {
-  console.log(`[MOCK WEBSOCKET] Emit to all in school ${schoolId}:`, { event, data });
+  // Emit to all users in school
 };
 
 const emitToRole = (schoolId: string, role: string, event: string, data: any) => {
-  console.log(`[MOCK WEBSOCKET] Emit to ${role} in school ${schoolId}:`, { event, data });
+  // Emit to users with specific role in school
 };
 
 const emitToUser = (userId: string, event: string, data: any) => {
-  console.log(`[MOCK WEBSOCKET] Emit to user ${userId}:`, { event, data });
+  // Emit to specific user
 };
 
 const router = Router();
@@ -333,7 +333,7 @@ async function _sendPushNotifications(title: string, message: string, targetUser
     const onesignalApiKey = process.env.ONESIGNAL_API_KEY;
     
     if (!onesignalAppId || !onesignalApiKey) {
-      console.log('OneSignal not configured, skipping push notifications');
+      // OneSignal not configured
       return;
     }
 

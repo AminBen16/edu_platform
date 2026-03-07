@@ -8,6 +8,7 @@ interface RateLimitOptions {
   keyGenerator?: (req: Request) => string; // Custom key generator
   skipSuccessfulRequests?: boolean; // Don't count successful requests
   message?: string; // Custom error message
+  schoolIdGetter?: (req: Request) => string; // Function to get schoolId
 }
 
 export const rateLimit = (options: RateLimitOptions) => {
@@ -17,10 +18,12 @@ export const rateLimit = (options: RateLimitOptions) => {
     keyGenerator = (req) => req.ip || 'unknown',
     skipSuccessfulRequests = false,
     message = 'Too many requests, please try again later.',
+    schoolIdGetter = (req) => (req.user as { schoolId?: string })?.schoolId || 'default',
   } = options;
 
   return async (req: Request, res: Response, next: NextFunction) => {
     const key = keyGenerator(req);
+    const schoolId = schoolIdGetter(req);
     const now = new Date();
     const windowEnd = new Date(now.getTime() + windowMs);
 
@@ -38,7 +41,8 @@ export const rateLimit = (options: RateLimitOptions) => {
             count: 1,
             windowEnd,
             createdAt: now,
-            updatedAt: now
+            updatedAt: now,
+            schoolId,
           }
         });
         return next();

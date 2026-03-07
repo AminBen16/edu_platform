@@ -2,13 +2,14 @@ import 'dart:async';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import '../api_config.dart';
 import 'api.dart';
+import 'logger_service.dart';
 
 class SocketService {
   static SocketService? _instance;
   io.Socket? _socket;
   final _messageController = StreamController<Map<String, dynamic>>.broadcast();
   final _connectionController = StreamController<bool>.broadcast();
-  
+
   // Singleton pattern
   SocketService._();
 
@@ -50,35 +51,35 @@ class SocketService {
       _setupEventListeners();
       _socket!.connect();
     } catch (e) {
-      print('Socket connection error: $e');
+      logger.error('Socket connection error: $e');
       _connectionController.add(false);
     }
   }
 
   void _setupEventListeners() {
     _socket!.onConnect((_) {
-      print('Socket connected');
+      logger.debug('Socket connected');
       _connectionController.add(true);
     });
 
     _socket!.onDisconnect((_) {
-      print('Socket disconnected');
+      logger.debug('Socket disconnected');
       _connectionController.add(false);
     });
 
     _socket!.onConnectError((error) {
-      print('Socket connection error: $error');
+      logger.error('Socket connection error: $error');
       _connectionController.add(false);
     });
 
     _socket!.onError((error) {
-      print('Socket error: $error');
+      logger.error('Socket error: $error');
       _connectionController.add(false);
     });
 
     // Listen for new messages
     _socket!.on('new-message', (data) {
-      print('Received message: $data');
+      logger.debug('Received message: $data');
       if (data is Map<String, dynamic>) {
         _messageController.add(data);
       }
@@ -86,7 +87,7 @@ class SocketService {
 
     // Listen for message updates
     _socket!.on('message-updated', (data) {
-      print('Message updated: $data');
+      logger.debug('Message updated: $data');
       if (data is Map<String, dynamic>) {
         _messageController.add({'type': 'update', ...data});
       }
@@ -94,7 +95,7 @@ class SocketService {
 
     // Listen for typing indicators
     _socket!.on('user-typing', (data) {
-      print('User typing: $data');
+      logger.debug('User typing: $data');
       if (data is Map<String, dynamic>) {
         _messageController.add({'type': 'typing', ...data});
       }
@@ -105,7 +106,7 @@ class SocketService {
   void joinClassRoom(String classId) {
     if (_socket?.connected ?? false) {
       _socket!.emit('join-class', classId);
-      print('Joined class room: $classId');
+      logger.debug('Joined class room: $classId');
     }
   }
 
@@ -113,7 +114,7 @@ class SocketService {
   void leaveClassRoom(String classId) {
     if (_socket?.connected ?? false) {
       _socket!.emit('leave-class', classId);
-      print('Left class room: $classId');
+      logger.debug('Left class room: $classId');
     }
   }
 
@@ -132,7 +133,7 @@ class SocketService {
         if (fileUrl != null) 'fileUrl': fileUrl,
         'timestamp': DateTime.now().toIso8601String(),
       });
-      print('Message sent to class: $classId');
+      logger.debug('Message sent to class: $classId');
     }
   }
 
@@ -151,20 +152,14 @@ class SocketService {
         if (fileUrl != null) 'fileUrl': fileUrl,
         'timestamp': DateTime.now().toIso8601String(),
       });
-      print('Direct message sent to: $receiverId');
+      logger.debug('Direct message sent to: $receiverId');
     }
   }
 
   /// Send typing indicator
-  void sendTypingIndicator({
-    required String classId,
-    required bool isTyping,
-  }) {
+  void sendTypingIndicator({required String classId, required bool isTyping}) {
     if (_socket?.connected ?? false) {
-      _socket!.emit('typing', {
-        'classId': classId,
-        'isTyping': isTyping,
-      });
+      _socket!.emit('typing', {'classId': classId, 'isTyping': isTyping});
     }
   }
 
@@ -172,7 +167,7 @@ class SocketService {
   void joinLiveSession(String roomCode) {
     if (_socket?.connected ?? false) {
       _socket!.emit('join-live-session', roomCode);
-      print('Joined live session: $roomCode');
+      logger.debug('Joined live session: $roomCode');
     }
   }
 
@@ -180,7 +175,7 @@ class SocketService {
   void leaveLiveSession(String roomCode) {
     if (_socket?.connected ?? false) {
       _socket!.emit('leave-live-session', roomCode);
-      print('Left live session: $roomCode');
+      logger.debug('Left live session: $roomCode');
     }
   }
 
@@ -190,10 +185,7 @@ class SocketService {
     required Map<String, dynamic> signal,
   }) {
     if (_socket?.connected ?? false) {
-      _socket!.emit('webrtc-signal', {
-        'roomCode': roomCode,
-        'signal': signal,
-      });
+      _socket!.emit('webrtc-signal', {'roomCode': roomCode, 'signal': signal});
     }
   }
 
@@ -202,7 +194,7 @@ class SocketService {
     _socket?.disconnect();
     _socket?.dispose();
     _socket = null;
-    print('Socket disconnected');
+    logger.debug('Socket disconnected');
   }
 
   /// Clean up resources
@@ -212,4 +204,3 @@ class SocketService {
     _connectionController.close();
   }
 }
-

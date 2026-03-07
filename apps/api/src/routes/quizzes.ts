@@ -103,6 +103,7 @@ router.post('/', protect, async (req, res) => {
                             create: q.options.map((opt: any) => ({
                                 text: opt.text,
                                 isCorrect: opt.isCorrect || false,
+                                order: opt.order || 0,
                                 schoolId: req.user!.schoolId
                             }))
                         } : undefined
@@ -279,8 +280,12 @@ router.post('/:id/submit', protect, async (req, res) => {
                 studentId: student.id,
                 quizId: quizId,
                 userId: req.user!.id,
+                schoolId: req.user!.schoolId,
                 answers: {
-                    create: answerRecords as any[],
+                    create: answerRecords.map(a => ({
+                        ...a,
+                        schoolId: req.user!.schoolId
+                    })),
                 },
             },
             include: {

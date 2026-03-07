@@ -71,19 +71,18 @@ router.get('/:id', protect, async (req, res) => {
   try {
     const term = await prisma.term.findFirst({
       where: { id, schoolId: req.user!.schoolId },
-      include: {
-        assessments: {
-          include: { subject: true, class: true }
-        },
-        _count: { select: { assessments: true } }
-      }
     });
 
     if (!term) {
       return res.status(404).json({ error: 'Term not found' });
     }
 
-    res.json(term);
+    // Get assessments count separately
+    const assessmentCount = await prisma.assessment.count({
+      where: { termId: id }
+    });
+
+    res.json({ ...term, _count: { assessments: assessmentCount } });
   } catch (error) {
     console.error(`Failed to fetch term ${id}:`, error);
     res.status(500).json({ error: 'Failed to fetch term' });

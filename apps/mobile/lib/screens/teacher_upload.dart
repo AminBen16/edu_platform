@@ -59,7 +59,10 @@ class _TeacherUploadState extends State<TeacherUploadScreen> {
       final token = await ApiService.getToken();
       if (token == null) throw Exception('Not authenticated');
 
-      final request = http.MultipartRequest('POST', Uri.parse('${ApiService.baseUrl}/upload/file'));
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${ApiService.baseUrl}/upload/file'),
+      );
       request.headers['Authorization'] = 'Bearer $token';
       request.files.add(await http.MultipartFile.fromPath('file', file!.path));
 
@@ -74,7 +77,10 @@ class _TeacherUploadState extends State<TeacherUploadScreen> {
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('File uploaded successfully'), backgroundColor: Colors.green),
+            const SnackBar(
+              content: Text('File uploaded successfully'),
+              backgroundColor: Colors.green,
+            ),
           );
         }
       } else {
@@ -88,7 +94,10 @@ class _TeacherUploadState extends State<TeacherUploadScreen> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error uploading file: ${e.toString()}'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error uploading file: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -110,12 +119,25 @@ class _TeacherUploadState extends State<TeacherUploadScreen> {
             if (_isLoadingQuizzes)
               const Center(child: CircularProgressIndicator())
             else if (_quizzes.isEmpty)
-              Text('No quizzes available for content', style: TextStyle(color: Colors.grey[600]))
+              Text(
+                'No quizzes available for content',
+                style: TextStyle(color: Colors.grey[600]),
+              )
             else
               DropdownButtonFormField<String>(
-                value: _selectedQuizId,
-                decoration: const InputDecoration(labelText: 'Select Quiz/Lesson', border: OutlineInputBorder()),
-                items: _quizzes.map((quiz) => DropdownMenuItem<String>(value: quiz['id']?.toString(), child: Text(quiz['title'] ?? ''))).toList(),
+                initialValue: _selectedQuizId,
+                decoration: const InputDecoration(
+                  labelText: 'Select Quiz/Lesson',
+                  border: OutlineInputBorder(),
+                ),
+                items: _quizzes
+                    .map(
+                      (quiz) => DropdownMenuItem<String>(
+                        value: quiz['id']?.toString(),
+                        child: Text(quiz['title'] ?? ''),
+                      ),
+                    )
+                    .toList(),
                 onChanged: (value) => setState(() => _selectedQuizId = value),
               ),
             const SizedBox(height: 16),
@@ -129,9 +151,21 @@ class _TeacherUploadState extends State<TeacherUploadScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.video_library, size: 48, color: Theme.of(context).colorScheme.secondary),
+                    Icon(
+                      Icons.video_library,
+                      size: 48,
+                      color: Theme.of(context).colorScheme.secondary,
+                    ),
                     const SizedBox(width: 12),
-                    Expanded(child: Text('Selected: ${file!.path.split('/').last}', style: TextStyle(color: Theme.of(context).colorScheme.secondary, fontWeight: FontWeight.w600))),
+                    Expanded(
+                      child: Text(
+                        'Selected: ${file!.path.split('/').last}',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.secondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -139,21 +173,48 @@ class _TeacherUploadState extends State<TeacherUploadScreen> {
               onPressed: _isUploading ? null : pickFile,
               icon: const Icon(Icons.attach_file),
               label: const Text('Select File'),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[200], foregroundColor: Colors.black87, padding: const EdgeInsets.symmetric(vertical: 16)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.grey[200],
+                foregroundColor: Colors.black87,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: (file != null && !_isUploading) ? _uploadFile : null,
-              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
               child: _isUploading
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
                   : const Text('Upload Video'),
             ),
             if (_uploadProgress > 0) ...[
               const SizedBox(height: 16),
-              LinearProgressIndicator(value: _uploadProgress, backgroundColor: Colors.grey[300], valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary)),
+              LinearProgressIndicator(
+                value: _uploadProgress,
+                backgroundColor: Colors.grey[300],
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  Theme.of(context).colorScheme.primary,
+                ),
+              ),
               const SizedBox(height: 8),
-              Text(_uploadStatus ?? '', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
+              Text(
+                _uploadStatus ?? '',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ],
         ),

@@ -44,10 +44,7 @@ class _ErrorBoundaryState extends State<ErrorBoundary> {
     return widget.child;
   }
 
-  static _ErrorBoundaryState? of(BuildContext context) {
-    return context.findAncestorStateOfType<_ErrorBoundaryState>();
-  }
-
+  /// Handle error and update state
   void handleError(Object error, StackTrace stackTrace) {
     setState(() {
       hasError = true;

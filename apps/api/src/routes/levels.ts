@@ -55,10 +55,19 @@ router.get('/', protect, async (req, res) => {
   try {
     const { curriculumId, type } = req.query;
     
-    const where: any = { schoolId: req.user!.schoolId };
+    // Build where clause - filter through curriculum to get schoolId
+    const where: any = {};
     
     if (curriculumId) {
       where.curriculumId = curriculumId as string;
+    } else {
+      // Get curriculum for this school
+      const curriculum = await prisma.curriculum.findFirst({
+        where: { schoolId: req.user!.schoolId }
+      });
+      if (curriculum) {
+        where.curriculumId = curriculum.id;
+      }
     }
     
     if (type) {
@@ -155,18 +164,24 @@ router.post('/initialize-uganda', protect, async (req, res) => {
 router.get('/:id', protect, async (req, res) => {
   const { id } = req.params;
   try {
-    const level = await prisma.curriculumLevel.findFirst({
-      where: { id, schoolId: req.user!.schoolId },
+    // First get the curriculum level to check ownership
+    const level = await prisma.curriculumLevel.findUnique({
+      where: { id },
       include: {
+        curriculum: true,
         subjects: {
           include: { subject: true }
         },
-        classes: true,
-        curriculum: true
+        classes: true
       }
     });
 
     if (!level) {
+      return res.status(404).json({ error: 'Level not found' });
+    }
+
+    // Verify it belongs to user's school
+    if (level.curriculum?.schoolId !== req.user!.schoolId) {
       return res.status(404).json({ error: 'Level not found' });
     }
 
@@ -232,11 +247,13 @@ router.put('/:id', protect, async (req, res) => {
   const { code, name, level, type } = req.body;
 
   try {
-    const existingLevel = await prisma.curriculumLevel.findFirst({
-      where: { id, schoolId: req.user!.schoolId }
+    // First verify level exists and belongs to user's school
+    const existingLevel = await prisma.curriculumLevel.findUnique({
+      where: { id },
+      include: { curriculum: true }
     });
 
-    if (!existingLevel) {
+    if (!existingLevel || existingLevel.curriculum?.schoolId !== req.user!.schoolId) {
       return res.status(404).json({ error: 'Level not found' });
     }
 
@@ -261,11 +278,13 @@ router.delete('/:id', protect, async (req, res) => {
   const { id } = req.params;
 
   try {
-    const existingLevel = await prisma.curriculumLevel.findFirst({
-      where: { id, schoolId: req.user!.schoolId }
+    // First verify level exists and belongs to user's school
+    const existingLevel = await prisma.curriculumLevel.findUnique({
+      where: { id },
+      include: { curriculum: true }
     });
 
-    if (!existingLevel) {
+    if (!existingLevel || existingLevel.curriculum?.schoolId !== req.user!.schoolId) {
       return res.status(404).json({ error: 'Level not found' });
     }
 
@@ -309,12 +328,13 @@ router.post('/:id/subjects', protect, async (req, res) => {
   }
 
   try {
-    // Check if level exists
-    const level = await prisma.curriculumLevel.findFirst({
-      where: { id, schoolId: req.user!.schoolId }
+    // Check if level exists and belongs to user's school
+    const level = await prisma.curriculumLevel.findUnique({
+      where: { id },
+      include: { curriculum: true }
     });
 
-    if (!level) {
+    if (!level || level.curriculum?.schoolId !== req.user!.schoolId) {
       return res.status(404).json({ error: 'Level not found' });
     }
 
