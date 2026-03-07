@@ -4,14 +4,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const database_1 = require("../config/database");
 const auth_1 = require("../middleware/auth");
-const database_2 = require("../lib/database");
 const router = (0, express_1.Router)();
 // GET /assignments - Get all assignments based on user role
 router.get('/', auth_1.protect, async (req, res) => {
     const { id: userId, role, schoolId } = req.user;
     try {
         let assignments;
-        if (role === database_2.Role.STUDENT) {
+        if (role === 'STUDENT') {
             const student = await database_1.prisma.student.findUnique({ where: { userId } });
             if (!student)
                 return res.status(404).json({ error: 'Student profile not found.' });
@@ -20,7 +19,7 @@ router.get('/', auth_1.protect, async (req, res) => {
                 where: { studentId: student.id },
                 select: { classId: true }
             });
-            const classIds = enrollments.map(e => e.classId).filter(id => id !== null);
+            const classIds = enrollments.map((e) => e.classId).filter((id) => id !== null);
             // Get all lessons assigned to those classes, then get assignments for those lessons
             assignments = await database_1.prisma.assignment.findMany({
                 where: {
@@ -32,7 +31,7 @@ router.get('/', auth_1.protect, async (req, res) => {
                 orderBy: { dueDate: 'asc' }
             });
         }
-        else if (role === database_2.Role.TEACHER) {
+        else if (role === 'TEACHER') {
             const teacher = await database_1.prisma.teacher.findUnique({ where: { userId } });
             if (!teacher)
                 return res.status(404).json({ error: 'Teacher profile not found.' });
@@ -79,7 +78,7 @@ router.get('/:id', auth_1.protect, async (req, res) => {
 });
 // POST /assignments - Create a new assignment (Teachers and Admins)
 router.post('/', auth_1.protect, async (req, res) => {
-    if (req.user.role !== database_2.Role.TEACHER && req.user.role !== database_2.Role.ADMIN) {
+    if (req.user.role !== 'TEACHER' && req.user.role !== 'ADMIN') {
         return res.status(403).json({ error: 'You are not authorized to create assignments.' });
     }
     const { title, description, lessonId, dueDate, maxScore } = req.body;
@@ -88,8 +87,15 @@ router.post('/', auth_1.protect, async (req, res) => {
     }
     try {
         const teacher = await database_1.prisma.teacher.findUnique({ where: { userId: req.user.id } });
-        if (!teacher && req.user.role === database_2.Role.TEACHER) {
+        if (!teacher && req.user.role === 'TEACHER') {
             return res.status(404).json({ error: 'Teacher profile not found.' });
+        }
+        // Verify lesson belongs to user's school
+        const lesson = await database_1.prisma.lesson.findFirst({
+            where: { id: lessonId, schoolId: req.user.schoolId }
+        });
+        if (!lesson) {
+            return res.status(404).json({ error: 'Lesson not found in your school.' });
         }
         const newAssignment = await database_1.prisma.assignment.create({
             data: {
@@ -98,10 +104,10 @@ router.post('/', auth_1.protect, async (req, res) => {
                 dueDate: dueDate ? new Date(dueDate) : undefined,
                 maxScore: maxScore ? parseFloat(maxScore) : 100,
                 lessonId,
-                teacherId: teacher?.id, // Can be null if admin creates it
+                teacherId: teacher?.id,
+                schoolId: req.user.schoolId,
             }
         });
-        // TODO: Add notification logic here
         res.status(201).json(newAssignment);
     }
     catch (error) {
@@ -111,7 +117,7 @@ router.post('/', auth_1.protect, async (req, res) => {
 });
 // POST /assignments/:id/submit - Submit an assignment (Students only)
 router.post('/:id/submit', auth_1.protect, async (req, res) => {
-    if (req.user.role !== database_2.Role.STUDENT) {
+    if (req.user.role !== 'STUDENT') {
         return res.status(403).json({ error: 'Only students can submit assignments.' });
     }
     const { id: assignmentId } = req.params;
@@ -121,13 +127,23 @@ router.post('/:id/submit', auth_1.protect, async (req, res) => {
         if (!student) {
             return res.status(404).json({ error: 'Student profile not found.' });
         }
-        // TODO: Check if student is enrolled in the lesson/class for this assignment
+        // Verify assignment exists in student's school
+        const assignment = await database_1.prisma.assignment.findFirst({
+            where: {
+                id: assignmentId,
+                lesson: { schoolId: req.user.schoolId }
+            }
+        });
+        if (!assignment) {
+            return res.status(404).json({ error: 'Assignment not found.' });
+        }
         const submission = await database_1.prisma.submission.create({
             data: {
                 content,
                 fileUrl,
                 studentId: student.id,
-                assignmentId
+                assignmentId,
+                schoolId: req.user.schoolId,
             }
         });
         res.status(201).json(submission);
@@ -139,7 +155,7 @@ router.post('/:id/submit', auth_1.protect, async (req, res) => {
 });
 // GET /assignments/:id/submissions - Get all submissions for an assignment (Teachers and Admins)
 router.get('/:id/submissions', auth_1.protect, async (req, res) => {
-    if (req.user.role !== database_2.Role.TEACHER && req.user.role !== database_2.Role.ADMIN) {
+    if (req.user.role !== 'TEACHER' && req.user.role !== 'ADMIN') {
         return res.status(403).json({ error: 'You are not authorized to view submissions.' });
     }
     const { id: assignmentId } = req.params;
@@ -167,7 +183,7 @@ router.get('/:id/submissions', auth_1.protect, async (req, res) => {
 });
 // PUT /submissions/:submissionId/grade - Grade a submission (Teachers and Admins)
 router.put('/submissions/:submissionId/grade', auth_1.protect, async (req, res) => {
-    if (req.user.role !== database_2.Role.TEACHER && req.user.role !== database_2.Role.ADMIN) {
+    if (req.user.role !== 'TEACHER' && req.user.role !== 'ADMIN') {
         return res.status(403).json({ error: 'You are not authorized to grade submissions.' });
     }
     const { submissionId } = req.params;
@@ -176,11 +192,22 @@ router.put('/submissions/:submissionId/grade', auth_1.protect, async (req, res) 
         return res.status(400).json({ error: 'Score is required.' });
     }
     try {
+        // Verify submission belongs to user's school through assignment relation
+        const submission = await database_1.prisma.submission.findFirst({
+            where: {
+                id: submissionId,
+                assignment: {
+                    lesson: { schoolId: req.user.schoolId }
+                }
+            }
+        });
+        if (!submission) {
+            return res.status(404).json({ error: 'Submission not found.' });
+        }
         const updatedSubmission = await database_1.prisma.submission.update({
             where: { id: submissionId },
             data: { score: parseFloat(score) }
         });
-        // TODO: Notify student about the grade
         res.json(updatedSubmission);
     }
     catch (error) {

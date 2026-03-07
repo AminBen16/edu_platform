@@ -63,6 +63,19 @@ const school_settings_1 = __importDefault(require("./routes/school-settings"));
 const reports_1 = __importDefault(require("./routes/reports"));
 const attendance_1 = __importDefault(require("./routes/attendance"));
 const schedule_1 = __importDefault(require("./routes/schedule"));
+const tickets_1 = __importDefault(require("./routes/tickets"));
+const announcements_1 = __importDefault(require("./routes/announcements"));
+const subjects_1 = __importDefault(require("./routes/subjects"));
+// Uganda Curriculum Routes
+const levels_1 = __importDefault(require("./routes/levels"));
+const topics_1 = __importDefault(require("./routes/topics"));
+const competencies_1 = __importDefault(require("./routes/competencies"));
+const assessments_1 = __importDefault(require("./routes/assessments"));
+const terms_1 = __importDefault(require("./routes/terms"));
+const reportCards_1 = __importDefault(require("./routes/reportCards"));
+const competencyProgress_1 = __importDefault(require("./routes/competencyProgress"));
+// WebRTC Signaling Route
+const webrtc_1 = __importDefault(require("./routes/webrtc"));
 Sentry.init({
     dsn: process.env.SENTRY_DSN || '',
     tracesSampleRate: 1.0,
@@ -70,12 +83,17 @@ Sentry.init({
 const app = (0, express_1.default)();
 // Middleware
 app.use(Sentry.Handlers.requestHandler());
-app.use((0, cors_1.default)({
-    origin: '*', // Allow all origins for local development
+const corsOptions = {
+    origin: process.env.ALLOWED_ORIGINS
+        ? process.env.ALLOWED_ORIGINS.split(',')
+        : process.env.NODE_ENV === 'production'
+            ? false // In production, only allow same-origin
+            : '*', // Allow all in development
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
+};
+app.use((0, cors_1.default)(corsOptions));
 app.use(express_1.default.json({ limit: '10mb' }));
 app.use(express_1.default.urlencoded({ extended: true }));
 // Health check
@@ -89,12 +107,6 @@ app.get('/', (req, res) => {
 });
 // Test endpoint for debugging
 app.get('/test', (req, res) => {
-    console.log('Test endpoint hit:', {
-        method: req.method,
-        headers: req.headers,
-        body: req.body,
-        url: req.url
-    });
     res.status(200).json({
         message: 'Test endpoint working',
         received: {
@@ -123,6 +135,19 @@ app.use('/api/v1/school-settings', school_settings_1.default);
 app.use('/api/v1/reports', reports_1.default);
 app.use('/api/v1/attendance', attendance_1.default);
 app.use('/api/v1/schedule', schedule_1.default);
+app.use('/api/v1/tickets', tickets_1.default);
+app.use('/api/v1/announcements', announcements_1.default);
+app.use('/api/v1/subjects', subjects_1.default);
+// Uganda Curriculum Routes
+app.use('/api/v1/levels', levels_1.default);
+app.use('/api/v1/topics', topics_1.default);
+app.use('/api/v1/competencies', competencies_1.default);
+app.use('/api/v1/assessments', assessments_1.default);
+app.use('/api/v1/terms', terms_1.default);
+app.use('/api/v1/report-cards', reportCards_1.default);
+app.use('/api/v1/progress', competencyProgress_1.default);
+// WebRTC Signaling Route
+app.use('/api/v1/webrtc', webrtc_1.default);
 // Error handling
 app.use(Sentry.Handlers.errorHandler());
 // 404 handler
@@ -155,7 +180,7 @@ app.use('*', (req, res) => {
 });
 // Start server for local development
 if (process.env.NODE_ENV !== 'production') {
-    const PORT = process.env.PORT || 3000;
+    const PORT = parseInt(process.env.PORT || '3000', 10);
     const server = (0, http_1.createServer)(app);
     const io = new socket_io_1.Server(server, {
         cors: {
@@ -165,7 +190,6 @@ if (process.env.NODE_ENV !== 'production') {
     });
     // Socket.IO for real-time features (local dev only)
     io.on('connection', (socket) => {
-        console.log('User connected:', socket.id);
         // Join class rooms
         socket.on('join-class', (classId) => {
             socket.join(classId);
@@ -191,13 +215,11 @@ if (process.env.NODE_ENV !== 'production') {
             });
         });
         socket.on('disconnect', () => {
-            console.log('User disconnected:', socket.id);
+            // User disconnected
         });
     });
-    server.listen(PORT, () => {
-        console.log(`🚀 Education Platform API running on port ${PORT}`);
-        console.log(`📚 API Documentation: http://localhost:${PORT}/api/v1`);
-        console.log(`🔗 WebSocket server ready for real-time features`);
+    server.listen(PORT, '0.0.0.0', () => {
+        // Server started - listening on all interfaces
     });
 }
 // Export for Vercel serverless

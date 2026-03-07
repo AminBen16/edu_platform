@@ -13,7 +13,6 @@ router.get('/', async (req, res) => {
     const { schoolId, role } = req.user;
     const { classId, isActive } = req.query;
     try {
-        const db = database_1.prisma;
         const where = { schoolId };
         if (classId) {
             where.classId = classId;
@@ -21,15 +20,18 @@ router.get('/', async (req, res) => {
         if (isActive !== undefined) {
             where.isActive = isActive === 'true';
         }
-        const sessions = await db.liveSession.findMany({
+        const sessions = await database_1.prisma.liveSession.findMany({
             where,
             include: {
-                class_: {
+                class: {
                     select: { id: true, name: true },
                 },
                 teacher: {
                     select: { id: true, user: { select: { name: true, email: true } } },
                 },
+                _count: {
+                    select: { participants: { where: { leftAt: null } } }
+                }
             },
             orderBy: { startTime: 'desc' },
         });
@@ -42,11 +44,11 @@ router.get('/', async (req, res) => {
             endTime: session.endTime,
             isActive: session.isActive,
             classId: session.classId,
-            className: session.class_?.name,
+            className: session.class?.name,
             teacherId: session.teacherId,
             teacherName: session.teacher?.user?.name,
-            participantCount: session.participantCount || 0,
-            maxParticipants: session.maxParticipants,
+            participantCount: session._count?.participants || 0,
+            maxParticipants: 50,
             createdAt: session.createdAt,
         }));
         res.json(transformedSessions);
@@ -64,9 +66,8 @@ router.post('/', (0, auth_1.authorize)(database_2.Role.TEACHER, database_2.Role.
         return res.status(400).json({ error: 'title and classId are required' });
     }
     try {
-        const db = database_1.prisma;
         // Get teacher profile
-        const teacher = await db.teacher.findFirst({
+        const teacher = await database_1.prisma.teacher.findFirst({
             where: { userId },
         });
         if (!teacher) {
@@ -74,7 +75,7 @@ router.post('/', (0, auth_1.authorize)(database_2.Role.TEACHER, database_2.Role.
         }
         // Generate unique room code
         const roomCode = `ROOM-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-        const session = await db.liveSession.create({
+        const session = await database_1.prisma.liveSession.create({
             data: {
                 schoolId,
                 title,
@@ -82,12 +83,11 @@ router.post('/', (0, auth_1.authorize)(database_2.Role.TEACHER, database_2.Role.
                 classId,
                 teacherId: teacher.id,
                 roomCode,
-                maxParticipants: maxParticipants || 50,
                 isActive: true,
                 startTime: scheduledStartTime ? new Date(scheduledStartTime) : new Date(),
             },
             include: {
-                class_: {
+                class: {
                     select: { id: true, name: true },
                 },
             },
@@ -100,7 +100,7 @@ router.post('/', (0, auth_1.authorize)(database_2.Role.TEACHER, database_2.Role.
             startTime: session.startTime,
             isActive: session.isActive,
             classId: session.classId,
-            className: session.class_?.name,
+            className: session.class?.name,
             message: 'Live session created successfully',
         });
     }
@@ -113,16 +113,18 @@ router.post('/', (0, auth_1.authorize)(database_2.Role.TEACHER, database_2.Role.
 router.get('/:roomCode', async (req, res) => {
     const { roomCode } = req.params;
     try {
-        const db = database_1.prisma;
-        const session = await db.liveSession.findUnique({
+        const session = await database_1.prisma.liveSession.findUnique({
             where: { roomCode },
             include: {
-                class_: {
+                class: {
                     select: { id: true, name: true },
                 },
                 teacher: {
                     select: { id: true, user: { select: { name: true, email: true } } },
                 },
+                _count: {
+                    select: { participants: { where: { leftAt: null } } }
+                }
             },
         });
         if (!session) {
@@ -137,11 +139,11 @@ router.get('/:roomCode', async (req, res) => {
             endTime: session.endTime,
             isActive: session.isActive,
             classId: session.classId,
-            className: session.class_?.name,
+            className: session.class?.name,
             teacherId: session.teacherId,
             teacherName: session.teacher?.user?.name,
-            participantCount: session.participantCount || 0,
-            maxParticipants: session.maxParticipants,
+            participantCount: session._count?.participants || 0,
+            maxParticipants: 50,
         });
     }
     catch (error) {
@@ -152,10 +154,9 @@ router.get('/:roomCode', async (req, res) => {
 // POST /live-sessions/:roomCode/join - Join live session
 router.post('/:roomCode/join', async (req, res) => {
     const { roomCode } = req.params;
-    const { userId, userName, role } = req.body;
+    const { userName, role } = req.body;
     try {
-        const db = database_1.prisma;
-        const session = await db.liveSession.findUnique({
+        const session = await database_1.prisma.liveSession.findUnique({
             where: { roomCode },
         });
         if (!session) {
@@ -164,16 +165,36 @@ router.post('/:roomCode/join', async (req, res) => {
         if (!session.isActive) {
             return res.status(400).json({ error: 'Live session has ended' });
         }
-        if (session.maxParticipants && (session.participantCount || 0) >= session.maxParticipants) {
+        const participantCount = await database_1.prisma.liveSessionParticipant.count({
+            where: { sessionId: session.id, leftAt: null }
+        });
+        if (participantCount >= 50) {
             return res.status(400).json({ error: 'Session is full' });
         }
-        // Increment participant count
-        await db.liveSession.update({
-            where: { roomCode },
-            data: {
-                participantCount: { increment: 1 },
-            },
+        // Check for existing participant record
+        const existingParticipant = await database_1.prisma.liveSessionParticipant.findFirst({
+            where: {
+                sessionId: session.id,
+                participantId: req.user.id,
+            }
         });
+        if (existingParticipant) {
+            await database_1.prisma.liveSessionParticipant.update({
+                where: { id: existingParticipant.id },
+                data: { leftAt: null, joinedAt: new Date() }
+            });
+        }
+        else {
+            await database_1.prisma.liveSessionParticipant.create({
+                data: {
+                    sessionId: session.id,
+                    participantId: req.user.id,
+                    role: role || 'STUDENT',
+                    schoolId: session.schoolId,
+                    joinedAt: new Date(),
+                }
+            });
+        }
         res.json({
             message: 'Joined live session successfully',
             sessionId: session.id,
@@ -194,22 +215,23 @@ router.post('/:roomCode/join', async (req, res) => {
 router.post('/:roomCode/leave', async (req, res) => {
     const { roomCode } = req.params;
     try {
-        const db = database_1.prisma;
-        const session = await db.liveSession.findUnique({
+        const session = await database_1.prisma.liveSession.findUnique({
             where: { roomCode },
         });
         if (!session) {
             return res.status(404).json({ error: 'Live session not found' });
         }
-        // Decrement participant count
-        if (session.participantCount && session.participantCount > 0) {
-            await db.liveSession.update({
-                where: { roomCode },
-                data: {
-                    participantCount: { decrement: 1 },
-                },
-            });
-        }
+        // Update participant record
+        await database_1.prisma.liveSessionParticipant.updateMany({
+            where: {
+                sessionId: session.id,
+                participantId: req.user.id,
+                leftAt: null
+            },
+            data: {
+                leftAt: new Date()
+            }
+        });
         res.json({ message: 'Left live session successfully' });
     }
     catch (error) {
@@ -221,14 +243,13 @@ router.post('/:roomCode/leave', async (req, res) => {
 router.post('/:roomCode/end', (0, auth_1.authorize)(database_2.Role.TEACHER, database_2.Role.ADMIN, database_2.Role.SUPER_ADMIN), async (req, res) => {
     const { roomCode } = req.params;
     try {
-        const db = database_1.prisma;
-        const session = await db.liveSession.findUnique({
+        const session = await database_1.prisma.liveSession.findUnique({
             where: { roomCode },
         });
         if (!session) {
             return res.status(404).json({ error: 'Live session not found' });
         }
-        await db.liveSession.update({
+        await database_1.prisma.liveSession.update({
             where: { roomCode },
             data: {
                 isActive: false,

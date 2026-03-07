@@ -15,15 +15,14 @@ router.get('/', async (req, res) => {
     const { schoolId, role, id: userId } = req.user;
     const { classId, studentId, startDate, endDate, status } = req.query;
     try {
-        const db = database_1.prisma;
         const where = { schoolId };
         // Students can only see their own attendance
         if (role === database_2.Role.STUDENT) {
-            const studentProfile = await db.studentProfile.findUnique({
+            const student = await database_1.prisma.student.findFirst({
                 where: { userId },
             });
-            if (studentProfile) {
-                where.studentId = studentProfile.id;
+            if (student) {
+                where.studentId = student.id;
             }
             else {
                 return res.json([]);
@@ -44,31 +43,38 @@ router.get('/', async (req, res) => {
         if (status) {
             where.status = status;
         }
-        const attendance = await db.attendance.findMany({
+        const attendance = await database_1.prisma.attendance.findMany({
             where,
-            include: {
-                student: {
-                    select: { id: true, name: true, email: true },
-                },
-                class_: {
-                    select: { id: true, name: true },
-                },
-            },
             orderBy: { date: 'desc' },
         });
+        // Get student and class info separately
+        const studentIds = [...new Set(attendance.map(a => a.studentId))];
+        const classIds = [...new Set(attendance.map(a => a.classId).filter(Boolean))];
+        const students = await database_1.prisma.student.findMany({
+            where: { id: { in: studentIds } },
+            include: { user: { select: { name: true, email: true } } }
+        });
+        const classes = await database_1.prisma.class.findMany({
+            where: { id: { in: classIds } },
+            select: { id: true, name: true }
+        });
+        const studentMap = new Map(students.map(s => [s.id, s]));
+        const classMap = new Map(classes.map(c => [c.id, c]));
         // Transform the response
-        const transformedAttendance = attendance.map((record) => ({
-            id: record.id,
-            studentName: record.student.name,
-            studentEmail: record.student.email,
-            classId: record.classId,
-            className: record.class_.name,
-            date: record.date.toISOString().split('T')[0],
-            status: record.status,
-            checkInTime: record.checkInTime,
-            checkOutTime: record.checkOutTime,
-            notes: record.notes,
-        }));
+        const transformedAttendance = attendance.map((record) => {
+            const student = studentMap.get(record.studentId);
+            const classInfo = classMap.get(record.classId || '');
+            return {
+                id: record.id,
+                studentName: student?.user.name,
+                studentEmail: student?.user.email,
+                classId: record.classId,
+                className: classInfo?.name,
+                date: record.date.toISOString().split('T')[0],
+                status: record.status,
+                notes: record.notes,
+            };
+        });
         res.json(transformedAttendance);
     }
     catch (error) {
@@ -79,55 +85,64 @@ router.get('/', async (req, res) => {
 // POST /attendance - Create attendance record (teachers/admins only)
 router.post('/', (0, auth_1.authorize)(database_2.Role.TEACHER, database_2.Role.ADMIN, database_2.Role.SUPER_ADMIN), async (req, res) => {
     const { schoolId } = req.user;
-    const { studentId, classId, date, status, checkInTime, checkOutTime, notes } = req.body;
+    const { studentId, classId, date, status, notes } = req.body;
     if (!studentId || !classId || !date || !status) {
         return res.status(400).json({
             error: 'studentId, classId, date, and status are required',
         });
     }
     try {
-        const db = database_1.prisma;
-        const attendance = await db.attendance.upsert({
+        // Try to find existing record first
+        const existingRecord = await database_1.prisma.attendance.findFirst({
             where: {
-                studentId_classId_date: {
-                    studentId,
-                    classId,
-                    date: new Date(date),
+                studentId,
+                classId,
+                date: {
+                    gte: new Date(new Date(date).setHours(0, 0, 0, 0)),
+                    lt: new Date(new Date(date).setHours(23, 59, 59, 999))
+                }
+            },
+            include: {
+                student: {
+                    include: { user: { select: { name: true, email: true } } }
                 },
-            },
-            update: {
-                status,
-                checkInTime,
-                checkOutTime,
-                notes,
-            },
-            create: {
+                class: {
+                    select: { id: true, name: true }
+                }
+            }
+        });
+        if (existingRecord) {
+            // Update existing record
+            const updated = await database_1.prisma.attendance.update({
+                where: { id: existingRecord.id },
+                data: { status, notes }
+            });
+            return res.status(200).json({
+                id: updated.id,
+                studentId: updated.studentId,
+                classId: updated.classId,
+                date: updated.date.toISOString().split('T')[0],
+                status: updated.status,
+                notes: updated.notes
+            });
+        }
+        // Create new record
+        const attendance = await database_1.prisma.attendance.create({
+            data: {
                 schoolId,
                 studentId,
                 classId,
                 date: new Date(date),
                 status,
-                checkInTime,
-                checkOutTime,
                 notes,
-            },
-            include: {
-                student: {
-                    select: { id: true, name: true, email: true },
-                },
-                class_: {
-                    select: { id: true, name: true },
-                },
-            },
+            }
         });
         res.status(201).json({
             id: attendance.id,
-            studentName: attendance.student.name,
-            className: attendance.class_.name,
+            studentId: attendance.studentId,
+            classId: attendance.classId,
             date: attendance.date.toISOString().split('T')[0],
             status: attendance.status,
-            checkInTime: attendance.checkInTime,
-            checkOutTime: attendance.checkOutTime,
             notes: attendance.notes,
         });
     }
@@ -144,32 +159,35 @@ router.post('/bulk', (0, auth_1.authorize)(database_2.Role.TEACHER, database_2.R
         return res.status(400).json({ error: 'records array is required' });
     }
     try {
-        const db = database_1.prisma;
         const results = await Promise.all(records.map(async (record) => {
-            return db.attendance.upsert({
+            // Try to find existing record first
+            const existingRecord = await database_1.prisma.attendance.findFirst({
                 where: {
-                    studentId_classId_date: {
-                        studentId: record.studentId,
-                        classId: record.classId,
-                        date: new Date(record.date),
-                    },
-                },
-                update: {
-                    status: record.status,
-                    checkInTime: record.checkInTime,
-                    checkOutTime: record.checkOutTime,
-                    notes: record.notes,
-                },
-                create: {
+                    studentId: record.studentId,
+                    classId: record.classId,
+                    date: {
+                        gte: new Date(new Date(record.date).setHours(0, 0, 0, 0)),
+                        lt: new Date(new Date(record.date).setHours(23, 59, 59, 999))
+                    }
+                }
+            });
+            if (existingRecord) {
+                // Update existing record
+                return database_1.prisma.attendance.update({
+                    where: { id: existingRecord.id },
+                    data: { status: record.status, notes: record.notes }
+                });
+            }
+            // Create new record
+            return database_1.prisma.attendance.create({
+                data: {
                     schoolId,
                     studentId: record.studentId,
                     classId: record.classId,
                     date: new Date(record.date),
                     status: record.status,
-                    checkInTime: record.checkInTime,
-                    checkOutTime: record.checkOutTime,
                     notes: record.notes,
-                },
+                }
             });
         }));
         res.status(201).json({
@@ -187,14 +205,13 @@ router.get('/stats', async (req, res) => {
     const { schoolId, role, id: userId } = req.user;
     const { classId, startDate, endDate } = req.query;
     try {
-        const db = database_1.prisma;
         const where = { schoolId };
         if (role === database_2.Role.STUDENT) {
-            const studentProfile = await db.studentProfile.findUnique({
+            const student = await database_1.prisma.student.findFirst({
                 where: { userId },
             });
-            if (studentProfile) {
-                where.studentId = studentProfile.id;
+            if (student) {
+                where.studentId = student.id;
             }
         }
         if (classId) {
@@ -206,7 +223,7 @@ router.get('/stats', async (req, res) => {
                 lte: new Date(endDate),
             };
         }
-        const attendance = await db.attendance.findMany({ where });
+        const attendance = await database_1.prisma.attendance.findMany({ where });
         const totalRecords = attendance.length;
         const presentCount = attendance.filter((a) => a.status === 'present').length;
         const absentCount = attendance.filter((a) => a.status === 'absent').length;

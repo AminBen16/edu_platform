@@ -10,13 +10,13 @@ const auth_1 = require("../middleware/auth");
 const axios_1 = __importDefault(require("axios"));
 // Mock WebSocket functions for development
 const emitToAll = (schoolId, event, data) => {
-    console.log(`[MOCK WEBSOCKET] Emit to all in school ${schoolId}:`, { event, data });
+    // Emit to all users in school
 };
 const emitToRole = (schoolId, role, event, data) => {
-    console.log(`[MOCK WEBSOCKET] Emit to ${role} in school ${schoolId}:`, { event, data });
+    // Emit to users with specific role in school
 };
 const emitToUser = (userId, event, data) => {
-    console.log(`[MOCK WEBSOCKET] Emit to user ${userId}:`, { event, data });
+    // Emit to specific user
 };
 const router = (0, express_1.Router)();
 // Mock notifications data for fallback
@@ -304,7 +304,7 @@ async function _sendPushNotifications(title, message, targetUsers) {
         const onesignalAppId = process.env.ONESIGNAL_APP_ID;
         const onesignalApiKey = process.env.ONESIGNAL_API_KEY;
         if (!onesignalAppId || !onesignalApiKey) {
-            console.log('OneSignal not configured, skipping push notifications');
+            // OneSignal not configured
             return;
         }
         // Send to all users (in production, you'd filter by actual player IDs)

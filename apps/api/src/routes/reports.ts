@@ -5,8 +5,17 @@ import { protect, authorize } from '../middleware/auth';
 import { RequestWithUser } from '../types/auth';
 import { prisma } from '../config/database';
 import { Role } from '../lib/database';
+import PDFDocument from 'pdfkit';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const router = Router();
+
+// Ensure temp directory exists
+const tempDir = path.join(process.cwd(), 'temp');
+if (!fs.existsSync(tempDir)) {
+  fs.mkdirSync(tempDir, { recursive: true });
+}
 
 // GET /reports - Get all reports for the user's school
 router.get('/', protect, async (req: RequestWithUser, res: Response) => {

@@ -1,8 +1,17 @@
 // apps/api/src/services/websocket.ts
 import { Server as SocketIOServer } from 'socket.io';
 
-// Mock WebSocket service for development
-// In production, this would use actual Socket.IO
+/**
+ * WebSocket Service for Real-time Communication
+ * 
+ * NOTE: For Vercel serverless deployment, WebSockets are disabled by default.
+ * In production, consider using:
+ * - Pusher (https://pusher.com)
+ * - Ably (https://ably.com)
+ * - Socket.IO with a dedicated WebSocket server
+ * 
+ * This service provides the interface and falls back to polling/logging.
+ */
 
 interface ConnectedUser {
   id: string;
@@ -16,13 +25,32 @@ interface ConnectedUser {
 class WebSocketService {
   private connectedUsers: Map<string, ConnectedUser> = new Map();
   private io: SocketIOServer | null = null;
+  private isInitialized: boolean = false;
 
-  // Mock implementation for development
+  // Initialize WebSocket server
   initialize(server: any) {
-    console.log('WebSocket service initialized (mock mode)');
-    // In production, this would initialize actual Socket.IO server
-    // this.io = new SocketIOServer(server);
-    // this.setupEventHandlers();
+    // Only initialize if not in serverless environment
+    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+      console.log('WebSocket service: Running in production mode (WebSockets disabled for serverless)');
+      console.log('Use polling or external services like Pusher for real-time features');
+      this.isInitialized = true;
+      return;
+    }
+
+    console.log('WebSocket service initialized');
+    try {
+      this.io = new SocketIOServer(server, {
+        cors: {
+          origin: "*",
+          methods: ["GET", "POST"]
+        }
+      });
+      this.setupEventHandlers();
+      this.isInitialized = true;
+      console.log('Socket.IO server running');
+    } catch (error) {
+      console.error('Failed to initialize Socket.IO:', error);
+    }
   }
 
   private setupEventHandlers() {
@@ -55,36 +83,32 @@ class WebSocketService {
     });
   }
 
+  // Check if WebSocket is available
+  isAvailable(): boolean {
+    return this.isInitialized && this.io !== null;
+  }
+
   // Emit to all users in a school
   emitToAll(schoolId: string, event: string, data: any) {
-    console.log(`Emitting to all users in school ${schoolId}:`, { event, data });
-    
     if (this.io) {
       this.io.to(`school_${schoolId}`).emit(event, data);
     } else {
-      // Mock implementation - log the event
-      this.mockEmit(`school_${schoolId}`, event, data);
+      console.log(`[WS] School ${schoolId}: ${event}`, data);
     }
   }
 
   // Emit to specific role in a school
   emitToRole(schoolId: string, role: string, event: string, data: any) {
-    console.log(`Emitting to ${role} in school ${schoolId}:`, { event, data });
-    
     if (this.io) {
       this.io.to(`school_${schoolId}`).to(`role_${role}`).emit(event, data);
     } else {
-      // Mock implementation - log the event
-      this.mockEmit(`school_${schoolId}_role_${role}`, event, data);
+      console.log(`[WS] School ${schoolId} Role ${role}: ${event}`, data);
     }
   }
 
   // Emit to specific user
   emitToUser(userId: string, event: string, data: any) {
-    console.log(`Emitting to user ${userId}:`, { event, data });
-    
     if (this.io) {
-      // Find user's socket and emit
       const user = Array.from(this.connectedUsers.values())
         .find(u => u.userId === userId);
       
@@ -92,21 +116,8 @@ class WebSocketService {
         this.io.to(user.socketId).emit(event, data);
       }
     } else {
-      // Mock implementation - log the event
-      this.mockEmit(`user_${userId}`, event, data);
+      console.log(`[WS] User ${userId}: ${event}`, data);
     }
-  }
-
-  // Mock emit for development
-  private mockEmit(target: string, event: string, data: any) {
-    // In development, we'll just log the event
-    // In production, this would actually emit via WebSocket
-    console.log(`[MOCK WEBSOCKET] Target: ${target}, Event: ${event}, Data:`, data);
-    
-    // Simulate real-time delivery with a small delay
-    setTimeout(() => {
-      console.log(`[MOCK WEBSOCKET] Delivered to ${target}`);
-    }, 100);
   }
 
   // Get connected users count

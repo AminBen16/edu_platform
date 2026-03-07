@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
         const schedules = await db.schedule.findMany({
             where,
             include: {
-                class_: {
+                class: {
                     select: { id: true, name: true },
                 },
             },
@@ -35,7 +35,7 @@ router.get('/', async (req, res) => {
         const transformedSchedules = schedules.map((record) => ({
             id: record.id,
             classId: record.classId,
-            className: record.class_.name,
+            className: record.class?.name,
             dayOfWeek: record.dayOfWeek,
             startTime: record.startTime,
             endTime: record.endTime,
@@ -73,7 +73,7 @@ router.post('/', (0, auth_1.authorize)(database_2.Role.TEACHER, database_2.Role.
                 isRecurring: isRecurring ?? true,
             },
             include: {
-                class_: {
+                class: {
                     select: { id: true, name: true },
                 },
             },
@@ -81,7 +81,7 @@ router.post('/', (0, auth_1.authorize)(database_2.Role.TEACHER, database_2.Role.
         res.status(201).json({
             id: schedule.id,
             classId: schedule.classId,
-            className: schedule.class_.name,
+            className: schedule.class?.name,
             dayOfWeek: schedule.dayOfWeek,
             startTime: schedule.startTime,
             endTime: schedule.endTime,
@@ -114,7 +114,7 @@ router.put('/:id', (0, auth_1.authorize)(database_2.Role.TEACHER, database_2.Rol
                 isRecurring,
             },
             include: {
-                class_: {
+                class: {
                     select: { id: true, name: true },
                 },
             },
@@ -122,7 +122,7 @@ router.put('/:id', (0, auth_1.authorize)(database_2.Role.TEACHER, database_2.Rol
         res.json({
             id: schedule.id,
             classId: schedule.classId,
-            className: schedule.class_.name,
+            className: schedule.class?.name,
             dayOfWeek: schedule.dayOfWeek,
             startTime: schedule.startTime,
             endTime: schedule.endTime,

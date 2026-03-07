@@ -3,9 +3,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.cleanupExpiredRateLimits = exports.generalRateLimit = exports.deletionRateLimit = exports.invitationRateLimit = exports.authRateLimit = exports.rateLimit = void 0;
 const database_1 = require("../config/database");
 const rateLimit = (options) => {
-    const { windowMs, maxRequests, keyGenerator = (req) => req.ip || 'unknown', skipSuccessfulRequests = false, message = 'Too many requests, please try again later.', } = options;
+    const { windowMs, maxRequests, keyGenerator = (req) => req.ip || 'unknown', skipSuccessfulRequests = false, message = 'Too many requests, please try again later.', schoolIdGetter = (req) => req.user?.schoolId || 'default', } = options;
     return async (req, res, next) => {
         const key = keyGenerator(req);
+        const schoolId = schoolIdGetter(req);
         const now = new Date();
         const windowEnd = new Date(now.getTime() + windowMs);
         try {
@@ -21,7 +22,8 @@ const rateLimit = (options) => {
                         count: 1,
                         windowEnd,
                         createdAt: now,
-                        updatedAt: now
+                        updatedAt: now,
+                        schoolId,
                     }
                 });
                 return next();

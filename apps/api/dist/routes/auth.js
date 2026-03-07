@@ -10,14 +10,54 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const crypto_1 = __importDefault(require("crypto"));
 const database_1 = require("../config/database");
 const auth_1 = require("../middleware/auth");
-// import EmailService from '../services/emailService'; // Assuming this service exists
+const rateLimit_1 = require("../middleware/rateLimit");
 const router = (0, express_1.Router)();
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'a-fallback-secret-that-is-long-and-secure';
-if (JWT_SECRET === 'a-fallback-secret-that-is-long-and-secure') {
-    console.warn('Warning: Using fallback JWT secret. Set NEXTAUTH_SECRET in your environment for production.');
+const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'dev-only-secret-do-not-use-in-prod';
+if (!process.env.NEXTAUTH_SECRET) {
+    console.warn('WARNING: NEXTAUTH_SECRET not set. Using fallback secret for development only.');
 }
-// POST /auth/login - Production-ready login
-router.post('/login', async (req, res) => {
+// GET /auth/validate/:code - Validate invitation code (rate limited)
+router.get('/validate/:code', rateLimit_1.generalRateLimit, async (req, res) => {
+    const { code } = req.params;
+    const { email } = req.query;
+    if (!code) {
+        return res.status(400).json({ error: 'Invitation code is required.' });
+    }
+    try {
+        const invitation = await database_1.prisma.invitation.findUnique({
+            where: { code },
+            include: {
+                school: { select: { name: true, id: true } }
+            }
+        });
+        if (!invitation) {
+            return res.status(404).json({ error: 'Invalid invitation code.' });
+        }
+        if (invitation.used) {
+            return res.status(400).json({ error: 'This invitation code has already been used.' });
+        }
+        if (invitation.expiresAt < new Date()) {
+            return res.status(400).json({ error: 'This invitation code has expired.' });
+        }
+        // If email is provided, verify it matches
+        if (email && invitation.email !== email) {
+            return res.status(400).json({ error: 'This invitation code is for a different email address.' });
+        }
+        res.json({
+            valid: true,
+            name: invitation.name,
+            role: invitation.role,
+            email: invitation.email,
+            school: invitation.school
+        });
+    }
+    catch (error) {
+        console.error('Validate invitation error:', error);
+        res.status(500).json({ error: 'Failed to validate invitation.' });
+    }
+});
+// POST /auth/login - Production-ready login (rate limited for security)
+router.post('/login', rateLimit_1.authRateLimit, async (req, res) => {
     const { email, password, schoolId } = req.body;
     if (!email || !password) {
         return res.status(400).json({ error: 'Email and password are required.' });
@@ -33,7 +73,7 @@ router.post('/login', async (req, res) => {
             if (!schoolId) {
                 return res.status(409).json({ error: 'Multiple accounts found. Please provide a school ID.' });
             }
-            user = users.find(u => u.schoolId === schoolId);
+            user = users.find((u) => u.schoolId === schoolId);
         }
         else {
             user = users[0];
@@ -102,8 +142,8 @@ router.post('/register', async (req, res) => {
         res.status(500).json({ error: 'Failed to register user.' });
     }
 });
-// POST /auth/invite - Generate invitation (Admin only)
-router.post('/invite', auth_1.protect, async (req, res) => {
+// POST /auth/invite - Generate invitation (Admin only, rate limited)
+router.post('/invite', auth_1.protect, rateLimit_1.invitationRateLimit, async (req, res) => {
     if (req.user.role !== "ADMIN") {
         return res.status(403).json({ error: 'You are not authorized to invite users.' });
     }
@@ -153,8 +193,8 @@ router.get('/invitations', auth_1.protect, async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch invitations.' });
     }
 });
-// POST /auth/forgot-password - Request password reset
-router.post('/forgot-password', async (req, res) => {
+// POST /auth/forgot-password - Request password reset (rate limited)
+router.post('/forgot-password', rateLimit_1.authRateLimit, async (req, res) => {
     const { email } = req.body;
     if (!email) {
         return res.status(400).json({ error: 'Email is required.' });

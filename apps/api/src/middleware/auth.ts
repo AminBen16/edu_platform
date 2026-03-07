@@ -5,7 +5,20 @@ import { prisma } from '../config/database';
 import { Role } from '../lib/database';
 import { AuthenticatedUser } from '../types/auth';
 
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'a-fallback-secret-that-is-long-and-secure';
+// Validate JWT_SECRET - must be set in production
+const JWT_SECRET = process.env.NEXTAUTH_SECRET;
+
+if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('NEXTAUTH_SECRET environment variable is required for production');
+}
+
+const getSecret = () => {
+  if (!JWT_SECRET) {
+    console.warn('WARNING: NEXTAUTH_SECRET not set. Using temporary secret for development only.');
+    return 'dev-only-temp-secret-change-in-production';
+  }
+  return JWT_SECRET;
+};
 
 // Augment the Express Request type to include the user object
 declare global {
@@ -26,7 +39,8 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
   const token = authHeader.split(' ')[1];
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+    const secret = getSecret();
+    const decoded = jwt.verify(token, secret) as { userId: string };
     
     if (!decoded.userId) {
          return res.status(401).json({ error: 'Not authorized, token is invalid.' });

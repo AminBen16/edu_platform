@@ -46,7 +46,7 @@ router.get('/', auth_1.protect, async (req, res) => {
                     },
                     select: { id: true }
                 });
-                const lessonIds = teacherLessons.map(l => l.id);
+                const lessonIds = teacherLessons.map((l) => l.id);
                 resources = await database_1.prisma.lessonResource.findMany({
                     where: {
                         lessonId: { in: lessonIds }
@@ -81,7 +81,7 @@ router.get('/', auth_1.protect, async (req, res) => {
                     select: { lessonId: true }
                 });
                 const enrolledLessonIds = studentEnrollments
-                    .map(e => e.lessonId)
+                    .map((e) => e.lessonId)
                     .filter((id) => id !== null);
                 if (enrolledLessonIds.length > 0) {
                     resources = await database_1.prisma.lessonResource.findMany({
@@ -124,7 +124,8 @@ router.post('/', auth_1.protect, (0, auth_1.authorize)(database_2.Role.TEACHER, 
                 type: type || 'DOCUMENT',
                 url: '', // Will be updated by StorageService
                 size: file.size,
-                lessonId: lessonId || null
+                lessonId: lessonId || null,
+                schoolId: user.schoolId,
             }
         });
         // Store file using StorageService (local + cloud)

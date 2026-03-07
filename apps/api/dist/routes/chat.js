@@ -62,6 +62,7 @@ router.post('/message', auth_1.protect, async (req, res) => {
                 senderId: userId,
                 classId,
                 isRead: false,
+                schoolId: req.user.schoolId,
             },
             include: {
                 sender: {

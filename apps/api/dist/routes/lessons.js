@@ -12,7 +12,11 @@ router.get('/', auth_1.protect, async (req, res) => {
             where: { schoolId: req.user.schoolId },
             orderBy: { createdAt: 'desc' },
             include: {
-                teacher: true,
+                teacher: {
+                    include: {
+                        user: { select: { name: true, email: true } }
+                    }
+                },
                 subject: true,
                 class: true,
             },
@@ -31,7 +35,11 @@ router.get('/:id', auth_1.protect, async (req, res) => {
         const lesson = await database_1.prisma.lesson.findUnique({
             where: { id, schoolId: req.user.schoolId },
             include: {
-                teacher: true,
+                teacher: {
+                    include: {
+                        user: { select: { name: true, email: true } }
+                    }
+                },
                 subject: true,
                 class: true,
                 resources: true,
@@ -58,21 +66,25 @@ router.post('/', auth_1.protect, async (req, res) => {
         return res.status(400).json({ error: 'Title, description, subjectId, and classId are required.' });
     }
     try {
+        // Get teacher profile ID
+        const teacher = await database_1.prisma.teacher.findUnique({
+            where: { userId: req.user.id }
+        });
         const newLesson = await database_1.prisma.lesson.create({
             data: {
                 title,
                 description,
                 content,
-                type,
+                type: type || 'LESSON',
                 videoUrl,
                 documentUrl,
                 duration: duration ? parseInt(duration) : undefined,
                 order: order ? parseInt(order) : undefined,
                 isPublished: isPublished || false,
                 difficulty,
-                tags,
+                tags: tags ? JSON.stringify(tags) : undefined,
                 schoolId: req.user.schoolId,
-                teacherId: req.user.id,
+                teacherId: teacher?.id,
                 subjectId,
                 classId,
             },
@@ -89,13 +101,17 @@ router.put('/:id', auth_1.protect, async (req, res) => {
     const { id } = req.params;
     const { title, description, content, type, videoUrl, documentUrl, duration, order, isPublished, subjectId, classId, difficulty, tags, } = req.body;
     try {
+        // Get teacher profile ID for authorization check
+        const teacher = await database_1.prisma.teacher.findUnique({
+            where: { userId: req.user.id }
+        });
         const lesson = await database_1.prisma.lesson.findUnique({
             where: { id, schoolId: req.user.schoolId },
         });
         if (!lesson) {
             return res.status(404).json({ error: 'Lesson not found' });
         }
-        if (req.user.role !== "ADMIN" && lesson.teacherId !== req.user.id) {
+        if (req.user.role !== "ADMIN" && lesson.teacherId !== teacher?.id) {
             return res.status(403).json({ error: 'You are not authorized to update this lesson.' });
         }
         const updatedLesson = await database_1.prisma.lesson.update({
@@ -111,7 +127,7 @@ router.put('/:id', auth_1.protect, async (req, res) => {
                 order: order ? parseInt(order) : undefined,
                 isPublished,
                 difficulty,
-                tags,
+                tags: tags ? (Array.isArray(tags) ? JSON.stringify(tags) : tags) : undefined,
                 subjectId,
                 classId,
                 updatedAt: new Date(),
@@ -128,13 +144,17 @@ router.put('/:id', auth_1.protect, async (req, res) => {
 router.delete('/:id', auth_1.protect, async (req, res) => {
     const { id } = req.params;
     try {
+        // Get teacher profile ID for authorization check
+        const teacher = await database_1.prisma.teacher.findUnique({
+            where: { userId: req.user.id }
+        });
         const lesson = await database_1.prisma.lesson.findUnique({
             where: { id, schoolId: req.user.schoolId },
         });
         if (!lesson) {
             return res.status(404).json({ error: 'Lesson not found' });
         }
-        if (req.user.role !== 'ADMIN' && lesson.teacherId !== req.user.id) {
+        if (req.user.role !== 'ADMIN' && lesson.teacherId !== teacher?.id) {
             return res.status(403).json({ error: 'You are not authorized to delete this lesson.' });
         }
         await database_1.prisma.lesson.delete({
