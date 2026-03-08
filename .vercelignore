@@ -16,10 +16,9 @@ apps/mobile
 
 # Build outputs
 build
-dist
 .next
 apps/admin/.next
-apps/api/dist
+# Note: DO NOT exclude apps/api/dist - it's needed for Vercel deployment
 
 # IDE
 .idea

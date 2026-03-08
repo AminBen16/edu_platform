@@ -6,7 +6,9 @@
   ],
   "scripts": {
     "dev": "concurrently \"cd apps/api && npm run dev\" \"cd apps/admin && npm run dev\"",
+    "prebuild": "npm run build:packages",
     "build": "npm run build:api && npm run build:admin",
+    "build:packages": "cd packages/db && npm run build",
     "build:api": "cd apps/api && npm run build",
     "build:admin": "cd apps/admin && npm run build",
     "build:mobile": "cd apps/mobile && flutter build web",
