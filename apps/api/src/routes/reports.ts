@@ -246,7 +246,7 @@ async function generateTeacherReports(schoolId: string, teacherId: string) {
         })
       : [];
     
-    const totalPresent = attendance.filter(a => a.status === 'PRESENT').length;
+    const totalPresent = attendance.filter((a: any) => a.status === 'PRESENT').length;
     const averageAttendance = attendance.length > 0 
       ? Math.round((totalPresent / attendance.length) * 100) 
       : 0;

@@ -68,17 +68,17 @@ router.get('/', async (req: RequestWithUser, res: Response) => {
       select: { id: true, name: true }
     });
 
-    const studentMap = new Map(students.map(s => [s.id, s]));
-    const classMap = new Map(classes.map(c => [c.id, c]));
+    const studentMap = new Map<string, any>(students.map(s => [s.id, s]));
+    const classMap = new Map<string, any>(classes.map(c => [c.id, c]));
 
     // Transform the response
-    const transformedAttendance = attendance.map((record) => {
+    const transformedAttendance = attendance.map((record: any) => {
       const student = studentMap.get(record.studentId);
       const classInfo = classMap.get(record.classId || '');
       return {
         id: record.id,
-        studentName: student?.user.name,
-        studentEmail: student?.user.email,
+        studentName: student?.user?.name,
+        studentEmail: student?.user?.email,
         classId: record.classId,
         className: classInfo?.name,
         date: record.date.toISOString().split('T')[0],
@@ -266,9 +266,9 @@ router.get(
       const attendance = await prisma.attendance.findMany({ where });
 
       const totalRecords = attendance.length;
-      const presentCount = attendance.filter((a) => a.status === 'present').length;
-      const absentCount = attendance.filter((a) => a.status === 'absent').length;
-      const lateCount = attendance.filter((a) => a.status === 'late').length;
+      const presentCount = attendance.filter((a: any) => a.status === 'present').length;
+      const absentCount = attendance.filter((a: any) => a.status === 'absent').length;
+      const lateCount = attendance.filter((a: any) => a.status === 'late').length;
 
       const attendanceRate =
         totalRecords > 0 ? (presentCount / totalRecords) * 100 : 0;

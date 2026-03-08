@@ -96,7 +96,7 @@ router.get('/', protect, async (req, res) => {
                 },
                 include: { subject: true }
             });
-            subjects = levelSubjects.map(ls => ({
+            subjects = levelSubjects.map((ls: any) => ({
                 ...ls.subject,
                 isEnabled: ls.isEnabled
             }));
@@ -194,7 +194,7 @@ router.post('/bulk', protect, async (req, res) => {
     try {
         // Create all subjects
         const createdSubjects = await Promise.all(
-            subjects.map(subjectData =>
+            subjects.map((subjectData: any) =>
                 prisma.subject.create({
                     data: {
                         name: subjectData.name,
@@ -210,7 +210,7 @@ router.post('/bulk', protect, async (req, res) => {
         // If levelId provided, map subjects to level
         if (levelId) {
             await Promise.all(
-                createdSubjects.map(subject =>
+                createdSubjects.map((subject: any) =>
                     prisma.levelSubject.create({
                         data: {
                             levelId,

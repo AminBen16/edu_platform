@@ -42,7 +42,7 @@ router.get('/', async (req: RequestWithUser, res: Response) => {
       orderBy: { startTime: 'desc' },
     });
 
-    const transformedSessions = sessions.map((session) => ({
+    const transformedSessions = sessions.map((session: any) => ({
       id: session.id,
       title: session.title,
       description: session.description,

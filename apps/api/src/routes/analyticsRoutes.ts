@@ -1,9 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient, Prisma } from '@prisma/client';
 import { protect } from '../middleware/auth';
+import { prisma } from '../config/database';
 import { Role, AuditLogAction } from '../lib/database';
-
-const prisma = new PrismaClient();
 const router = Router();
 
 router.get('/dashboard', protect, async (req, res) => {

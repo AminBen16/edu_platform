@@ -65,7 +65,7 @@ async function getStudentDashboard(userId: string, schoolId: string) {
 const classIds = enrollments.map((e: any) => e.classId).filter(Boolean) as string[];
     
     // Get enrolled classes with details (for courses list)
-    const courses = enrollments.map((enrollment: any) => ({
+    const courses = enrollments.map((enrollment: any): any => ({
         id: enrollment.class?.id || '',
         title: enrollment.class?.name || 'Unknown Class',
         instructor: enrollment.class?.teacher?.user?.name || 'TBA',
@@ -110,7 +110,7 @@ const classIds = enrollments.map((e: any) => e.classId).filter(Boolean) as strin
             upcomingClasses: upcomingClasses.length,
         },
         courses, // For mobile course list
-        upcomingClasses: upcomingClasses.map(cls => ({
+        upcomingClasses: upcomingClasses.map((cls: any) => ({
             id: cls.id,
             title: cls.title,
             time: cls.startTime.toISOString(),
@@ -128,7 +128,7 @@ async function getTeacherDashboard(userId: string, schoolId: string) {
         select: { id: true, name: true, _count: { select: { enrollments: true } } }
     });
 
-    const totalStudents = classes.reduce((sum, c) => sum + c._count.enrollments, 0);
+    const totalStudents = classes.reduce((sum: number, c: any) => sum + c._count.enrollments, 0);
     
     // Get pending submissions (assignments without grades)
     const pendingSubmissions = await prisma.submission.count({
@@ -258,16 +258,16 @@ async function getParentDashboard(userId: string, schoolId: string) {
     const attendancePercent = totalAttendance > 0 ? (presentCount / totalAttendance) * 100 : 0;
 
     const averageGrade = quizAttempts.length > 0
-        ? quizAttempts.reduce((sum, attempt) => sum + (attempt.score || 0), 0) / quizAttempts.length
+        ? quizAttempts.reduce((sum: number, attempt: any) => sum + (attempt.score || 0), 0) / quizAttempts.length
         : 0;
 
     // Build children data with their individual stats
-    const childrenData = await Promise.all(children.map(async (child) => {
+    const childrenData = await Promise.all(children.map(async (child: any) => {
         const childQuizAttempts = quizAttempts.filter(a => a.studentId === child.id);
         const childAttendance = attendance.filter(a => a.studentId === child.id);
         
         const childAvgGrade = childQuizAttempts.length > 0
-            ? childQuizAttempts.reduce((sum, a) => sum + (a.score || 0), 0) / childQuizAttempts.length
+            ? childQuizAttempts.reduce((sum: number, a: any) => sum + (a.score || 0), 0) / childQuizAttempts.length
             : 0;
 
         const childPresent = childAttendance.filter(a => a.status === 'PRESENT').length;
