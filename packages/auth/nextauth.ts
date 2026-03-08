@@ -1,9 +1,19 @@
 // packages/auth/nextauth.ts
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import prisma, { Role } from '../../packages/db';
+import prisma from '../../packages/db';
 import * as bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+
+// Define Role type locally to avoid import issues
+enum Role {
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  ADMIN = 'ADMIN',
+  TEACHER = 'TEACHER',
+  STUDENT = 'STUDENT',
+  PARENT = 'PARENT',
+  SCHOOL_ADMIN = 'SCHOOL_ADMIN',
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -74,8 +84,6 @@ export const authOptions: NextAuthOptions = {
       } else if (token) {
           // If no access_token from account (e.g., Credentials provider)
           // re-sign the token to get a string representation if needed by the client.
-          // IMPORTANT: This is a simplification. In a production app, the server-side API would validate the session cookie.
-          // For client-side direct API calls, we need a JWT.
           const payload = {
               id: token.id,
               email: token.email,
@@ -90,7 +98,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       // Add role and schoolId to the session object
       if (session.user) {
-        session.user.role = token.role as Role;
+        session.user.role = token.role as string;
         session.user.schoolId = token.schoolId as string;
         session.user.id = token.id as string;
       }
@@ -103,3 +111,7 @@ export const authOptions: NextAuthOptions = {
     signIn: '/auth/login', // Custom login page
   },
 };
+
+// Export production URL
+export const nextAuthUrl = process.env.NEXTAUTH_URL || 'https://edu-platform-admin-fawn.vercel.app';
+

@@ -7,11 +7,11 @@
 class ApiConfig {
   // Base URL for the API - change this for production
   // Development: http://localhost:3000/api/v1
-  // Production: https://your-api-domain.com/api/v1
+  // Production: https://edu-platform-api.vercel.app/api/v1
 
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:3000/api/v1', // Android emulator localhost
+    defaultValue: 'https://edu-platform-api.vercel.app/api/v1',
   );
 
   // For iOS simulator, use: http://localhost:3000/api/v1
