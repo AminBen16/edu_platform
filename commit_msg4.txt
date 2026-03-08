@@ -1,0 +1,5 @@
+docs: Add Vercel deployment guide - no credit card required
+
+- VERCEL_DEPLOYMENT_GUIDE.md: Step-by-step free deployment instructions
+- DEPLOYMENT_STATUS.md: Current project status and configuration
+

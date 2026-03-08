@@ -3,6 +3,7 @@ import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import prisma, { Role } from '../../packages/db';
 import * as bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 export const authOptions: NextAuthOptions = {
   providers: [

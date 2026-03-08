@@ -1,4 +1,3 @@
-// apps/api/src/lib/database.ts
 // Database types and utilities for API
 // Note: This file should ONLY contain types and enums, not database connections
 
@@ -58,3 +57,4 @@ export interface DatabaseSchool {
   createdAt: string;
   updatedAt: string;
 }
+
