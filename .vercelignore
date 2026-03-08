@@ -1,7 +1,36 @@
+# Dependencies
 node_modules
+
+# Git
 .git
+.github
+
+# Environment files
 .env
 .env.local
-apps/api
-packages
-!packages/db
+.env.production
+.env.*.local
+
+# Mobile app (deploy separately)
+apps/mobile
+
+# Build outputs
+build
+dist
+.next
+apps/admin/.next
+apps/api/dist
+
+# IDE
+.idea
+.vscode
+.neon
+
+# Flutter
+.dart_tool
+.flutter-plugins-dependencies
+pubspec.lock
+
+# Misc
+*.log
+.vercel

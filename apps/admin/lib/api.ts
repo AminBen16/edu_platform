@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://edu-platform-api.vercel.app/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

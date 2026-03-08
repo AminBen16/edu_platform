@@ -115,6 +115,6 @@ export const authOptions: NextAuthOptions = {
   },
 };
 
-// Export production URL
-export const nextAuthUrl = process.env.NEXTAUTH_URL || 'https://edu-platform-admin-fawn.vercel.app';
+// Export production URL - use environment variable
+export const nextAuthUrl = process.env.NEXTAUTH_URL;
 

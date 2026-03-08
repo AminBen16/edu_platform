@@ -3,20 +3,27 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1',
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
   },
   async rewrites() {
-    if (process.env.NODE_ENV === 'development') {
-      return {
-        beforeFiles: [
-          {
-            source: '/api/v1/:path*',
-            destination: 'http://localhost:3001/api/v1/:path*',
-          },
-        ],
-      };
+    // In production, proxy API requests to the same domain
+    if (process.env.NODE_ENV === 'production') {
+      return [
+        {
+          source: '/api/v1/:path*',
+          destination: '/api/v1/:path*',
+        },
+      ];
     }
-    return [];
+    // In development, use localhost API
+    return [
+      {
+        source: '/api/v1/:path*',
+        destination: 'http://localhost:3000/api/v1/:path*',
+      },
+    ];
   },
   headers: async () => {
     return [
@@ -34,3 +41,4 @@ const nextConfig = {
 };
 
 module.exports = nextConfig;
+

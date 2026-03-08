@@ -6,7 +6,7 @@
   ],
   "scripts": {
     "dev": "concurrently \"cd apps/api && npm run dev\" \"cd apps/admin && npm run dev\"",
-    "build": "cd apps/admin && npm run build",
+    "build": "npm run build:api && npm run build:admin",
     "build:api": "cd apps/api && npm run build",
     "build:admin": "cd apps/admin && npm run build",
     "build:mobile": "cd apps/mobile && flutter build web",
@@ -28,5 +28,8 @@
     "@supabase/storage-js": "^2.89.0",
     "axios": "^1.13.2",
     "multer": "^2.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
