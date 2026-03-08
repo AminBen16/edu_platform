@@ -1,11 +1,11 @@
 // packages/auth/nextauth.ts
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import prisma from '../../packages/db';
+import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-// Define Role type locally to avoid import issues
+// Define Role type locally
 enum Role {
   SUPER_ADMIN = 'SUPER_ADMIN',
   ADMIN = 'ADMIN',
@@ -14,6 +14,9 @@ enum Role {
   PARENT = 'PARENT',
   SCHOOL_ADMIN = 'SCHOOL_ADMIN',
 }
+
+// Initialize Prisma client
+const prisma = new PrismaClient();
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -53,7 +56,7 @@ export const authOptions: NextAuthOptions = {
 
         // Only allow admins and teachers to log in to the admin panel
         if (user.role !== Role.SUPER_ADMIN && user.role !== Role.SCHOOL_ADMIN && user.role !== Role.TEACHER) {
-            throw new Error('You do not have permission to access the admin panel.');
+          throw new Error('You do not have permission to access the admin panel.');
         }
 
         return {
@@ -82,28 +85,28 @@ export const authOptions: NextAuthOptions = {
       if (account?.access_token) {
         token.accessToken = account.access_token;
       } else if (token) {
-          // If no access_token from account (e.g., Credentials provider)
-          // re-sign the token to get a string representation if needed by the client.
-          const payload = {
-              id: token.id,
-              email: token.email,
-              role: token.role,
-              schoolId: token.schoolId,
-          };
-          // Sign the payload to get a new JWT token string.
-          token.accessToken = jwt.sign(payload, process.env.NEXTAUTH_SECRET!);
+        // If no access_token from account (e.g., Credentials provider)
+        // re-sign the token to get a string representation if needed by the client.
+        const payload = {
+          id: token.id,
+          email: token.email,
+          role: token.role,
+          schoolId: token.schoolId,
+        };
+        // Sign the payload to get a new JWT token string.
+        token.accessToken = jwt.sign(payload, process.env.NEXTAUTH_SECRET!);
       }
       return token;
     },
     async session({ session, token }) {
       // Add role and schoolId to the session object
       if (session.user) {
-        session.user.role = token.role as string;
-        session.user.schoolId = token.schoolId as string;
-        session.user.id = token.id as string;
+        (session.user as any).role = token.role;
+        (session.user as any).schoolId = token.schoolId;
+        (session.user as any).id = token.id;
       }
       // Add the access token to the session object
-      session.accessToken = token.accessToken as string;
+      (session as any).accessToken = token.accessToken;
       return session;
     },
   },

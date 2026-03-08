@@ -18,6 +18,6 @@
     "lib": ["es2020", "dom"],
     "outDir": "dist"
   },
-  "include": ["nextauth.ts", "types/**/*.ts"],
+  "include": ["nextauth.ts", "types/**/*"],
   "exclude": ["node_modules"]
 }
