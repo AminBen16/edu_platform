@@ -2,7 +2,7 @@
   "name": "db",
   "version": "1.0.0",
   "description": "",
-  "main": "dist/index.js",
+  "main": "./dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc && npm run prisma:generate",
@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
-"@types/node": "^20.12.2",
+    "@types/node": "^20.12.2",
     "prisma": "^5.22.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.3"
