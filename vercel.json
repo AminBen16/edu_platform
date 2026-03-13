@@ -4,27 +4,20 @@
     {
       "src": "apps/api/src/index.ts",
       "use": "@vercel/node"
-    },
-    {
-      "src": "apps/admin",
-      "use": "@vercel/next"
     }
   ],
   "routes": [
     {
-      "src": "/api/v1/(.*)",
-      "dest": "apps/api/src/index.ts"
+      "src": "/api/(.*)",
+      "dest": "/apps/api/src/index.ts"
     },
     {
-      "src": "/api/(.*)",
-      "dest": "apps/api/src/index.ts"
+      "src": "/api/v1/(.*)",
+      "dest": "/apps/api/src/index.ts"
     },
     {
       "src": "/(.*)",
-      "dest": "apps/admin/$1"
+      "dest": "/"
     }
-  ],
-  "regions": ["iad1"],
-  "installCommand": "npm install",
-  "buildCommand": "npm run build"
+  ]
 }
