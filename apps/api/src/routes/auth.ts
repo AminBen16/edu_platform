@@ -9,7 +9,10 @@ import { authRateLimit, invitationRateLimit, generalRateLimit } from '../middlew
 
 const router = Router();
 
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'dev-only-secret-do-not-use-in-prod';
+const JWT_SECRET = process.env.NEXTAUTH_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('NEXTAUTH_SECRET is missing. Set in Vercel dashboard.');
+}
 
 if (!process.env.NEXTAUTH_SECRET) {
     console.warn('WARNING: NEXTAUTH_SECRET not set. Using fallback secret for development only.');
@@ -63,11 +66,14 @@ router.get('/validate/:code', generalRateLimit, async (req, res) => {
 });
 
 // POST /auth/login - Production-ready login (rate limited for security)
-router.post('/login', authRateLimit, async (req, res) => {
-    const { email, password, schoolId } = req.body;
+import { LoginSchema } from '../lib/validation';
 
-    if (!email || !password) {
-        return res.status(400).json({ error: 'Email and password are required.' });
+router.post('/login', authRateLimit, async (req, res) => {
+    let email, password, schoolId;
+    try {
+        ({ email, password, schoolId } = LoginSchema.parse(req.body));
+    } catch (error) {
+        return res.status(400).json({ error: (error as Error).message });
     }
 
     try {
@@ -113,11 +119,14 @@ router.post('/login', authRateLimit, async (req, res) => {
 });
 
 // POST /auth/register - Accept invitation and create user
-router.post('/register', async (req, res) => {
-    const { email, password, name, invitationCode } = req.body;
+import { RegisterSchema } from '../lib/validation';
 
-    if (!email || !password || !name || !invitationCode) {
-        return res.status(400).json({ error: 'Email, password, name, and invitation code are required.' });
+router.post('/register', async (req, res) => {
+    let email, password, name, invitationCode;
+    try {
+        ({ email, password, name, invitationCode } = RegisterSchema.parse(req.body));
+    } catch (error) {
+        return res.status(400).json({ error: (error as Error).message });
     }
 
     try {

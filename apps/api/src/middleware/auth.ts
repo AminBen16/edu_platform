@@ -14,9 +14,8 @@ if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
 }
 
 const getSecret = () => {
-  if (!JWT_SECRET) {
-    console.warn('WARNING: NEXTAUTH_SECRET not set. Using temporary secret for development only.');
-    return 'dev-only-temp-secret-change-in-production';
+  if (!JWT_SECRET || JWT_SECRET.length < 32) {
+    throw new Error('NEXTAUTH_SECRET is missing or too short. Set in Vercel dashboard.');
   }
   return JWT_SECRET;
 };
