@@ -101,7 +101,7 @@ async function getStudentDashboard(userId, schoolId) {
             upcomingClasses: upcomingClasses.length,
         },
         courses, // For mobile course list
-        upcomingClasses: upcomingClasses.map(cls => ({
+        upcomingClasses: upcomingClasses.map((cls) => ({
             id: cls.id,
             title: cls.title,
             time: cls.startTime.toISOString(),

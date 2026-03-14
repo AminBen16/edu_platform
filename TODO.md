@@ -1,55 +1,36 @@
-# Code Quality Fixes TODO
+# Vercel Deployment TODO
 
-## Priority 1 - Prisma Type Errors (API Routes)
+## 1. [✅] Preparation
+- [✅] Install dependencies: npm install
+- [✅] Build packages/db: npm run build:packages
+- [✅] Build API: npm run build:api
+- [✅] Build Admin: npm run build:admin
 
-### Fix live-sessions.ts
-- [x] Replace `class_` with `class` in include statements
-- [x] Add `const db = prisma as any;` casting
+## 2. [✅] Vercel CLI Setup
+- [✅] Check Vercel CLI: vercel --version
+- [✅] Login: vercel login
 
-### Fix attendance.ts
-- [x] Replace `class_` with `class` in include statements
-- [x] Replace `studentProfile` with `student` 
-- [x] Add `const db = prisma as any;` casting
+## 3. [✅] Deploy API (Root)
+- [✅] vercel --prod (https://eduplatform-fjb9lt3ot-ainamanipro.vercel.app)
 
-### Fix schedule.ts
-- [x] Already has `const db = prisma as any;` - verify fixes work
-- [x] Check `subject` field handling
+## 4. [ ] Deploy Admin
+- [ ] cd apps/admin && vercel --prod
 
-### Fix dashboard.ts
-- [x] Fix `subject` relation in Class include
+## 5. [ ] Test Endpoints
+- [ ] Test API endpoints (list below)
+- [ ] Test Admin pages
 
-### Fix other routes with subject includes
-- [ ] levels.ts - Uses subject through LevelSubject (valid relation)
-- [ ] competencies.ts - Uses subject through Topic (valid relation)
-- [ ] topics.ts - Uses subject directly (valid relation)
-- [ ] terms.ts - Uses subject through Assessment (valid relation)
-- [ ] reportCards.ts - Uses subject through ReportCardSubject (valid relation)
-- [ ] competencyProgress.ts - Uses subject through Competency/Topic (valid relation)
+## 6. [ ] Post-Deployment
+- [ ] Update env vars if needed
+- [ ] Verify integration
 
-Note: The "subject" errors in ClassInclude are because Class doesn't have a subject field - that's correct. The subject includes in other routes are through proper relations.
-
-## Priority 2 - Flutter/Dart Issues
-
-### Fix unused imports/variables
-- [ ] Find and fix unused import: socket_service.dart
-- [ ] Remove unused variables: type, contentId
-- [ ] Fix unused catch variable 'e'
-
-### Fix deprecated API
-- [ ] Replace 'value' with 'initialValue' in form fields
-
-### Fix async gaps
-- [ ] Add mounted check for BuildContext usage across async
-
-## Priority 3 - Code Quality
-
-### Fix print statements
-- [ ] Replace print() with proper logging
-
-## Completed
-- [x] Created TODO list
-- [x] Fixed live-sessions.ts
-- [x] Fixed attendance.ts
-- [x] Fixed schedule.ts
-- [x] Fixed dashboard.ts
+**API Endpoints to test:**
+- POST /api/auth/register
+- POST /api/auth/login
+- GET /api/users
+- GET /api/dashboard
+- GET /api/lessons
+- GET /api/quizzes
+- GET /api/analytics
+- GET /api/live-sessions
 

@@ -1,10 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const client_1 = require("@prisma/client");
 const auth_1 = require("../middleware/auth");
-const database_1 = require("../lib/database");
-const prisma = new client_1.PrismaClient();
+const database_1 = require("../config/database");
+const database_2 = require("../lib/database");
 const router = (0, express_1.Router)();
 router.get('/dashboard', auth_1.protect, async (req, res) => {
     const schoolId = req.user?.schoolId;
@@ -13,22 +12,22 @@ router.get('/dashboard', auth_1.protect, async (req, res) => {
     }
     try {
         const [totalStudents, totalTeachers, totalLessons, totalQuizzes, recentActivity, usersWithEnrollmentData,] = await Promise.all([
-            prisma.user.count({ where: { schoolId, role: database_1.Role.STUDENT } }),
-            prisma.user.count({ where: { schoolId, role: database_1.Role.TEACHER } }),
-            prisma.lesson.count({ where: { schoolId } }),
-            prisma.quiz.count({ where: { schoolId } }),
-            prisma.auditLog.findMany({
+            database_1.prisma.user.count({ where: { schoolId, role: database_2.Role.STUDENT } }),
+            database_1.prisma.user.count({ where: { schoolId, role: database_2.Role.TEACHER } }),
+            database_1.prisma.lesson.count({ where: { schoolId } }),
+            database_1.prisma.quiz.count({ where: { schoolId } }),
+            database_1.prisma.auditLog.findMany({
                 where: {
                     schoolId: schoolId, // Explicitly cast to any to resolve type issue
                     action: {
-                        in: [database_1.AuditLogAction.USER_LOGIN, database_1.AuditLogAction.LESSON_VIEWED, database_1.AuditLogAction.QUIZ_ATTEMPTED]
+                        in: [database_2.AuditLogAction.USER_LOGIN, database_2.AuditLogAction.LESSON_VIEWED, database_2.AuditLogAction.QUIZ_ATTEMPTED]
                     }
                 }, // Cast to any
                 orderBy: { createdAt: 'desc' },
                 take: 10,
                 include: { user: { select: { id: true, name: true, role: true } } }
             }),
-            prisma.user.findMany({
+            database_1.prisma.user.findMany({
                 where: {
                     schoolId,
                     studentProfile: {

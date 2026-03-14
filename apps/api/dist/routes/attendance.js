@@ -66,8 +66,8 @@ router.get('/', async (req, res) => {
             const classInfo = classMap.get(record.classId || '');
             return {
                 id: record.id,
-                studentName: student?.user.name,
-                studentEmail: student?.user.email,
+                studentName: student?.user?.name,
+                studentEmail: student?.user?.email,
                 classId: record.classId,
                 className: classInfo?.name,
                 date: record.date.toISOString().split('T')[0],

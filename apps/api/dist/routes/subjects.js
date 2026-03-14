@@ -93,7 +93,7 @@ router.get('/', auth_1.protect, async (req, res) => {
                 },
                 include: { subject: true }
             });
-            subjects = levelSubjects.map(ls => ({
+            subjects = levelSubjects.map((ls) => ({
                 ...ls.subject,
                 isEnabled: ls.isEnabled
             }));
@@ -182,7 +182,7 @@ router.post('/bulk', auth_1.protect, async (req, res) => {
     }
     try {
         // Create all subjects
-        const createdSubjects = await Promise.all(subjects.map(subjectData => database_1.prisma.subject.create({
+        const createdSubjects = await Promise.all(subjects.map((subjectData) => database_1.prisma.subject.create({
             data: {
                 name: subjectData.name,
                 code: subjectData.code,
@@ -193,7 +193,7 @@ router.post('/bulk', auth_1.protect, async (req, res) => {
         })));
         // If levelId provided, map subjects to level
         if (levelId) {
-            await Promise.all(createdSubjects.map(subject => database_1.prisma.levelSubject.create({
+            await Promise.all(createdSubjects.map((subject) => database_1.prisma.levelSubject.create({
                 data: {
                     levelId,
                     subjectId: subject.id,

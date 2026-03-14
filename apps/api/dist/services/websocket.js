@@ -1,17 +1,38 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.emitToUser = exports.emitToRole = exports.emitToAll = exports.webSocketService = void 0;
+// apps/api/src/services/websocket.ts
+const socket_io_1 = require("socket.io");
 class WebSocketService {
     constructor() {
         this.connectedUsers = new Map();
         this.io = null;
+        this.isInitialized = false;
     }
-    // Mock implementation for development
+    // Initialize WebSocket server
     initialize(server) {
-        console.log('WebSocket service initialized (mock mode)');
-        // In production, this would initialize actual Socket.IO server
-        // this.io = new SocketIOServer(server);
-        // this.setupEventHandlers();
+        // Only initialize if not in serverless environment
+        if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+            console.log('WebSocket service: Running in production mode (WebSockets disabled for serverless)');
+            console.log('Use polling or external services like Pusher for real-time features');
+            this.isInitialized = true;
+            return;
+        }
+        console.log('WebSocket service initialized');
+        try {
+            this.io = new socket_io_1.Server(server, {
+                cors: {
+                    origin: "*",
+                    methods: ["GET", "POST"]
+                }
+            });
+            this.setupEventHandlers();
+            this.isInitialized = true;
+            console.log('Socket.IO server running');
+        }
+        catch (error) {
+            console.error('Failed to initialize Socket.IO:', error);
+        }
     }
     setupEventHandlers() {
         if (!this.io)
@@ -39,33 +60,31 @@ class WebSocketService {
             });
         });
     }
+    // Check if WebSocket is available
+    isAvailable() {
+        return this.isInitialized && this.io !== null;
+    }
     // Emit to all users in a school
     emitToAll(schoolId, event, data) {
-        console.log(`Emitting to all users in school ${schoolId}:`, { event, data });
         if (this.io) {
             this.io.to(`school_${schoolId}`).emit(event, data);
         }
         else {
-            // Mock implementation - log the event
-            this.mockEmit(`school_${schoolId}`, event, data);
+            console.log(`[WS] School ${schoolId}: ${event}`, data);
         }
     }
     // Emit to specific role in a school
     emitToRole(schoolId, role, event, data) {
-        console.log(`Emitting to ${role} in school ${schoolId}:`, { event, data });
         if (this.io) {
             this.io.to(`school_${schoolId}`).to(`role_${role}`).emit(event, data);
         }
         else {
-            // Mock implementation - log the event
-            this.mockEmit(`school_${schoolId}_role_${role}`, event, data);
+            console.log(`[WS] School ${schoolId} Role ${role}: ${event}`, data);
         }
     }
     // Emit to specific user
     emitToUser(userId, event, data) {
-        console.log(`Emitting to user ${userId}:`, { event, data });
         if (this.io) {
-            // Find user's socket and emit
             const user = Array.from(this.connectedUsers.values())
                 .find(u => u.userId === userId);
             if (user) {
@@ -73,19 +92,8 @@ class WebSocketService {
             }
         }
         else {
-            // Mock implementation - log the event
-            this.mockEmit(`user_${userId}`, event, data);
+            console.log(`[WS] User ${userId}: ${event}`, data);
         }
-    }
-    // Mock emit for development
-    mockEmit(target, event, data) {
-        // In development, we'll just log the event
-        // In production, this would actually emit via WebSocket
-        console.log(`[MOCK WEBSOCKET] Target: ${target}, Event: ${event}, Data:`, data);
-        // Simulate real-time delivery with a small delay
-        setTimeout(() => {
-            console.log(`[MOCK WEBSOCKET] Delivered to ${target}`);
-        }, 100);
     }
     // Get connected users count
     getConnectedUsersCount(schoolId) {
