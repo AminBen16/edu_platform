@@ -1,0 +1,86 @@
+name: mobile
+description: "Kavuma - Education Platform for Uganda"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.10.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # UI
+  cupertino_icons: ^1.0.6
+
+  # Networking
+  http: ^1.2.0
+
+  # State Management
+  flutter_riverpod: ^2.5.1
+
+  # Local Storage
+  dio: ^5.4.0
+  path_provider: ^2.1.2
+  cached_network_image: ^3.3.0
+  share_plus: ^9.0.0
+  shared_preferences: ^2.2.2
+  flutter_pdfview: ^1.3.2
+
+  # JSON Serialization
+  json_annotation: ^4.8.1
+  freezed_annotation: ^2.4.1
+
+  # URL Launcher for payments
+  url_launcher: ^6.2.0
+
+  # Image Picker for uploads
+  image_picker: ^1.0.4
+
+  # Screen Recording
+  flutter_screen_recording: ^2.0.0
+
+  # Video/Recording audio
+  record: ^5.0.0
+
+  # Socket.IO for chat
+  socket_io_client: ^3.0.2
+
+  # WebRTC for live classes (Free P2P)
+  flutter_webrtc: ^0.9.48+hotfix.1
+
+  # Video Player
+  video_player: ^2.8.1
+
+  # Audio Player
+  just_audio: ^0.9.36
+
+  # Permissions
+  permission_handler: ^11.0.1
+
+  # Share functionality
+
+  # Local notifications
+  flutter_local_notifications: ^19.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+  freezed: ^2.5.2
+  build_runner: ^2.4.8
+  json_serializable: ^6.7.1
+
+flutter:
+  uses-material-design: true
+  
+  # App Assets - Organisation Logo
+  assets:
+    - assets/
+    
+  # App name configuration
+  # Note: The actual app name on device is set in:
+  # - Android: android/app/build.gradle.kts (android:label)
+  # - iOS: ios/Runner/Info.plist (CFBundleDisplayName)
+  # - Desktop: windows/runner/main.dart (flutterDimensions)

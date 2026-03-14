@@ -1,0 +1,33 @@
+{
+  "name": "db",
+  "version": "1.0.0",
+  "description": "",
+  "main": "./dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "npx tsc && npm run prisma:generate:safe",
+    "clean": "rm -rf dist",
+    "db:seed": "prisma db seed",
+    "prisma:generate": "prisma generate",
+    "prisma:generate:safe": "npx prisma generate",
+    "postinstall": "npm run prisma:generate:safe"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^2.4.3"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.12.2",
+    "prisma": "^5.22.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts",
+    "schema": "schema.prisma"
+  }
+}

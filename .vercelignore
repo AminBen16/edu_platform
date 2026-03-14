@@ -1,0 +1,35 @@
+# Dependencies
+node_modules
+
+# Git
+.git
+.github
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Mobile app (deploy separately)
+apps/mobile
+
+# Build outputs
+build
+.next
+apps/admin/.next
+# Note: DO NOT exclude apps/api/dist - it's needed for Vercel deployment
+
+# IDE
+.idea
+.vscode
+.neon
+
+# Flutter
+.dart_tool
+.flutter-plugins-dependencies
+pubspec.lock
+
+# Misc
+*.log
+.vercel

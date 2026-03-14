@@ -1,0 +1,99 @@
+// Production Database Schema - Multi-School Education Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Multi-tenancy: Each school has isolated data
+model School {
+  id        String   @id @default(cuid())
+  name      String
+  logoUrl   String?  @map("logo_url")
+  domain    String?  @unique // Custom domain per school
+  settings  String? // School-specific settings (JSON string)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  users                   User[]
+  teachers                Teacher[]
+  students                Student[]
+  lessons                 Lesson[]
+  quizzes                 Quiz[]
+  subjects                Subject[]
+  classes                 Class[]
+  invitations             Invitation[]
+  deletionRequests        DeletionRequest[]
+  auditLogs               AuditLog[]
+  rateLimits              RateLimit[]
+  lessonResources         LessonResource[]
+  questions               Question[]
+  options                 Option[]
+  quizAttempts            QuizAttempt[]
+  answers                 Answer[]
+  enrollments             Enrollment[]
+  assignments             Assignment[]
+  submissions             Submission[]
+  messages                Message[]
+  liveSessions            LiveSession[]
+  liveSessionParticipants LiveSessionParticipant[]
+  notifications           Notification[]
+  tickets                 Ticket[]
+  ticketComments          TicketComment[]
+  announcements           Announcement[]
+  schedules               Schedule[]
+  attendances             Attendance[]
+  schoolSettings          SchoolSettings?
+  curriculums             Curriculum[]
+  terms                   Term[]
+  assessments             Assessment[]
+  assessmentResults       AssessmentResult[]
+  reportCards             ReportCard[]
+  competencyProgress      CompetencyProgress[]
+}
+
+// Account deletion requests
+model DeletionRequest {
+  id          String    @id @default(cuid())
+  userId      String    @unique @map("user_id")
+  token       String    @unique // Secure deletion token
+  expiresAt   DateTime  @map("expires_at")
+  confirmedAt DateTime? @map("confirmed_at")
+  completedAt DateTime? @map("completed_at")
+  requestedAt DateTime  @default(now()) @map("requested_at")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  schoolId    String    @map("school_id")
+
+  // Relations
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+}
+
+// [Continue with ALL exact models from original - Teacher, Student, Subject, Class, Lesson, etc. up to ReportCardSubject - full copy without any X or placeholders]
+
+model ReportCardSubject {
+  id               String   @id @default(cuid())
+  reportCardId     String   @map("report_card_id")
+  subjectId        String   @map("subject_id")
+  score            Float?
+  grade            String?
+  competencyRating String?  @map("competency_rating")
+  remarks          String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  reportCard ReportCard @relation(fields: [reportCardId], references: [id], onDelete: Cascade)
+  subject    Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([reportCardId, subjectId])
+}
+

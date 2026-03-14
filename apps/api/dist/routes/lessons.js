@@ -1,0 +1,174 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+// apps/api/src/routes/lessons.ts
+const express_1 = require("express");
+const database_1 = require("../config/database");
+const auth_1 = require("../middleware/auth");
+const router = (0, express_1.Router)();
+// GET /lessons - List lessons for user's school
+router.get('/', auth_1.protect, async (req, res) => {
+    try {
+        const lessons = await database_1.prisma.lesson.findMany({
+            where: { schoolId: req.user.schoolId },
+            orderBy: { createdAt: 'desc' },
+            include: {
+                teacher: {
+                    include: {
+                        user: { select: { name: true, email: true } }
+                    }
+                },
+                subject: true,
+                class: true,
+            },
+        });
+        res.json(lessons);
+    }
+    catch (error) {
+        console.error('Failed to fetch lessons:', error);
+        res.status(500).json({ error: 'Failed to fetch lessons.' });
+    }
+});
+// GET /lessons/:id - Get a specific lesson
+router.get('/:id', auth_1.protect, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const lesson = await database_1.prisma.lesson.findUnique({
+            where: { id, schoolId: req.user.schoolId },
+            include: {
+                teacher: {
+                    include: {
+                        user: { select: { name: true, email: true } }
+                    }
+                },
+                subject: true,
+                class: true,
+                resources: true,
+                assignments: true,
+            },
+        });
+        if (!lesson) {
+            return res.status(404).json({ error: 'Lesson not found' });
+        }
+        res.json(lesson);
+    }
+    catch (error) {
+        console.error('Get lesson error:', error);
+        res.status(500).json({ error: 'Failed to fetch lesson.' });
+    }
+});
+// POST /lessons - Create a lesson (only for teachers and admins)
+const validation_1 = require("../lib/validation");
+router.post('/', auth_1.protect, async (req, res) => {
+    if (req.user.role !== 'TEACHER' && req.user.role !== 'ADMIN') {
+        return res.status(403).json({ error: 'You are not authorized to create lessons.' });
+    }
+    let title, description, content, type, videoUrl, documentUrl, duration, order, isPublished, subjectId, classId, difficulty, tags;
+    try {
+        ({ title, description, content, type, videoUrl, documentUrl, duration, order, isPublished, subjectId, classId, difficulty, tags } = validation_1.LessonCreateSchema.parse(req.body));
+    }
+    catch (error) {
+        return res.status(400).json({ error: error.message });
+    }
+    try {
+        // Get teacher profile ID
+        const teacher = await database_1.prisma.teacher.findUnique({
+            where: { userId: req.user.id }
+        });
+        const newLesson = await database_1.prisma.lesson.create({
+            data: {
+                title,
+                description,
+                content,
+                type: type || 'LESSON',
+                videoUrl,
+                documentUrl,
+                duration,
+                order,
+                isPublished: isPublished || false,
+                difficulty,
+                tags: tags ? JSON.stringify(tags) : undefined,
+                schoolId: req.user.schoolId,
+                teacherId: teacher?.id,
+                subjectId,
+                classId,
+            },
+        });
+        res.status(201).json(newLesson);
+    }
+    catch (error) {
+        console.error('Lesson creation error:', error);
+        res.status(500).json({ error: 'Failed to create lesson.' });
+    }
+});
+// PUT /lessons/:id - Update a lesson (only for the teacher who created it or an admin)
+router.put('/:id', auth_1.protect, async (req, res) => {
+    const { id } = req.params;
+    const { title, description, content, type, videoUrl, documentUrl, duration, order, isPublished, subjectId, classId, difficulty, tags, } = req.body;
+    try {
+        // Get teacher profile ID for authorization check
+        const teacher = await database_1.prisma.teacher.findUnique({
+            where: { userId: req.user.id }
+        });
+        const lesson = await database_1.prisma.lesson.findUnique({
+            where: { id, schoolId: req.user.schoolId },
+        });
+        if (!lesson) {
+            return res.status(404).json({ error: 'Lesson not found' });
+        }
+        if (req.user.role !== "ADMIN" && lesson.teacherId !== teacher?.id) {
+            return res.status(403).json({ error: 'You are not authorized to update this lesson.' });
+        }
+        const updatedLesson = await database_1.prisma.lesson.update({
+            where: { id },
+            data: {
+                title,
+                description,
+                content,
+                type,
+                videoUrl,
+                documentUrl,
+                duration,
+                order,
+                isPublished,
+                difficulty,
+                tags: tags ? (Array.isArray(tags) ? JSON.stringify(tags) : tags) : undefined,
+                subjectId,
+                classId,
+                updatedAt: new Date(),
+            },
+        });
+        res.json(updatedLesson);
+    }
+    catch (error) {
+        console.error('Update lesson error:', error);
+        res.status(500).json({ error: 'Failed to update lesson.' });
+    }
+});
+// DELETE /lessons/:id - Delete a lesson (only for the teacher who created it or an admin)
+router.delete('/:id', auth_1.protect, async (req, res) => {
+    const { id } = req.params;
+    try {
+        // Get teacher profile ID for authorization check
+        const teacher = await database_1.prisma.teacher.findUnique({
+            where: { userId: req.user.id }
+        });
+        const lesson = await database_1.prisma.lesson.findUnique({
+            where: { id, schoolId: req.user.schoolId },
+        });
+        if (!lesson) {
+            return res.status(404).json({ error: 'Lesson not found' });
+        }
+        if (req.user.role !== 'ADMIN' && lesson.teacherId !== teacher?.id) {
+            return res.status(403).json({ error: 'You are not authorized to delete this lesson.' });
+        }
+        await database_1.prisma.lesson.delete({
+            where: { id },
+        });
+        res.status(204).send(); // No Content
+    }
+    catch (error) {
+        console.error('Delete lesson error:', error);
+        res.status(500).json({ error: 'Failed to delete lesson.' });
+    }
+});
+exports.default = router;

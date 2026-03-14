@@ -1,0 +1,33 @@
+# IDE & Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Dependencies / Build artifacts
+/node_modules/
+/apps/**/node_modules/
+/packages/**/node_modules/
+/build/
+/dist/
+*.log
+
+# Dart & Flutter
+.dart_tool/
+.packages
+.pub-cache/
+pubspec.lock
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+.vercel
+
+.env
+.env.*
+apps/**/.env
+apps/**/.env.*
+packages/**/.env
+packages/**/.env.*
+.env*.local

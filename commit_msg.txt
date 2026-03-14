@@ -1,0 +1,1 @@
+docs: Add Vercel deployment guide - no credit card required
