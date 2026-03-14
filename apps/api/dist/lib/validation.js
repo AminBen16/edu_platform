@@ -23,14 +23,19 @@ exports.InviteSchema = zod_1.z.object({
 // Lesson Schemas (example)
 exports.LessonCreateSchema = zod_1.z.object({
     title: zod_1.z.string().min(3).max(200),
-    description: zod_1.z.string().min(10).max(5000),
-    subjectId: zod_1.z.string(),
-    classId: zod_1.z.string(),
+    description: zod_1.z.string().optional(),
+    subjectId: zod_1.z.string().optional(),
+    classId: zod_1.z.string().optional(),
     content: zod_1.z.string().optional(),
+    type: zod_1.z.string().optional(),
     videoUrl: zod_1.z.string().url().optional(),
-    duration: zod_1.z.number().int().min(1).max(300).optional(),
+    documentUrl: zod_1.z.string().url().optional(),
+    duration: zod_1.z.number().optional(),
+    order: zod_1.z.number().optional(),
     isPublished: zod_1.z.boolean().optional(),
-}).strict(); // Reject unknown fields
+    difficulty: zod_1.z.string().optional(),
+    tags: zod_1.z.array(zod_1.z.string()).optional(),
+}).strict();
 exports.LessonUpdateSchema = exports.LessonCreateSchema.partial();
 // Utils
 const validate = (schema, data) => {

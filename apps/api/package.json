@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node src/index.ts",
-"prebuild": "npm run prisma:generate --prefix ../../packages/db",
+    "prebuild": "npm run prisma:generate:safe --prefix ../../packages/db",
     "build": "tsc",
     "start": "node dist/index.js"
   },

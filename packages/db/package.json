@@ -5,11 +5,12 @@
   "main": "./dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc && npm run prisma:generate",
+    "build": "tsc && npm run prisma:generate:safe",
     "clean": "rm -rf dist",
     "db:seed": "prisma db seed",
     "prisma:generate": "prisma generate",
-    "postinstall": "prisma generate"
+    "prisma:generate:safe": "node -e \"require('os').platform() === 'win32' ? console.log('Skipping Prisma generate on Windows (will run on Vercel Linux)') : require('child_process').execSync('prisma generate', {stdio: 'inherit'})\" || true",
+    "postinstall": "npm run prisma:generate:safe || true"
   },
   "keywords": [],
   "author": "",

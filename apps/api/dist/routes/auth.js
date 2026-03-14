@@ -12,9 +12,9 @@ const database_1 = require("../config/database");
 const auth_1 = require("../middleware/auth");
 const rateLimit_1 = require("../middleware/rateLimit");
 const router = (0, express_1.Router)();
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'dev-only-secret-do-not-use-in-prod';
-if (!process.env.NEXTAUTH_SECRET) {
-    console.warn('WARNING: NEXTAUTH_SECRET not set. Using fallback secret for development only.');
+const JWT_SECRET = process.env.NEXTAUTH_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+    throw new Error('NEXTAUTH_SECRET is required and must be at least 32 characters. Set in Vercel dashboard.');
 }
 // GET /auth/validate/:code - Validate invitation code (rate limited)
 router.get('/validate/:code', rateLimit_1.generalRateLimit, async (req, res) => {

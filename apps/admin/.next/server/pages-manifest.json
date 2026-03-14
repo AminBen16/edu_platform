@@ -1,8 +1,1 @@
-{
-  "/_app": "pages/_app.js",
-  "/_error": "pages/_error.js",
-  "/_document": "pages/_document.js",
-  "/": "pages/index.js",
-  "/auth/login": "pages/auth/login.js",
-  "/api/auth/[...nextauth]": "pages/api/auth/[...nextauth].js"
-}
+{"/api/auth/[...nextauth]":"pages/api/auth/[...nextauth].js","/auth/login":"pages/auth/login.html","/auth/register":"pages/auth/register.html","/_app":"pages/_app.js","/_error":"pages/_error.js","/classes":"pages/classes.js","/assignments":"pages/assignments.js","/analytics":"pages/analytics.js","/chat":"pages/chat.js","/":"pages/index.js","/lessons":"pages/lessons.js","/levels":"pages/levels.js","/live-classes":"pages/live-classes.js","/users":"pages/users.js","/subjects":"pages/subjects.js","/quizzes":"pages/quizzes.js","/resources":"pages/resources.js","/_document":"pages/_document.js","/404":"pages/404.html"}

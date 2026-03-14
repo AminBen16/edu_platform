@@ -8,23 +8,23 @@ async function main() {
 
   // Create School
   const school = await prisma.school.upsert({
-    where: { domain: 'kavuma.com' },
+    where: { domain: 'eduplatform.local' },
     update: {},
     create: {
-      name: 'Kavuma Education Platform',
-      domain: 'kavuma.com',
+      name: 'Education Platform',
+      domain: 'eduplatform.local',
       logoUrl: '',
     },
   });
   console.log(`Created school: ${school.name}`);
 
   // Create Admin User
-  const adminPassword = await bcrypt.hash('password', 10);
+  const adminPassword = await bcrypt.hash('Admin@123', 10);
   const admin = await prisma.user.upsert({
-    where: { email_schoolId: { email: 'admin@kavuma.com', schoolId: school.id } },
+    where: { email_schoolId: { email: 'admin@eduplatform.local', schoolId: school.id } },
     update: {},
     create: {
-      email: 'admin@kavuma.com',
+      email: 'admin@eduplatform.local',
       name: 'Super Admin',
       password: adminPassword,
       role: 'ADMIN',
@@ -33,15 +33,15 @@ async function main() {
       lastLoginAt: new Date(),
     },
   });
-  console.log(`Created admin: ${admin.email}`);
+  console.log(`Created admin: ${admin.email} | Password: Admin@123`);
 
   // Create Teacher User and Profile
-  const teacherPassword = await bcrypt.hash('password', 10);
+  const teacherPassword = await bcrypt.hash('Teacher@123', 10);
   const teacherUser = await prisma.user.upsert({
-    where: { email_schoolId: { email: 'teacher@kavuma.com', schoolId: school.id } },
+    where: { email_schoolId: { email: 'teacher@eduplatform.local', schoolId: school.id } },
     update: {},
     create: {
-      email: 'teacher@kavuma.com',
+      email: 'teacher@eduplatform.local',
       name: 'John Doe',
       password: teacherPassword,
       role: 'TEACHER',
@@ -58,15 +58,15 @@ async function main() {
       schoolId: school.id,
     },
   });
-  console.log(`Created teacher: ${teacherUser.email}`);
+  console.log(`Created teacher: ${teacherUser.email} | Password: Teacher@123`);
 
   // Create Student User and Profile
-  const studentPassword = await bcrypt.hash('password', 10);
+  const studentPassword = await bcrypt.hash('Student@123', 10);
   const studentUser = await prisma.user.upsert({
-    where: { email_schoolId: { email: 'student@kavuma.com', schoolId: school.id } },
+    where: { email_schoolId: { email: 'student@eduplatform.local', schoolId: school.id } },
     update: {},
     create: {
-      email: 'student@kavuma.com',
+      email: 'student@eduplatform.local',
       name: 'Jane Smith',
       password: studentPassword,
       role: 'STUDENT',
@@ -83,18 +83,18 @@ async function main() {
       schoolId: school.id,
       grade: 'P5',
       section: 'A',
-      parentEmail: 'parent@kavuma.com', // Link to parent
+      parentEmail: 'parent@eduplatform.local', // Link to parent
     },
   });
-  console.log(`Created student: ${studentUser.email}`);
+  console.log(`Created student: ${studentUser.email} | Password: Student@123`);
 
   // Create Parent User and Profile
-  const parentPassword = await bcrypt.hash('password', 10);
+  const parentPassword = await bcrypt.hash('Parent@123', 10);
   const parentUser = await prisma.user.upsert({
-    where: { email_schoolId: { email: 'parent@kavuma.com', schoolId: school.id } },
+    where: { email_schoolId: { email: 'parent@eduplatform.local', schoolId: school.id } },
     update: {},
     create: {
-      email: 'parent@kavuma.com',
+      email: 'parent@eduplatform.local',
       name: 'Parent Guardian',
       password: parentPassword,
       role: 'PARENT',
@@ -104,7 +104,7 @@ async function main() {
     },
   });
   // Parent doesn't need a separate profile, uses parentEmail to link to students
-  console.log(`Created parent: ${parentUser.email}`);
+  console.log(`Created parent: ${parentUser.email} | Password: Parent@123`);
 
   // Create Subject
   let subject = await prisma.subject.findFirst({
