@@ -5,14 +5,20 @@
     "rootDir": "./src",
     "outDir": "./dist",
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "db": ["../../packages/db"],
+      "db/*": ["../../packages/db/*"]
     }
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "dist"],
+  "references": [
+    { "path": "../../packages/db/tsconfig.json" }
+  ]
 }

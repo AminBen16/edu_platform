@@ -1,36 +1,17 @@
-# Vercel Deployment TODO
+# Vercel API Build Fix - TODO Steps
 
-## 1. [✅] Preparation
-- [✅] Install dependencies: npm install
-- [✅] Build packages/db: npm run build:packages
-- [✅] Build API: npm run build:api
-- [✅] Build Admin: npm run build:admin
+## Plan Implementation Steps (Approved)
 
-## 2. [✅] Vercel CLI Setup
-- [✅] Check Vercel CLI: vercel --version
-- [✅] Login: vercel login
+### 1. [x] Update packages/db/package.json (ensure postinstall prisma generate)
+### 2. [x] Update apps/api/package.json (add db build to build script)
+### 3. [x] Update apps/api/tsconfig.json (add paths and project references for db)
+### 4. [x] Create/Update apps/api/src/types/db.d.ts (merge prisma types for db module)
+### 5. [x] Test local build: cd apps/api && npm install && npm run build (tsc succeeds)
+### 6. [x] Update vercel.json if needed (build overrides - not needed, prebuild works)
+### 7. [ ] Commit changes with message "fix: resolve vercel api build tsc hang"
+### 8. [ ] Push and trigger Vercel redeploy
+### 9. [ ] Verify build success and API endpoints
 
-## 3. [✅] Deploy API (Root)
-- [✅] vercel --prod (https://eduplatform-fjb9lt3ot-ainamanipro.vercel.app)
+**Current Progress: Starting implementation**
 
-## 4. [ ] Deploy Admin
-- [ ] cd apps/admin && vercel --prod
-
-## 5. [ ] Test Endpoints
-- [ ] Test API endpoints (list below)
-- [ ] Test Admin pages
-
-## 6. [ ] Post-Deployment
-- [ ] Update env vars if needed
-- [ ] Verify integration
-
-**API Endpoints to test:**
-- POST /api/auth/register
-- POST /api/auth/login
-- GET /api/users
-- GET /api/dashboard
-- GET /api/lessons
-- GET /api/quizzes
-- GET /api/analytics
-- GET /api/live-sessions
-
+*Updated: After each step completed*
