@@ -91,10 +91,7 @@
                 // Update API status
                 updateElement('api-status', '✅ API Connected', 'success');
                 
-                // Fetch analytics data
-                const analyticsResponse = await fetch(`${API_BASE}/dashboard/analytics`, {
-                    headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
-                });
+// Fetch analytics data\n                const analyticsResponse = await fetch(`\${API_BASE}/dashboard`, {\n                    headers: authToken ? { 'Authorization': `Bearer \${authToken}` } : {}\n                });
                 
                 if (analyticsResponse.ok) {
                     const analytics = await analyticsResponse.json();
@@ -110,11 +107,7 @@
                     updateElement('analytics-status', 'Analytics Ready', 'warning');
                 }
                 
-                // Fetch live sessions data
-                try {
-                    const liveResponse = await fetch(`${API_BASE}/dashboard/live-sessions`, {
-                        headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
-                    });
+// Fetch live sessions data\n                try {\n                    const liveResponse = await fetch(`\${API_BASE}/dashboard`, {\n                        headers: authToken ? { 'Authorization': `Bearer \${authToken}` } : {}\n                    });
                     
                     if (liveResponse.ok) {
                         const liveData = await liveResponse.json();
@@ -128,7 +121,7 @@
                 
                 // Fetch chat status data
                 try {
-                    const chatResponse = await fetch(`${API_BASE}/dashboard/chat-status`, {
+`${API_BASE}/dashboard`
                         headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
                     });
                     

@@ -54,8 +54,7 @@ const corsOptions = {
   origin: process.env.ALLOWED_ORIGINS 
     ? process.env.ALLOWED_ORIGINS.split(',') 
     : process.env.NODE_ENV === 'production' 
-      ? false  // In production, only allow same-origin
-      : '*',   // Allow all in development
+      ? ['https://edu-platform-admin-ivory.vercel.app', 'https://edu-platform-admin-ivory.vercel.app/*']  // Allow admin frontend\n      : '*',   // Allow all in development
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']

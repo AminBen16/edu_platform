@@ -1,17 +1,18 @@
-# Vercel API Build Fix - TODO Steps
+# Fix CORS, Favicon, and Dashboard Errors
 
-## Plan Implementation Steps (Approved)
+## Plan Steps:
+- [ ] 1. Copy favicon.png from apps/mobile/web → apps/admin/public/favicon.ico
+- [ ] 2. Edit apps/admin/public/index.html: Change fetch('/dashboard/analytics') → fetch('/dashboard')
+- [ ] 3. Edit apps/api/src/index.ts: Update CORS to allow admin URL + env fallback
+- [ ] 4. Add Vercel headers to vercel.json (optional redundancy)
+- [ ] 5. Test locally
+- [ ] 6. Redeploy both API and Admin to Vercel
+- [ ] 7. Verify fixes: No 404s, CORS passes, dashboard data loads
 
-### 1. [x] Update packages/db/package.json (ensure postinstall prisma generate)
-### 2. [x] Update apps/api/package.json (add db build to build script)
-### 3. [x] Update apps/api/tsconfig.json (add paths and project references for db)
-### 4. [x] Create/Update apps/api/src/types/db.d.ts (merge prisma types for db module)
-### 5. [x] Test local build: cd apps/api && npm install && npm run build (tsc succeeds)
-### 6. [x] Update vercel.json if needed (build overrides - not needed, prebuild works)
-### 7. [ ] Commit changes with message "fix: resolve vercel api build tsc hang"
-### 8. [ ] Push and trigger Vercel redeploy
-### 9. [ ] Verify build success and API endpoints
+## Root Causes Fixed:
+1. Missing `/api/v1/dashboard/analytics` endpoint (wrong URL in static HTML)
+2. CORS blocks admin → API (missing origin in production)
+3. Favicon 404 (missing file)
 
-**Current Progress: Starting implementation**
+**Next**: Starting with favicon copy...
 
-*Updated: After each step completed*
