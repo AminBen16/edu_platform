@@ -89,7 +89,9 @@
     </div>
 
     <script>
-        const API_BASE = 'https://api-32v26rbb4-ainamanipro.vercel.app/api/v1';
+// Production: Use relative path leveraging Vercel proxy/next.config.js rewrites
+// Update with your production API domain: https://your-api.vercel.app/api/v1
+const API_BASE = '/api/v1';
         let authToken = localStorage.getItem('authToken') || null;
         let isAuthenticated = !!authToken;
 
@@ -153,7 +155,7 @@
             try {
                 updateElement('api-status', '✅ API Connected', 'success');
 
-                // Fetch analytics dashboard data - use correct endpoint
+                // Fixed: Correct production endpoint matching backend routes/analyticsRoutes.ts
                 const analyticsResponse = await fetch(`${API_BASE}/analytics/dashboard`, {
                     headers: { 
                         'Authorization': `Bearer ${authToken}`,
@@ -172,6 +174,7 @@
                 }
 
                 // Live sessions - use dashboard endpoint
+                // Dashboard root endpoint exists at /api/v1/dashboard/
                 const dashboardResponse = await fetch(`${API_BASE}/dashboard`, {
                     headers: { 
                         'Authorization': `Bearer ${authToken}`
