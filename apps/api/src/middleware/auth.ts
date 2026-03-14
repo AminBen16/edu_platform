@@ -8,15 +8,11 @@ import { AuthenticatedUser } from '../types/auth';
 // Validate JWT_SECRET - must be set in production
 const JWT_SECRET = process.env.NEXTAUTH_SECRET;
 
-if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
-  console.error('NEXTAUTH_SECRET missing - using temp secret. Set in Vercel dashboard.');
-  console.warn('API / root accessible, protected routes will fail without secret.');
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  throw new Error('NEXTAUTH_SECRET is required and must be at least 32 characters. Set in Vercel dashboard. Application cannot start without this.');
 }
 
 const getSecret = () => {
-  if (!JWT_SECRET || JWT_SECRET.length < 32) {
-    throw new Error('NEXTAUTH_SECRET is missing or too short. Set in Vercel dashboard.');
-  }
   return JWT_SECRET;
 };
 

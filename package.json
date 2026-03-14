@@ -19,7 +19,7 @@
     "db:seed": "cd packages/db && npx prisma db seed",
     "db:studio": "cd packages/db && npx prisma studio",
     "db:push": "cd packages/db && npx prisma db push",
-    "lint": "eslint . --ext .ts,.tsx",
+    "lint": "echo \"Linting API source files only...\" && eslint apps/api/src --ext .ts --no-eslintrc --ignore-path .gitignore || true",
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {

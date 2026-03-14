@@ -1,4 +1,6 @@
 ﻿const { exec } = require('child_process');
+
+// Environment variables to add to Vercel
 const vars = {
   'API_URL': 'https://edu-platform-omega.vercel.app/api',
   'NEXT_PUBLIC_API_URL': 'https://edu-platform-omega.vercel.app/api',
@@ -7,10 +9,11 @@ const vars = {
 
 let count = 0;
 Object.entries(vars).forEach(([name, value]) => {
-  const proc = exec(\echo \$'\n \n' | vercel env add \\);
+  const proc = exec('echo | vercel env add');
   proc.stdin.write(value + '\n');
   proc.stdin.end();
   count++;
 });
 
 console.log('Submitted ' + count + ' environment variables');
+
