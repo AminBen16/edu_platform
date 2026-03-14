@@ -4,6 +4,7 @@ import cors from 'cors';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import * as Sentry from '@sentry/node';
+import { securityHeaders, requireJWTSecret } from './middleware/security';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -51,12 +52,17 @@ const app: Express = express();
 // Middleware
 app.use(Sentry.Handlers.requestHandler());
 const corsOptions = {
-  origin: '*',
+  origin: process.env.NODE_ENV === 'production' 
+    ? 'https://eduplatform-tau.vercel.app' 
+    : process.env.ALLOWED_ORIGINS?.split(',') || '*',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 };
 app.use(cors(corsOptions));
+app.use(securityHeaders);
+app.use(requireJWTSecret);
+app.use(Sentry.Handlers.requestHandler());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 

@@ -57,13 +57,17 @@ router.get('/:id', auth_1.protect, async (req, res) => {
     }
 });
 // POST /lessons - Create a lesson (only for teachers and admins)
+const validation_1 = require("../lib/validation");
 router.post('/', auth_1.protect, async (req, res) => {
     if (req.user.role !== 'TEACHER' && req.user.role !== 'ADMIN') {
         return res.status(403).json({ error: 'You are not authorized to create lessons.' });
     }
-    const { title, description, content, type, videoUrl, documentUrl, duration, order, isPublished, subjectId, classId, difficulty, tags, } = req.body;
-    if (!title || !description || !subjectId || !classId) {
-        return res.status(400).json({ error: 'Title, description, subjectId, and classId are required.' });
+    let title, description, content, type, videoUrl, documentUrl, duration, order, isPublished, subjectId, classId, difficulty, tags;
+    try {
+        ({ title, description, content, type, videoUrl, documentUrl, duration, order, isPublished, subjectId, classId, difficulty, tags } = validation_1.LessonCreateSchema.parse(req.body));
+    }
+    catch (error) {
+        return res.status(400).json({ error: error.message });
     }
     try {
         // Get teacher profile ID

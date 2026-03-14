@@ -58,29 +58,18 @@ router.get('/:id', protect, async (req, res) => {
 });
 
 // POST /lessons - Create a lesson (only for teachers and admins)
+import { LessonCreateSchema } from '../lib/validation';
+
 router.post('/', protect, async (req, res) => {
     if (req.user!.role !== 'TEACHER' && req.user!.role !== 'ADMIN') {
         return res.status(403).json({ error: 'You are not authorized to create lessons.' });
     }
 
-    const {
-        title,
-        description,
-        content,
-        type,
-        videoUrl,
-        documentUrl,
-        duration,
-        order,
-        isPublished,
-        subjectId,
-        classId,
-        difficulty,
-        tags,
-    } = req.body;
-
-    if (!title || !description || !subjectId || !classId) {
-        return res.status(400).json({ error: 'Title, description, subjectId, and classId are required.' });
+    let title, description, content, type, videoUrl, documentUrl, duration, order, isPublished, subjectId, classId, difficulty, tags;
+    try {
+        ({ title, description, content, type, videoUrl, documentUrl, duration, order, isPublished, subjectId, classId, difficulty, tags } = LessonCreateSchema.parse(req.body));
+    } catch (error) {
+        return res.status(400).json({ error: (error as Error).message });
     }
 
     try {
@@ -97,8 +86,8 @@ router.post('/', protect, async (req, res) => {
                 type: type || 'LESSON',
                 videoUrl,
                 documentUrl,
-                duration: duration ? parseInt(duration) : undefined,
-                order: order ? parseInt(order) : undefined,
+        duration,
+                order,
                 isPublished: isPublished || false,
                 difficulty,
                 tags: tags ? JSON.stringify(tags) : undefined,
@@ -161,8 +150,8 @@ router.put('/:id', protect, async (req, res) => {
                 type,
                 videoUrl,
                 documentUrl,
-                duration: duration ? parseInt(duration) : undefined,
-                order: order ? parseInt(order) : undefined,
+                duration,
+                order,
                 isPublished,
                 difficulty,
                 tags: tags ? (Array.isArray(tags) ? JSON.stringify(tags) : tags) : undefined,

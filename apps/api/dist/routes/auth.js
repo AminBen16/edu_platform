@@ -57,10 +57,14 @@ router.get('/validate/:code', rateLimit_1.generalRateLimit, async (req, res) => 
     }
 });
 // POST /auth/login - Production-ready login (rate limited for security)
+const validation_1 = require("../lib/validation");
 router.post('/login', rateLimit_1.authRateLimit, async (req, res) => {
-    const { email, password, schoolId } = req.body;
-    if (!email || !password) {
-        return res.status(400).json({ error: 'Email and password are required.' });
+    let email, password, schoolId;
+    try {
+        ({ email, password, schoolId } = validation_1.LoginSchema.parse(req.body));
+    }
+    catch (error) {
+        return res.status(400).json({ error: error.message });
     }
     try {
         // Find the user by email. If multiple accounts exist, schoolId will be needed.
@@ -95,10 +99,14 @@ router.post('/login', rateLimit_1.authRateLimit, async (req, res) => {
     }
 });
 // POST /auth/register - Accept invitation and create user
+const validation_2 = require("../lib/validation");
 router.post('/register', async (req, res) => {
-    const { email, password, name, invitationCode } = req.body;
-    if (!email || !password || !name || !invitationCode) {
-        return res.status(400).json({ error: 'Email, password, name, and invitation code are required.' });
+    let email, password, name, invitationCode;
+    try {
+        ({ email, password, name, invitationCode } = validation_2.RegisterSchema.parse(req.body));
+    }
+    catch (error) {
+        return res.status(400).json({ error: error.message });
     }
     try {
         const invitation = await database_1.prisma.invitation.findUnique({

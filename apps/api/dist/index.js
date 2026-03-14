@@ -43,6 +43,7 @@ const cors_1 = __importDefault(require("cors"));
 const http_1 = require("http");
 const socket_io_1 = require("socket.io");
 const Sentry = __importStar(require("@sentry/node"));
+const security_1 = require("./middleware/security");
 // Import routes
 const auth_1 = __importDefault(require("./routes/auth"));
 const users_1 = __importDefault(require("./routes/users"));
@@ -84,16 +85,17 @@ const app = (0, express_1.default)();
 // Middleware
 app.use(Sentry.Handlers.requestHandler());
 const corsOptions = {
-    origin: process.env.ALLOWED_ORIGINS
-        ? process.env.ALLOWED_ORIGINS.split(',')
-        : process.env.NODE_ENV === 'production'
-            ? false // In production, only allow same-origin
-            : '*', // Allow all in development
+    origin: process.env.NODE_ENV === 'production'
+        ? 'https://eduplatform-tau.vercel.app'
+        : process.env.ALLOWED_ORIGINS?.split(',') || '*',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 };
 app.use((0, cors_1.default)(corsOptions));
+app.use(security_1.securityHeaders);
+app.use(security_1.requireJWTSecret);
+app.use(Sentry.Handlers.requestHandler());
 app.use(express_1.default.json({ limit: '10mb' }));
 app.use(express_1.default.urlencoded({ extended: true }));
 // Health check
@@ -184,18 +186,16 @@ if (process.env.NODE_ENV !== 'production') {
     const server = (0, http_1.createServer)(app);
     const io = new socket_io_1.Server(server, {
         cors: {
-            origin: "*",
-            methods: ["GET", "POST"]
+            origin: '*',
+            methods: ['GET', 'POST']
         }
     });
     // Socket.IO for real-time features (local dev only)
     io.on('connection', (socket) => {
-        // Join class rooms
         socket.on('join-class', (classId) => {
             socket.join(classId);
             socket.emit('joined-class', { classId, userId: socket.id });
         });
-        // Real-time chat
         socket.on('send-message', (data) => {
             io.to(data.classId).emit('new-message', {
                 ...data,
@@ -203,7 +203,6 @@ if (process.env.NODE_ENV !== 'production') {
                 senderId: socket.id
             });
         });
-        // Live class WebRTC signaling
         socket.on('join-live-session', (roomCode) => {
             socket.join(roomCode);
             socket.emit('joined-session', { roomCode, userId: socket.id });
@@ -219,7 +218,7 @@ if (process.env.NODE_ENV !== 'production') {
         });
     });
     server.listen(PORT, '0.0.0.0', () => {
-        // Server started - listening on all interfaces
+        console.log(`Server running on port ${PORT}`);
     });
 }
 // Export for Vercel serverless
