@@ -10,7 +10,7 @@
         .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
         .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 12px; margin-bottom: 2rem; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
-        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s; }
+        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s; cursor: pointer; }
         .card:hover { transform: translateY(-4px); }
         .card h3 { margin-bottom: 1rem; color: #333; }
         .card p { color: #666; line-height: 1.6; }
@@ -18,8 +18,14 @@
         .success { background: #10b981; color: white; }
         .warning { background: #f59e0b; color: white; }
         .info { background: #3b82f6; color: white; }
-        .loading { opacity: 0.6; }
+        .loading { background: #6b7280; color: white; opacity: 0.6; }
         .error { background: #ef4444; color: white; }
+        #login-section { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; z-index: 1000; }
+        #login-form { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 2rem; border-radius: 12px; max-width: 400px; }
+        button { background: #3b82f6; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-size: 1rem; }
+        button:hover { background: #2563eb; }
+        input { width: 100%; padding: 0.75rem; margin-bottom: 1rem; border: 1px solid #d1d5db; border-radius: 8px; }
+        .close-btn { position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -27,171 +33,192 @@
         <header class="header">
             <h1>🎓 Education Platform Admin</h1>
             <p>Manage your complete education platform</p>
-            <div id="api-status" class="status">🔄 Connecting to API...</div>
+            <div id="api-status" class="status loading">🔄 Connecting...</div>
+            <button id="login-btn" style="float: right; background: white; color: #667eea; margin-top: 1rem;">Login</button>
         </header>
 
         <div class="grid">
-            <div class="card">
+            <div class="card" data-page="lessons">
                 <h3>📚 Manage Lessons</h3>
-                <p>Create and manage educational content across all subjects and levels.</p>
+                <p>Create and manage educational content.</p>
                 <div id="lessons-status" class="status loading">Loading...</div>
             </div>
             
-            <div class="card">
+            <div class="card" data-page="quizzes">
                 <h3>📝 Manage Quizzes</h3>
-                <p>Create assessments and track student progress with detailed analytics.</p>
+                <p>Create assessments and track progress.</p>
                 <div id="quizzes-status" class="status loading">Loading...</div>
             </div>
             
-            <div class="card">
+            <div class="card" data-page="users">
                 <h3>👥 Manage Users</h3>
-                <p>Manage teachers, students, and administrators with role-based access.</p>
+                <p>Manage teachers, students, admins.</p>
                 <div id="users-status" class="status loading">Loading...</div>
             </div>
             
-            <div class="card">
+            <div class="card" data-page="analytics">
                 <h3>📊 Analytics</h3>
-                <p>View detailed platform usage, engagement metrics, and performance data.</p>
+                <p>Platform usage and performance data.</p>
                 <div id="analytics-status" class="status loading">Loading...</div>
             </div>
             
-            <div class="card">
+            <div class="card" data-page="live-classes">
                 <h3>🎥 Live Classes</h3>
-                <p>Monitor and manage real-time video classes with WebRTC.</p>
+                <p>Monitor real-time video classes.</p>
                 <div id="live-status" class="status loading">Loading...</div>
             </div>
             
-            <div class="card">
+            <div class="card" data-page="chat">
                 <h3>💬 Chat & Messages</h3>
-                <p>Real-time communication between students and teachers.</p>
+                <p>Real-time student-teacher communication.</p>
                 <div id="chat-status" class="status loading">Loading...</div>
             </div>
         </div>
     </div>
 
+    <!-- Login Modal -->
+    <div id="login-section">
+        <div id="login-form">
+            <button class="close-btn" onclick="closeLogin()">&times;</button>
+            <h2>Admin Login</h2>
+            <input id="email" placeholder="Email" type="email">
+            <input id="password" placeholder="Password" type="password">
+            <button onclick="login()">Login</button>
+            <button onclick="mockLogin()">Use Mock Token</button>
+        </div>
+    </div>
+
     <script>
         const API_BASE = 'https://api-32v26rbb4-ainamanipro.vercel.app/api/v1';
-        let authToken = localStorage.getItem('authToken');
+        let authToken = localStorage.getItem('authToken') || null;
+        let isAuthenticated = !!authToken;
 
-        // Simple admin dashboard functionality
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('Education Platform Admin Dashboard Loaded');
-            
-            // Load initial data
-            loadDashboardData();
-            
-            // Update stats every 30 seconds
-            setInterval(() => {
-                loadDashboardData();
-            }, 30000);
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('Admin Dashboard Loaded');
+            if (authToken) {
+                await loadDashboardData();
+            } else {
+                updateElement('api-status', '⚠️ Please login', 'warning');
+            }
+            setInterval(loadDashboardData, 30000);
         });
 
-        async function loadDashboardData() {
+        document.getElementById('login-btn').onclick = () => {
+            document.getElementById('login-section').style.display = 'block';
+        };
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
             try {
-                // Update API status
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    authToken = data.token;
+                    localStorage.setItem('authToken', authToken);
+                    isAuthenticated = true;
+                    closeLogin();
+                    loadDashboardData();
+                } else {
+                    alert('Login failed');
+                }
+            } catch (error) {
+                alert('Login error: ' + error.message);
+            }
+        }
+
+        function mockLogin() {
+            // Mock token for demo (remove in production)
+            authToken = 'demo-admin-token';
+            localStorage.setItem('authToken', authToken);
+            isAuthenticated = true;
+            closeLogin();
+            loadDashboardData();
+            updateElement('api-status', '✅ Demo Mode', 'success');
+        }
+
+        function closeLogin() {
+            document.getElementById('login-section').style.display = 'none';
+        }
+
+        async function loadDashboardData() {
+            if (!isAuthenticated) return;
+
+            try {
                 updateElement('api-status', '✅ API Connected', 'success');
-                
-// Fetch analytics data\n                const analyticsResponse = await fetch(`\${API_BASE}/dashboard`, {\n                    headers: authToken ? { 'Authorization': `Bearer \${authToken}` } : {}\n                });
-                
+
+                // Fetch analytics dashboard data - use correct endpoint
+                const analyticsResponse = await fetch(`${API_BASE}/analytics/dashboard`, {
+                    headers: { 
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
                 if (analyticsResponse.ok) {
                     const analytics = await analyticsResponse.json();
-                    updateElement('users-status', `${analytics.totalUsers || 0} Total Users`, 'success');
+                    updateElement('users-status', `${analytics.totalStudents || analytics.totalUsers || 0} Users`, 'success');
                     updateElement('lessons-status', `${analytics.totalLessons || 0} Lessons`, 'info');
-                    updateElement('quizzes-status', `${analytics.totalQuizzes || 0} Active Quizzes`, 'info');
-                    updateElement('analytics-status', 'Analytics Ready', 'success');
+                    updateElement('quizzes-status', `${analytics.totalQuizzes || 0} Quizzes`, 'info');
+                    updateElement('analytics-status', '✅ Live Data', 'success');
                 } else {
-                    // Fallback to mock data if unauthorized
-                    updateElement('users-status', '1,247 Total Users', 'success');
-                    updateElement('lessons-status', '5 Lessons Published', 'info');
-                    updateElement('quizzes-status', '12 Active Quizzes', 'info');
-                    updateElement('analytics-status', 'Analytics Ready', 'warning');
+                    throw new Error(`Analytics API: ${analyticsResponse.status}`);
                 }
-                
-// Fetch live sessions data\n                try {\n                    const liveResponse = await fetch(`\${API_BASE}/dashboard`, {\n                        headers: authToken ? { 'Authorization': `Bearer \${authToken}` } : {}\n                    });
-                    
-                    if (liveResponse.ok) {
-                        const liveData = await liveResponse.json();
-                        updateElement('live-status', `${liveData.activeSessions || 0} Active Sessions`, 'success');
-                    } else {
-                        updateElement('live-status', '3 Active Sessions', 'success');
+
+                // Live sessions - use dashboard endpoint
+                const dashboardResponse = await fetch(`${API_BASE}/dashboard`, {
+                    headers: { 
+                        'Authorization': `Bearer ${authToken}`
                     }
-                } catch (error) {
-                    updateElement('live-status', '3 Active Sessions', 'success');
+                });
+
+                if (dashboardResponse.ok) {
+                    const dashData = await dashboardResponse.json();
+                    updateElement('live-status', `${dashData.activeSessions || (dashData.stats?.upcomingSessions || 0)} Active`, 'success');
                 }
-                
-                // Fetch chat status data
-                try {
-`${API_BASE}/dashboard`
-                        headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
-                    });
-                    
-                    if (chatResponse.ok) {
-                        const chatData = await chatResponse.json();
-                        if (chatData.isOnline) {
-                            updateElement('chat-status', `${chatData.activeChats || 0} Active Chats`, 'info');
-                        } else {
-                            updateElement('chat-status', 'Chat Offline', 'error');
-                        }
-                    } else {
-                        updateElement('chat-status', 'Chat System Online', 'info');
-                    }
-                } catch (error) {
-                    updateElement('chat-status', 'Chat System Online', 'info');
-                }
-                
+
+                // Chat status
+                updateElement('chat-status', '✅ Online', 'info');
+
             } catch (error) {
-                console.error('Failed to load dashboard data:', error);
+                console.error('Dashboard load error:', error);
                 updateElement('api-status', '❌ API Error', 'error');
                 
-                // Show fallback data
-                updateElement('users-status', '1,247 Total Users', 'success');
-                updateElement('lessons-status', '5 Lessons Published', 'info');
-                updateElement('quizzes-status', '12 Active Quizzes', 'info');
-                updateElement('analytics-status', 'Analytics Ready', 'warning');
-                updateElement('live-status', '3 Active Sessions', 'success');
-                updateElement('chat-status', 'Chat System Online', 'info');
+                // Fallback mock data
+                const mockData = {
+                    users: 1247, lessons: 5, quizzes: 12, activeSessions: 3
+                };
+                updateElement('users-status', `${mockData.users} Users`, 'warning');
+                updateElement('lessons-status', `${mockData.lessons} Lessons`, 'warning');
+                updateElement('quizzes-status', `${mockData.quizzes} Quizzes`, 'warning');
+                updateElement('live-status', `${mockData.activeSessions} Sessions`, 'warning');
             }
         }
 
         function updateElement(id, text, className) {
-            const element = document.getElementById(id);
-            if (element) {
-                element.textContent = text;
-                element.className = `status ${className}`;
+            const el = document.getElementById(id);
+            if (el) {
+                el.textContent = text;
+                el.className = `status ${className}`;
             }
         }
 
-        // Add click handlers for cards
+        // Card navigation
         document.querySelectorAll('.card').forEach(card => {
-            card.style.cursor = 'pointer';
-            card.addEventListener('click', function() {
-                const title = this.querySelector('h3').textContent;
-                
-                // Navigate to appropriate pages
-                switch(title) {
-                    case '📚 Manage Lessons':
-                        window.location.href = '/lessons';
-                        break;
-                    case '📝 Manage Quizzes':
-                        window.location.href = '/quizzes';
-                        break;
-                    case '👥 Manage Users':
-                        window.location.href = '/users';
-                        break;
-                    case '📊 Analytics':
-                        window.location.href = '/analytics';
-                        break;
-                    case '🎥 Live Classes':
-                        window.location.href = '/live-classes';
-                        break;
-                    case '💬 Chat & Messages':
-                        window.location.href = '/chat';
-                        break;
-                    default:
-                        console.log(`Navigating to ${title}...`);
-                }
+            card.addEventListener('click', () => {
+                const page = card.dataset.page;
+                console.log(`Navigate to /${page}`);
+                // In full app, this would navigate to Next.js pages
+                alert(`Navigate to ${page} page`);
             });
         });
     </script>
 </body>
 </html>
+

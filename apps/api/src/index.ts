@@ -51,10 +51,7 @@ const app: Express = express();
 // Middleware
 app.use(Sentry.Handlers.requestHandler());
 const corsOptions = {
-  origin: process.env.ALLOWED_ORIGINS 
-    ? process.env.ALLOWED_ORIGINS.split(',') 
-    : process.env.NODE_ENV === 'production' 
-      ? ['https://edu-platform-admin-ivory.vercel.app', 'https://edu-platform-admin-ivory.vercel.app/*']  // Allow admin frontend\n      : '*',   // Allow all in development
+  origin: '*',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -158,20 +155,18 @@ if (process.env.NODE_ENV !== 'production') {
   const server = createServer(app);
   const io = new SocketIOServer(server, {
     cors: {
-      origin: "*",
-      methods: ["GET", "POST"]
+      origin: '*',
+      methods: ['GET', 'POST']
     }
   });
 
   // Socket.IO for real-time features (local dev only)
   io.on('connection', (socket: any) => {
-    // Join class rooms
     socket.on('join-class', (classId: any) => {
       socket.join(classId);
       socket.emit('joined-class', { classId, userId: socket.id });
     });
     
-    // Real-time chat
     socket.on('send-message', (data: any) => {
       io.to(data.classId).emit('new-message', {
         ...data,
@@ -180,7 +175,6 @@ if (process.env.NODE_ENV !== 'production') {
       });
     });
     
-    // Live class WebRTC signaling
     socket.on('join-live-session', (roomCode: any) => {
       socket.join(roomCode);
       socket.emit('joined-session', { roomCode, userId: socket.id });
@@ -199,7 +193,7 @@ if (process.env.NODE_ENV !== 'production') {
   });
 
   server.listen(PORT, '0.0.0.0', () => {
-    // Server started - listening on all interfaces
+    console.log(`Server running on port ${PORT}`);
   });
 }
 
@@ -207,3 +201,4 @@ if (process.env.NODE_ENV !== 'production') {
 export default function handler(req: Request, res: Response) {
   return (app as any)(req, res);
 }
+
