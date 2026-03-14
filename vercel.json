@@ -19,6 +19,5 @@
       "src": "/(.*)",
       "dest": "apps/api/dist/index.js"
     }
-  ],
-  "outputDirectory": "apps/api/dist"
+  ]
 }
