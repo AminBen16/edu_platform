@@ -1,10 +1,7 @@
-﻿import express, { Express, Request, Response } from 'express';
+// production API - Complete Education Platform
+import express, { Express, Request, Response } from 'express';
 
 const app: Express = express();
-
-// Basic middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
 
 // Health check
 app.get('/', (req: Request, res: Response) => {
@@ -16,21 +13,22 @@ app.get('/', (req: Request, res: Response) => {
   });
 });
 
-// Test endpoint
+// Test endpoint for debugging
 app.get('/test', (req: Request, res: Response) => {
-  res.status(200).json({ message: 'Test endpoint working' });
-});
-
-// API v1 check
-app.get('/api/v1', (req: Request, res: Response) => {
-  res.status(200).json({ message: 'API v1 available' });
+  res.status(200).json({ 
+    message: 'Test endpoint working',
+    env: {
+      NODE_ENV: process.env.NODE_ENV,
+      HAS_NEXTAUTH_SECRET: !!process.env.NEXTAUTH_SECRET
+    }
+  });
 });
 
 // 404 handler
 app.use('*', (req: Request, res: Response) => {
   res.status(404).json({
     error: 'Endpoint not found',
-    message: `Cannot ${req.method} ${req.path}`
+    message: `Cannot ${req.method} ${req.path}`,
   });
 });
 
