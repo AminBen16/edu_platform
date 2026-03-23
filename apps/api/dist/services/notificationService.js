@@ -9,7 +9,14 @@ const emailService_1 = __importDefault(require("./emailService"));
 const notificationsStore = [];
 class NotificationService {
     static getPublicUrl() {
-        return process.env.PUBLIC_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+        const vercelUrl = process.env.VERCEL_URL
+            ? `https://${process.env.VERCEL_URL}`
+            : undefined;
+        return (process.env.PUBLIC_URL ||
+            process.env.PUBLIC_APP_URL ||
+            process.env.NEXTAUTH_URL ||
+            vercelUrl ||
+            'http://localhost:3000');
     }
     static async sendNotification(options) {
         try {

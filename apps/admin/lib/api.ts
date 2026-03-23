@@ -1,6 +1,14 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+const browserBaseUrl = '/api/v1';
+const serverBaseUrl =
+  process.env.INTERNAL_API_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://127.0.0.1:3002/api/v1';
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (typeof window === 'undefined' ? serverBaseUrl : browserBaseUrl);
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

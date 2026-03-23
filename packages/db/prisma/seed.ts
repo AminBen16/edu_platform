@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import * as bcrypt from 'bcryptjs';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -276,7 +276,6 @@ async function main() {
         classId: classEntity.id,
         isActive: true,
         startTime: new Date(),
-        maxParticipants: 50,
       },
     });
   }
@@ -316,10 +315,10 @@ async function main() {
   console.log('✅ Seeding completed successfully!');
   console.log('');
   console.log('Test Accounts:');
-  console.log('  Admin:    admin@kavuma.com / password');
-  console.log('  Teacher:  teacher@kavuma.com / password');
-  console.log('  Student:  student@kavuma.com / password');
-  console.log('  Parent:   parent@kavuma.com / password');
+  console.log('  Admin:    admin@eduplatform.local / Admin@123');
+  console.log('  Teacher:  teacher@eduplatform.local / Teacher@123');
+  console.log('  Student:  student@eduplatform.local / Student@123');
+  console.log('  Parent:   parent@eduplatform.local / Parent@123');
   console.log('');
   console.log('Parent can view student progress via parentEmail link');
 }

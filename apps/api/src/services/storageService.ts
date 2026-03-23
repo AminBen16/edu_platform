@@ -1,11 +1,10 @@
-// apps/api/src/services/storageService.ts
-// Free cloud storage service (Supabase, Firebase, Cloudinary)
-
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { mkdir, unlink, writeFile } from 'fs/promises';
 import path from 'path';
-import fs from 'fs';
 
 interface StorageOptions {
-  file: Buffer;
+  file: Buffer | Uint8Array | NodeJS.ReadableStream;
   fileName: string;
   contentType: string;
   bucket?: string;
@@ -13,217 +12,162 @@ interface StorageOptions {
 
 interface StorageResult {
   url: string;
-  path: string;
+  key: string;
   size: number;
 }
 
 class StorageService {
-  private static provider: 'local' | 'supabase' | 'firebase' | 'cloudinary' = 'local';
-  
-  // Local storage (current setup - FREE)
-  static async storeLocal(options: StorageOptions): Promise<StorageResult> {
-    const uploadsDir = path.join(process.cwd(), 'uploads');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-    
-    const fileName = `${Date.now()}-${options.fileName}`;
-    const filePath = path.join(uploadsDir, fileName);
-    
-    fs.writeFileSync(filePath, options.file);
-    
-    return {
-      url: `/uploads/${fileName}`,
-      path: filePath,
-      size: options.file.length
-    };
+  private static client: S3Client;
+
+  private static hasR2Config() {
+    return Boolean(
+      process.env.R2_ENDPOINT &&
+      process.env.R2_ACCESS_KEY_ID &&
+      process.env.R2_SECRET_ACCESS_KEY &&
+      process.env.R2_BUCKET
+    );
   }
-  
-  // Supabase storage (FREE tier: 1GB + 2GB bandwidth)
-  static async storeSupabase(options: StorageOptions): Promise<StorageResult> {
-    // Implementation for Supabase
-    // npm install @supabase/supabase-js
-    try {
-      const { createClient } = require('@supabase/supabase-js');
-      const supabase = createClient(
-        process.env.SUPABASE_URL!,
-        process.env.SUPABASE_ANON_KEY!
-      );
-      
-      const bucket = options.bucket || 'uploads';
-      const fileName = `${Date.now()}-${options.fileName}`;
-      
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .upload(`public/${fileName}`, options.file, {
-          contentType: options.contentType,
-          upsert: false
-        });
-      
-      if (error) throw error;
-      
-      return {
-        url: data.path,
-        path: data.path,
-        size: options.file.length
-      };
-    } catch (error: any) {
-      console.error('Supabase storage error:', error);
-      throw new Error('Failed to store in Supabase');
-    }
+
+  private static getPublicBaseUrl() {
+    const vercelUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : undefined;
+    const baseUrl =
+      process.env.PUBLIC_APP_URL ||
+      process.env.PUBLIC_URL ||
+      process.env.NEXTAUTH_URL ||
+      vercelUrl ||
+      `http://localhost:${process.env.PORT || 3002}`;
+
+    return baseUrl.replace(/\/$/, '');
   }
-  
-  // Firebase storage (FREE tier: 1GB + 10GB bandwidth)
-  static async storeFirebase(options: StorageOptions): Promise<StorageResult> {
-    // Implementation for Firebase
-    // npm install firebase-admin
-    try {
-      const admin = require('firebase-admin');
-      const serviceAccount = require('../../firebase-service-account.json');
-      
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-        storageBucket: process.env.FIREBASE_STORAGE_BUCKET
-      });
-      
-      const bucket = admin.storage().bucket();
-      const fileName = `${Date.now()}-${options.fileName}`;
-      
-      const file = bucket.file(fileName);
-      
-      await file.save(options.file, {
-        metadata: {
-          contentType: options.contentType
-        }
-      });
-      
-      const [url] = await file.getSignedUrl({
-        action: 'read',
-        expires: '03-01-2500' // 100 years
-      });
-      
-      return {
-        url: url,
-        path: fileName,
-        size: options.file.length
-      };
-    } catch (error: any) {
-      console.error('Firebase storage error:', error);
-      throw new Error('Failed to store in Firebase');
-    }
+
+  private static getLocalUploadRoot() {
+    return path.join(process.cwd(), 'uploads');
   }
-  
-  // Cloudinary storage (FREE tier: 25GB + 25GB bandwidth)
-  static async storeCloudinary(options: StorageOptions): Promise<StorageResult> {
-    // Implementation for Cloudinary
-    // npm install cloudinary
-    try {
-      const cloudinary = require('cloudinary').v2;
-      
-      cloudinary.config({
-        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-        api_key: process.env.CLOUDINARY_API_KEY,
-        api_secret: process.env.CLOUDINARY_API_SECRET
-      });
-      
-      const result = await new Promise<any>((resolve, reject) => {
-        cloudinary.uploader.upload_stream(
-          {
-            resource_type: 'auto',
-            folder: options.bucket || 'uploads',
-            public_id: `${Date.now()}-${options.fileName.split('.')[0]}`,
-          },
-          (error: any, result: any) => {
-            if (error) reject(error);
-            else resolve(result);
-          }
-        ).end(options.file);
-      });
-      
-      return {
-        url: result.secure_url,
-        path: result.public_id,
-        size: options.file.length
-      };
-    } catch (error: any) {
-      console.error('Cloudinary storage error:', error);
-      throw new Error('Failed to store in Cloudinary');
+
+  static initialize() {
+    if (!StorageService.hasR2Config()) {
+      throw new Error('R2 env vars not set.');
     }
+
+    StorageService.client = new S3Client({
+      region: 'auto',
+      endpoint: process.env.R2_ENDPOINT!,
+      credentials: {
+        accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+      },
+      forcePathStyle: false, // R2 uses virtual-hosted style
+    });
   }
-  
-  // Main storage method
+
   static async storeFile(options: StorageOptions): Promise<StorageResult> {
-    // Start with local storage (always available)
-    const localResult = await this.storeLocal(options);
-    
-    // Try cloud storage if configured (free tier)
-    if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
-      try {
-        const cloudResult = await this.storeSupabase(options);
-        console.log('File stored in Supabase:', cloudResult.url);
-        return cloudResult;
-      } catch (error: any) {
-        console.log('Supabase failed, using local storage:', error.message);
-      }
+    const sanitizedFileName = options.fileName.replace(/\\/g, '/').replace(/[^a-zA-Z0-9._/-]/g, '_');
+    const body = Buffer.isBuffer(options.file)
+      ? options.file
+      : options.file instanceof Uint8Array
+        ? Buffer.from(options.file)
+        : null;
+
+    if (!body) {
+      throw new Error('Local storage only supports buffer uploads.');
     }
-    
-    if (process.env.FIREBASE_STORAGE_BUCKET) {
-      try {
-        const cloudResult = await this.storeFirebase(options);
-        console.log('File stored in Firebase:', cloudResult.url);
-        return cloudResult;
-      } catch (error: any) {
-        console.log('Firebase failed, using local storage:', error.message);
-      }
+
+    if (!StorageService.hasR2Config()) {
+      const relativeKey = `${Date.now()}-${sanitizedFileName}`.replace(/^\/+/, '');
+      const localPath = path.join(StorageService.getLocalUploadRoot(), relativeKey);
+      await mkdir(path.dirname(localPath), { recursive: true });
+      await writeFile(localPath, body);
+
+      return {
+        url: `${StorageService.getPublicBaseUrl()}/uploads/${relativeKey.replace(/\\/g, '/')}`,
+        key: `local/${relativeKey.replace(/\\/g, '/')}`,
+        size: body.length,
+      };
     }
-    
-    if (process.env.CLOUDINARY_CLOUD_NAME) {
-      try {
-        const cloudResult = await this.storeCloudinary(options);
-        console.log('File stored in Cloudinary:', cloudResult.url);
-        return cloudResult;
-      } catch (error: any) {
-        console.log('Cloudinary failed, using local storage:', error.message);
-      }
+
+    if (!StorageService.client) {
+      StorageService.initialize();
     }
-    
-    // Fallback to local storage
-    console.log('Using local storage:', localResult.url);
-    return localResult;
-  }
-  
-  // Delete file from storage
-  static async deleteFile(filePath: string): Promise<boolean> {
+
+    const key = `uploads/${Date.now()}-${sanitizedFileName}`;
+    const bucket = process.env.R2_BUCKET!;
+
+    const command = new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: body,
+      ContentType: options.contentType,
+      CacheControl: 'public, max-age=31536000', // 1 year
+    });
+
     try {
-      // Try cloud storage first
-      if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-        const { createClient } = require('@supabase/supabase-js');
-        const supabase = createClient(
-          process.env.SUPABASE_URL!,
-          process.env.SUPABASE_SERVICE_ROLE_KEY!
-        );
-        
-        const { error } = await supabase.storage
-          .from('uploads')
-          .remove([filePath]);
-        
-        if (!error) return true;
-      }
-      
-      // Fallback to local storage
-      const localPath = path.join(process.cwd(), filePath);
-      
-      if (fs.existsSync(localPath)) {
-        fs.unlinkSync(localPath);
-        return true;
-      }
-      
-      return false;
+      await StorageService.client.send(command);
+
+      // Get public URL (R2 public bucket)
+      const publicUrl = `https://${bucket}.${process.env.R2_PUBLIC_HOSTNAME || process.env.R2_ENDPOINT!.split('//')[1].split('/')[0]}/${key}`;
+
+      return {
+        url: publicUrl,
+        key,
+        size: body.length,
+      };
     } catch (error: any) {
-      console.error('Delete file error:', error);
+      console.error('R2 upload error:', error);
+      throw new Error('Failed to store file in R2');
+    }
+  }
+
+  static async deleteFile(key: string): Promise<boolean> {
+    if (key.startsWith('local/')) {
+      try {
+        const localPath = path.join(StorageService.getLocalUploadRoot(), key.replace(/^local\//, ''));
+        await unlink(localPath);
+        return true;
+      } catch (error: any) {
+        console.error('Local delete error:', error);
+        return false;
+      }
+    }
+
+    if (!StorageService.client) {
+      StorageService.initialize();
+    }
+
+    const bucket = process.env.R2_BUCKET!;
+    const command = new DeleteObjectCommand({
+      Bucket: bucket,
+      Key: key,
+    });
+
+    try {
+      await StorageService.client.send(command);
+      return true;
+    } catch (error: any) {
+      console.error('R2 delete error:', error);
       return false;
     }
+  }
+
+  static async getPresignedUrl(key: string, expiresIn = 3600): Promise<string> {
+    if (key.startsWith('local/')) {
+      return `${StorageService.getPublicBaseUrl()}/uploads/${key.replace(/^local\//, '')}`;
+    }
+
+    if (!StorageService.client) {
+      StorageService.initialize();
+    }
+
+    const command = new GetObjectCommand({
+      Bucket: process.env.R2_BUCKET!,
+      Key: key,
+    });
+
+    const url = await getSignedUrl(StorageService.client, command, { expiresIn });
+    return url;
   }
 }
 
 export default StorageService;
+

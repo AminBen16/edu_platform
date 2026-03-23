@@ -24,6 +24,8 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
     "Welcome to the class!",
     "Please keep your mics muted.",
   ];
+  static const String _sessionNotice =
+      'This screen is currently the class session lobby. Live video streaming is enabled only after your school configures a meeting provider.';
 
   @override
   void dispose() {
@@ -90,8 +92,17 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
                   Icon(Icons.live_tv, size: 80, color: Colors.white24),
                   SizedBox(height: 16),
                   Text(
-                    'Live Stream Feed',
+                    'Class Session Lobby',
                     style: TextStyle(color: Colors.white54, fontSize: 18),
+                  ),
+                  SizedBox(height: 12),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 32),
+                    child: Text(
+                      _sessionNotice,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white38, fontSize: 13),
+                    ),
                   ),
                 ],
               ),

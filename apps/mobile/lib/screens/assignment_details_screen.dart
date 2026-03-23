@@ -58,8 +58,8 @@ class _AssignmentDetailsScreenState extends State<AssignmentDetailsScreen> {
     try {
       final submissionData = <String, dynamic>{
         'assignmentId': widget.assignment['id']?.toString(),
-        'comment': _commentController.text,
-        'fileName': _attachedFileName,
+        'content': _commentController.text, // Map comment to content
+        'fileUrl': _attachedFileName != null ? 'https://example.com/uploads/$_attachedFileName' : null, // Simulate fileUrl
       };
 
       await ApiService.submitAssignment(widget.assignment['id'].toString(), submissionData);

@@ -13,11 +13,15 @@ const emitToUser = async (userId: string, event: string, data: any) => {
 
 const router = Router();
 
+const serializeNotificationData = (payload: Record<string, unknown>) =>
+  JSON.stringify(
+    Object.fromEntries(
+      Object.entries(payload).filter(([, value]) => value !== undefined && value !== null)
+    )
+  );
+
 // Validation helper
 const validateDatabaseConnection = () => {
-  if (!process.env.DATABASE_URL) {
-    throw new Error('DATABASE_URL environment variable is required for production');
-  }
   return true;
 };
 
@@ -97,47 +101,56 @@ router.post('/send', protect, async (req, res) => {
   
   try {
     validateDatabaseConnection();
+    const recipientGroups = Array.isArray(recipients) ? recipients : [];
     
     const notificationData = {
       title,
       message,
       type,
-      contentId,
-      contentType,
-      priority: priority || 'normal',
-      data: data || {},
       schoolId: req.user!.schoolId,
-      senderId: req.user!.id,
+      data: serializeNotificationData({
+        contentId,
+        contentType,
+        priority: priority || 'normal',
+        channels,
+        sendImmediately,
+        senderId: req.user!.id,
+        metadata: data ?? null,
+      }),
       createdAt: new Date(),
     };
 
     // Get target users based on recipients
     let targetUsers: any[] = [];
     
-    if (recipients.includes('all')) {
+    if (recipientGroups.includes('all')) {
       targetUsers = await prisma.user.findMany({
         where: { schoolId: req.user!.schoolId },
       });
-    } else if (recipients.includes('students')) {
+    } else if (recipientGroups.includes('students')) {
       targetUsers = await prisma.user.findMany({
         where: { 
           schoolId: req.user!.schoolId,
           role: 'STUDENT',
         },
       });
-    } else if (recipients.includes('parents')) {
+    } else if (recipientGroups.includes('parents')) {
       targetUsers = await prisma.user.findMany({
         where: { 
           schoolId: req.user!.schoolId,
           role: 'PARENT',
         },
       });
-    } else if (recipients.includes('admin')) {
+    } else if (recipientGroups.includes('admin')) {
       targetUsers = await prisma.user.findMany({
         where: { 
           schoolId: req.user!.schoolId,
           role: { in: ['ADMIN', 'SUPER_ADMIN'] },
         },
+      });
+    } else {
+      targetUsers = await prisma.user.findMany({
+        where: { schoolId: req.user!.schoolId, id: req.user!.id },
       });
     }
 
@@ -219,8 +232,11 @@ async function _sendSingleUserNotification(req: any, res: any, toUserId: string,
       type,
       userId: toUserId,
       schoolId: req.user!.schoolId,
-      senderId: req.user!.id,
       isRead: false,
+      data: serializeNotificationData({
+        senderId: req.user!.id,
+        channel: 'direct',
+      }),
       createdAt: new Date(),
     };
 

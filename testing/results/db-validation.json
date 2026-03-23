@@ -1,0 +1,80 @@
+{
+  "checkedAt": "2026-03-22T11:24:31.113Z",
+  "schemaModels": 43,
+  "tables": [
+    "Announcement",
+    "Answer",
+    "Assessment",
+    "AssessmentResult",
+    "Assignment",
+    "Attendance",
+    "AuditLog",
+    "Class",
+    "Competency",
+    "CompetencyProgress",
+    "Curriculum",
+    "CurriculumLevel",
+    "DeletionRequest",
+    "Enrollment",
+    "Invitation",
+    "LearningOutcome",
+    "Lesson",
+    "LessonCompetency",
+    "LessonResource",
+    "LevelSubject",
+    "LiveSession",
+    "LiveSessionParticipant",
+    "Message",
+    "Notification",
+    "Option",
+    "Question",
+    "Quiz",
+    "QuizAttempt",
+    "RateLimit",
+    "ReportCard",
+    "ReportCardSubject",
+    "Schedule",
+    "School",
+    "SchoolSettings",
+    "Student",
+    "Subject",
+    "Submission",
+    "Teacher",
+    "Term",
+    "Ticket",
+    "TicketComment",
+    "Topic",
+    "User"
+  ],
+  "sampleCounts": {
+    "schools": 1,
+    "users": 4,
+    "classes": 1,
+    "lessons": 2,
+    "quizzes": 1,
+    "messages": 0,
+    "liveSessions": 1
+  },
+  "seededAccounts": [
+    {
+      "email": "admin@eduplatform.local",
+      "role": "ADMIN"
+    },
+    {
+      "email": "parent@eduplatform.local",
+      "role": "PARENT"
+    },
+    {
+      "email": "student@eduplatform.local",
+      "role": "STUDENT"
+    },
+    {
+      "email": "teacher@eduplatform.local",
+      "role": "TEACHER"
+    }
+  ],
+  "configCheck": {
+    "adminEmail": "admin@eduplatform.local",
+    "adminFound": true
+  }
+}

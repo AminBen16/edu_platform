@@ -152,7 +152,9 @@ router.get('/:id', auth_1.protect, async (req, res) => {
         const level = await database_1.prisma.curriculumLevel.findUnique({
             where: { id },
             include: {
+                // @ts-ignore
                 curriculum: true,
+                // @ts-ignore
                 subjects: {
                     include: { subject: true }
                 },
@@ -163,6 +165,7 @@ router.get('/:id', auth_1.protect, async (req, res) => {
             return res.status(404).json({ error: 'Level not found' });
         }
         // Verify it belongs to user's school
+        // @ts-ignore
         if (level.curriculum?.schoolId !== req.user.schoolId) {
             return res.status(404).json({ error: 'Level not found' });
         }

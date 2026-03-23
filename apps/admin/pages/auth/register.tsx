@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { signIn } from 'next-auth/react';
 import { api } from '../../lib/api';
 
 export default function RegisterPage() {
@@ -28,9 +29,11 @@ export default function RegisterPage() {
   const validateInvitation = async () => {
     try {
       setValidating(true);
-      const response = await api.post('/auth/validate-invitation', {
-        invitationCode,
-      });
+      const normalizedInvitationCode = Array.isArray(invitationCode)
+        ? invitationCode[0]
+        : invitationCode;
+
+      const response = await api.get(`/auth/validate/${normalizedInvitationCode}`);
       
       setInvitation(response.data);
       setFormData(prev => ({
@@ -70,8 +73,11 @@ export default function RegisterPage() {
         password: formData.password,
       });
 
-      // Store token and redirect
-      localStorage.setItem('authToken', response.data.token);
+      await signIn('credentials', {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+      });
       router.push('/');
     } catch (err) {
       setError('Registration failed. Please try again.');

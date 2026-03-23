@@ -35,8 +35,9 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.eduplatform.mobile"
+        // IMPORTANT: You must change this value to a unique application ID.
+        // See: https://developer.android.com/studio/build/application-id.html
+        applicationId = "com.yourcompany.yourapp"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -49,8 +50,15 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // To sign your app for release, you need to create a file named 'key.properties'
+            // in the 'android' directory with the following content:
+            //
+            // storeFile=<path_to_your_keystore>
+            // storePassword=<your_store_password>
+            // keyAlias=<your_key_alias>
+            // keyPassword=<your_key_password>
+            //
+            // See: https://flutter.dev/to/sign-android-release
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

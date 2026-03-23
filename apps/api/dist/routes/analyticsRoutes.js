@@ -5,7 +5,7 @@ const auth_1 = require("../middleware/auth");
 const database_1 = require("../config/database");
 const database_2 = require("../lib/database");
 const router = (0, express_1.Router)();
-router.get('/dashboard', auth_1.protect, async (req, res) => {
+router.get('/', auth_1.protect, async (req, res) => {
     const schoolId = req.user?.schoolId;
     if (!schoolId) {
         return res.status(400).json({ message: 'School ID not found in user session.' });
@@ -30,34 +30,22 @@ router.get('/dashboard', auth_1.protect, async (req, res) => {
             database_1.prisma.user.findMany({
                 where: {
                     schoolId,
-                    studentProfile: {
-                        is: {
-                            enrollments: {
-                                some: {}
-                            }
-                        }
-                    }
+                    Student: { isNot: null }
                 },
                 select: {
                     id: true,
                     name: true,
                     email: true,
-                    studentProfile: {
+                    Student: {
                         include: {
                             enrollments: {
                                 select: {
-                                    Lesson: {
-                                        select: {
-                                            id: true
-                                        }
+                                    lesson: {
+                                        select: { id: true }
                                     }
                                 }
                             },
-                            quizAttempts: {
-                                select: {
-                                    score: true
-                                }
-                            }
+                            quizAttempts: true
                         }
                     }
                 }
@@ -68,11 +56,11 @@ router.get('/dashboard', auth_1.protect, async (req, res) => {
             let lessonsCompleted = 0;
             let quizzesTaken = 0;
             let averageQuizScore = 0;
-            if (user.studentProfile) {
-                lessonsCompleted = user.studentProfile.enrollments.reduce((sum, e) => sum + (e.Lesson || []).length, 0);
-                quizzesTaken = user.studentProfile.quizAttempts.length;
+            if (user.Student) {
+                lessonsCompleted = (user.Student.enrollments || []).reduce((sum, e) => sum + (e.lesson ? 1 : 0), 0);
+                quizzesTaken = (user.Student.quizAttempts || []).length;
                 if (quizzesTaken > 0) {
-                    averageQuizScore = user.studentProfile.quizAttempts.reduce((sum, qa) => sum + (qa.score || 0), 0) / quizzesTaken;
+                    averageQuizScore = user.Student.quizAttempts.reduce((sum, qa) => sum + (qa.score || 0), 0) / quizzesTaken;
                 }
             }
             return {

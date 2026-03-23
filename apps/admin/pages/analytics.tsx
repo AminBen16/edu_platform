@@ -213,7 +213,7 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
   if (!session) {
     return {
       redirect: {
-        destination: '/api/auth/signin', // Or your custom login page
+        destination: '/auth/login',
         permanent: false,
       },
     };

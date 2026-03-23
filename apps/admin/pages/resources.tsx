@@ -64,12 +64,12 @@ export default function ResourcesPage() {
       const [lessonsResponse, usersResponse, resourcesResponse] = await Promise.all([
         api.get('/lessons'),
         api.get('/users'),
-        api.get('/media').catch(() => ({ data: [] }))
+        api.get('/files').catch(() => ({ data: { resources: [] } }))
       ]);
       
       setLessons(lessonsResponse.data);
       setTeachers(usersResponse.data.filter((user: User) => user.role === 'TEACHER'));
-      setResources(resourcesResponse.data || []);
+      setResources(resourcesResponse.data?.resources || []);
     } catch (err) {
       setError('Failed to load data');
     } finally {
@@ -149,7 +149,7 @@ export default function ResourcesPage() {
         formData.append('lessonId', newResource.lessonId);
       }
 
-      const response = await api.post('/upload/file', formData, {
+      const response = await api.post('/files', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (progressEvent: any) => {
           const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -160,16 +160,17 @@ export default function ResourcesPage() {
       setUploadProgress(100);
 
       // Add the new resource to the list
+      const createdResource = response.data.resource;
       const newResourceData: Resource = {
-        id: response.data.id || Date.now().toString(),
-        title: newResource.title,
-        type: newResource.type,
-        url: response.data.url || `https://example.com/${selectedFile.name}`,
-        path: response.data.path || `school123/${Date.now()}_${selectedFile.name}`,
-        size: selectedFile.size,
-        lessonId: newResource.lessonId,
+        id: createdResource.id,
+        title: createdResource.title,
+        type: (createdResource.type || newResource.type).toLowerCase(),
+        url: createdResource.url,
+        path: createdResource.url,
+        size: createdResource.size || selectedFile.size,
+        lessonId: createdResource.lessonId || newResource.lessonId,
         uploadedBy: teachers[0]?.id || '',
-        createdAt: new Date().toISOString(),
+        createdAt: createdResource.createdAt || new Date().toISOString(),
       };
 
       setResources([newResourceData, ...resources]);
@@ -189,7 +190,7 @@ export default function ResourcesPage() {
     if (!window.confirm('Are you sure you want to delete this resource?')) return;
 
     try {
-      await api.delete(`/media/${resourceId}`);
+      await api.delete(`/files/${resourceId}`);
       setResources(resources.filter(r => r.id !== resourceId));
     } catch (err) {
       setError('Failed to delete resource');
@@ -214,13 +215,13 @@ export default function ResourcesPage() {
 
   const handleDownloadResource = async (resourceId: string, resourceUrl: string, resourceTitle: string) => {
     try {
-      const urlParts = resourceUrl.split('/');
-      const fileName = urlParts[urlParts.length - 1];
-      const filePath = `school123/${fileName}`;
+      const response = await fetch(resourceUrl);
+      if (!response.ok) {
+        throw new Error('Download failed');
+      }
+      const blob = await response.blob();
       
-      const response = await api.get(`/download/file/${filePath}`, { responseType: 'blob' });
-      
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.download = resourceTitle;
@@ -360,7 +361,7 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
   if (!session) {
     return {
       redirect: {
-        destination: '/api/auth/signin', // Or your custom login page
+        destination: '/auth/login',
         permanent: false,
       },
     };

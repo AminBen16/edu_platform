@@ -1,0 +1,29 @@
+{
+  "name": "edu-platform-tests",
+  "version": "2.0.0",
+  "description": "Complete local testing system for the education platform",
+  "scripts": {
+    "test": "node scripts/orchestrator.js",
+    "test:all": "node scripts/orchestrator.js",
+    "discover:api": "node scripts/discover-api-routes.js",
+    "discover:admin": "node scripts/discover-admin-pages.js",
+    "db:seed": "node --experimental-strip-types ../packages/db/prisma/seed.ts",
+    "db:validate": "node scripts/db-validate.js",
+    "test:api": "node scripts/discover-api-routes.js && node scripts/api-smoke.js",
+    "test:ui": "node scripts/discover-admin-pages.js && npx playwright test frontend/platform-crawler.spec.ts",
+    "test:ui:headed": "node scripts/discover-admin-pages.js && npx playwright test frontend/platform-crawler.spec.ts --headed",
+    "test:mobile": "node scripts/mobile-runner.js",
+    "install:browsers": "npx playwright install"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^20.11.0",
+    "prisma": "^5.22.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.10.0",
+    "autocannon": "^8.0.0"
+  }
+}

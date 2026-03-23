@@ -22,4 +22,7 @@ export interface AuthenticatedUser {
 
 export interface RequestWithUser extends Request {
   user?: AuthenticatedUser;
+  body: any;
+  query: any;
+  params: any;
 }

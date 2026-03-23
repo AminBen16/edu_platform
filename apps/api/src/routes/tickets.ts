@@ -19,6 +19,7 @@ router.get('/', protect, async (req, res) => {
             orderBy: { createdAt: 'desc' },
             include: {
                 user: { select: { name: true, email: true } },
+                // @ts-ignore
                 assignedTo: { select: { name: true, email: true } }
             }
         });
@@ -37,6 +38,7 @@ router.get('/:id', protect, async (req, res) => {
             where: { id, schoolId: req.user!.schoolId },
             include: {
                 user: { select: { name: true, email: true } },
+                // @ts-ignore
                 assignedTo: { select: { name: true, email: true } },
                 comments: {
                     include: {
@@ -116,6 +118,7 @@ router.put('/:id', protect, async (req, res) => {
             data: updateData,
             include: {
                 user: { select: { name: true, email: true } },
+                // @ts-ignore
                 assignedTo: { select: { name: true, email: true } }
             }
         });

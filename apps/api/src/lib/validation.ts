@@ -4,7 +4,7 @@ import { z } from 'zod';
 export const LoginSchema = z.object({
   email: z.string().email('Invalid email').min(1),
   password: z.string().min(6, 'Password min 6 chars'),
-  schoolId: z.string().min(1, 'School ID required'),
+  schoolId: z.string().min(1, 'School ID required').optional(),
 });
 
 export const RegisterSchema = z.object({

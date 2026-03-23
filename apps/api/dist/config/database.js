@@ -1,8 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.prisma = void 0;
-// Re-export Prisma client from packages/db
-// This ensures a single instance is used across the application
-const db_1 = require("db");
-Object.defineProperty(exports, "prisma", { enumerable: true, get: function () { return db_1.prisma; } });
-exports.default = db_1.prisma;
+const client_1 = require("@prisma/client");
+exports.prisma = global.__eduPrisma__ ||
+    new client_1.PrismaClient({
+        log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+    });
+if (process.env.NODE_ENV !== 'production') {
+    global.__eduPrisma__ = exports.prisma;
+}
+exports.default = exports.prisma;

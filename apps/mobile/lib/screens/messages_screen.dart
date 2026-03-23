@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'conversation_detail_screen.dart';
@@ -20,28 +22,49 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
   bool _isSearching = false;
   bool _isLoading = true;
   bool _showUnreadOnly = false;
+  Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
     _loadMessages();
+    _startPolling();
   }
 
-  Future<void> _loadMessages() async {
-    setState(() => _isLoading = true);
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startPolling() {
+    // Poll for new messages every 10 seconds (Vercel WebSocket fallback)
+    _pollingTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      if (mounted && !_isLoading) {
+        _loadMessages(isSilent: true);
+      }
+    });
+  }
+
+  Future<void> _loadMessages({bool isSilent = false}) async {
+    if (!isSilent) setState(() => _isLoading = true);
 
     try {
       final messageList = await ApiService.fetchMessages(widget.classId);
-      setState(() {
-        _conversations = messageList
-            .map((json) => Message.fromJson(json))
-            .toList();
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _conversations = messageList
+              .map((json) => Message.fromJson(json))
+              .toList();
+          if (!isSilent) _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted && !isSilent) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 

@@ -1,49 +1,43 @@
 // apps/api/src/routes/upload.ts
+// PATCH 2 CRIT-002/CRIT-003: R2 storage only (no fs, no Firebase/Supabase)
+
 import { Router } from 'express';
 import multer from 'multer';
-import { createClient } from '@supabase/supabase-js';
 import { protect } from '../middleware/auth';
+import StorageService from '../services/storageService.js';
 
 const router = Router();
 
-// Multer setup for in-memory storage
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
+// Multer memory storage (Vercel safe)
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB
+});
 
-// Supabase Storage client setup
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || '';
-const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
-
-// POST /upload/file - Upload a file to Supabase Storage
+// POST /upload/file - Upload via R2
 router.post('/file', protect, upload.single('file'), async (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded.' });
-    }
-    
-    if (!supabase) {
-        return res.status(500).json({ error: 'Supabase storage not configured.' });
-    }
-    
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded.' });
+  }
+
+  try {
     const user = req.user!;
-    const bucket = 'edu-files';
-    const filePath = `${user.schoolId}/${Date.now()}_${req.file.originalname}`;
-    try {
-        // Ensure bucket exists (idempotent)
-        await supabase.storage.createBucket(bucket, { public: false }).catch(() => {});
-        // Upload file
-        const { data, error } = await supabase.storage.from(bucket).upload(filePath, req.file.buffer, {
-            contentType: req.file.mimetype,
-            upsert: true,
-        });
-        if (error) {
-            return res.status(500).json({ error: error.message });
-        }
-        const publicUrl = supabase.storage.from(bucket).getPublicUrl(filePath).data.publicUrl;
-        res.status(201).json({ url: publicUrl, path: filePath });
-    } catch (err) {
-        res.status(500).json({ error: 'File upload failed.' });
-    }
+    const result = await StorageService.storeFile({
+      file: req.file.buffer,
+      fileName: `${user.schoolId}/${Date.now()}_${req.file.originalname}`,
+      contentType: req.file.mimetype
+    });
+
+    res.status(201).json({ 
+      url: result.url, 
+      key: result.key,
+      message: 'File uploaded to R2 successfully (CRIT-002 fixed)'
+    });
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({ error: 'Upload failed - check R2 env vars (CRIT-002)' });
+  }
 });
 
 export default router;
+

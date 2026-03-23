@@ -92,6 +92,20 @@ const classIds = enrollments.map((e: any) => e.classId).filter(Boolean) as strin
 
     const quizAttempts = await prisma.quizAttempt.findMany({
         where: { studentId: student.id },
+        include: {
+            quiz: {
+                select: {
+                    title: true,
+                    subject: {
+                        select: { id: true, name: true }
+                    }
+                }
+            }
+        }
+    });
+
+    const attendance = await prisma.attendance.findMany({
+        where: { studentId: student.id },
     });
 
     const completedAssignments = assignments.filter((a: any) => a.submissions.length > 0).length;
@@ -100,6 +114,60 @@ const classIds = enrollments.map((e: any) => e.classId).filter(Boolean) as strin
     const averageGrade = quizAttempts.length > 0 
         ? quizAttempts.reduce((sum: number, attempt: any) => sum + (attempt.score || 0), 0) / quizAttempts.length
         : 0;
+    const presentAttendance = attendance.filter((entry) => entry.status === 'PRESENT').length;
+    const attendancePercent = attendance.length > 0 ? (presentAttendance / attendance.length) * 100 : 100;
+
+    const subjectPerformance = new Map<string, { subjectId: string; total: number; count: number }>();
+    for (const attempt of quizAttempts as any[]) {
+        const subjectName = attempt.quiz?.subject?.name;
+        const subjectId = attempt.quiz?.subject?.id;
+        if (!subjectName || !subjectId) continue;
+
+        const bucket = subjectPerformance.get(subjectName) ?? { subjectId, total: 0, count: 0 };
+        bucket.total += attempt.score || 0;
+        bucket.count += 1;
+        subjectPerformance.set(subjectName, bucket);
+    }
+
+    const focusAreas = Array.from(subjectPerformance.entries())
+        .map(([subject, value]) => ({
+            subject,
+            subjectId: value.subjectId,
+            averageScore: value.count > 0 ? value.total / value.count : 0,
+        }))
+        .sort((left, right) => left.averageScore - right.averageScore)
+        .slice(0, 3);
+
+    const completionRatio = totalAssignments > 0 ? completedAssignments / totalAssignments : 1;
+    const normalizedAverageGrade = Math.max(0, Math.min(averageGrade, 100));
+    const normalizedAttendance = Math.max(0, Math.min(attendancePercent, 100));
+    const momentumScore = Math.round(
+        normalizedAverageGrade * 0.45 +
+        normalizedAttendance * 0.35 +
+        completionRatio * 100 * 0.20
+    );
+
+    const recommendations: string[] = [];
+    if (focusAreas[0] && focusAreas[0].averageScore < 65) {
+        recommendations.push(`Spend extra revision time on ${focusAreas[0].subject}.`);
+    }
+    if (completionRatio < 0.75) {
+        recommendations.push('Finish pending assignments to protect your momentum score.');
+    }
+    if (attendancePercent < 85) {
+        recommendations.push('Join upcoming live classes to improve consistency and attendance.');
+    }
+    if (recommendations.length === 0) {
+        recommendations.push('You are on track. Keep a steady study rhythm this week.');
+    }
+
+    const strengths = Array.from(subjectPerformance.entries())
+        .map(([subject, value]) => ({
+            subject,
+            averageScore: value.count > 0 ? value.total / value.count : 0,
+        }))
+        .sort((left, right) => right.averageScore - left.averageScore)
+        .slice(0, 2);
 
     return {
         stats: {
@@ -107,6 +175,7 @@ const classIds = enrollments.map((e: any) => e.classId).filter(Boolean) as strin
             completedAssignments,
             totalAssignments,
             averageGrade: parseFloat(averageGrade.toFixed(2)),
+            attendancePercent: parseFloat(attendancePercent.toFixed(2)),
             upcomingClasses: upcomingClasses.length,
         },
         courses, // For mobile course list
@@ -115,7 +184,19 @@ const classIds = enrollments.map((e: any) => e.classId).filter(Boolean) as strin
             title: cls.title,
             time: cls.startTime.toISOString(),
         })),
-        recentActivity: quizAttempts.slice(0, 5)
+        recentActivity: quizAttempts.slice(0, 5),
+        smartInsights: {
+            momentumScore,
+            focusAreas: focusAreas.map((area) => ({
+                ...area,
+                averageScore: parseFloat(area.averageScore.toFixed(2)),
+            })),
+            strengths: strengths.map((item) => ({
+                ...item,
+                averageScore: parseFloat(item.averageScore.toFixed(2)),
+            })),
+            recommendations,
+        }
     };
 }
 

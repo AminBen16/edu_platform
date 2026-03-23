@@ -3,7 +3,6 @@ import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 
 // Define Role type locally
 enum Role {
@@ -28,21 +27,40 @@ export const authOptions: NextAuthOptions = {
         schoolId: { label: 'School ID', type: 'text' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials.password || !credentials.schoolId) {
+        if (!credentials?.email || !credentials.password) {
           throw new Error('Missing credentials');
         }
 
-        const user = await prisma.user.findUnique({
-          where: {
-            email_schoolId: {
-              email: credentials.email,
-              schoolId: credentials.schoolId,
-            },
-          },
+        const users = await prisma.user.findMany({
+          where: { email: credentials.email },
         });
 
-        if (!user || !user.password) {
-          throw new Error('No user found with this email in the specified school.');
+        if (users.length === 0) {
+          throw new Error('No user found with this email.');
+        }
+
+        let user = users[0];
+
+        if (users.length > 1) {
+          if (!credentials.schoolId) {
+            throw new Error('Multiple accounts found. Provide a school ID.');
+          }
+
+          const matchedUser = users.find(
+            (candidate) => candidate.schoolId === credentials.schoolId
+          );
+
+          if (!matchedUser) {
+            throw new Error(
+              'No user found with this email in the specified school.'
+            );
+          }
+
+          user = matchedUser;
+        }
+
+        if (!user.password) {
+          throw new Error('No user found with valid credentials.');
         }
 
         const isPasswordValid = await bcrypt.compare(
@@ -74,27 +92,12 @@ export const authOptions: NextAuthOptions = {
   },
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user }) {
       // Persist the user's role and schoolId in the JWT
       if (user) {
         token.role = user.role;
         token.schoolId = user.schoolId;
         token.id = user.id;
-      }
-      // Explicitly add the raw JWT token for API calls
-      if (account?.access_token) {
-        token.accessToken = account.access_token;
-      } else if (token) {
-        // If no access_token from account (e.g., Credentials provider)
-        // re-sign the token to get a string representation if needed by the client.
-        const payload = {
-          id: token.id,
-          email: token.email,
-          role: token.role,
-          schoolId: token.schoolId,
-        };
-        // Sign the payload to get a new JWT token string.
-        token.accessToken = jwt.sign(payload, process.env.NEXTAUTH_SECRET!);
       }
       return token;
     },
@@ -117,4 +120,3 @@ export const authOptions: NextAuthOptions = {
 
 // Export production URL - use environment variable
 export const nextAuthUrl = process.env.NEXTAUTH_URL;
-

@@ -945,19 +945,80 @@ class ApiService {
   }
 
   // Fetch messages
-  static Future<List<dynamic>> fetchMessages(String classId) async {
+  static Map<String, dynamic> _normalizeMessage(
+    Map<String, dynamic> message,
+  ) {
+    final sender = message['sender'];
+    final senderId =
+        message['senderId']?.toString() ??
+        (sender is Map<String, dynamic> ? sender['id']?.toString() : null) ??
+        '';
+    final classId =
+        message['classId']?.toString() ??
+        message['receiverId']?.toString() ??
+        message['chatId']?.toString();
+    final createdAtValue = message['createdAt'] ?? message['timestamp'];
+
+    Map<String, dynamic>? normalizedSender;
+    if (sender is Map<String, dynamic>) {
+      normalizedSender = {
+        'id': sender['id']?.toString() ?? senderId,
+        'name': sender['name']?.toString() ?? message['senderName']?.toString() ?? 'Unknown',
+        'email': sender['email']?.toString() ?? '',
+        'role': sender['role']?.toString() ?? 'STUDENT',
+        'schoolId': sender['schoolId']?.toString() ?? '',
+        'avatarUrl': sender['avatarUrl']?.toString(),
+        'isActive': sender['isActive'] is bool ? sender['isActive'] as bool : true,
+        'createdAt': sender['createdAt']?.toString() ?? DateTime.now().toIso8601String(),
+        'updatedAt': sender['updatedAt']?.toString() ?? DateTime.now().toIso8601String(),
+      };
+    } else if (message['senderName'] != null) {
+      normalizedSender = {
+        'id': senderId,
+        'name': message['senderName']?.toString() ?? 'Unknown',
+        'email': '',
+        'role': 'STUDENT',
+        'schoolId': '',
+        'avatarUrl': message['senderAvatar']?.toString(),
+        'isActive': true,
+        'createdAt': DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      };
+    }
+
+    return {
+      'id': message['id']?.toString() ?? '',
+      'content': message['content']?.toString() ?? '',
+      'type': message['type']?.toString() ?? 'TEXT',
+      'fileUrl': message['fileUrl']?.toString(),
+      'senderId': senderId,
+      'sender': normalizedSender,
+      'classId': classId,
+      'isRead': message['isRead'] is bool ? message['isRead'] as bool : false,
+      'createdAt':
+          createdAtValue?.toString() ?? DateTime.now().toIso8601String(),
+    };
+  }
+
+  static Future<List<Map<String, dynamic>>> fetchMessages(String classId) async {
     final token = await getToken();
     if (token == null) throw Exception('Not authenticated');
 
     final response = await _fetch(
       () => http.get(
-        Uri.parse('$_baseUrl/chat/messages/$classId'),
+        Uri.parse('$_baseUrl/messages?classId=$classId'),
         headers: {'Authorization': 'Bearer $token'},
       ),
     );
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final data = jsonDecode(response.body);
+      if (data is List) {
+        return data
+            .map((item) => _normalizeMessage(Map<String, dynamic>.from(item)))
+            .toList();
+      }
+      return [];
     } else {
       final errorData = jsonDecode(response.body);
       throw Exception(errorData['error'] ?? 'Failed to load messages');
@@ -974,7 +1035,7 @@ class ApiService {
 
     final response = await _fetch(
       () => http.post(
-        Uri.parse('$_baseUrl/chat/message'),
+        Uri.parse('$_baseUrl/messages'),
         headers: {
           'Content-Type': 'application/json; charset=UTF-8',
           'Authorization': 'Bearer $token',
@@ -983,8 +1044,10 @@ class ApiService {
       ),
     );
 
-    if (response.statusCode == 201) {
-      return jsonDecode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return _normalizeMessage(
+        Map<String, dynamic>.from(jsonDecode(response.body)),
+      );
     } else {
       final errorData = jsonDecode(response.body);
       throw Exception(errorData['error'] ?? 'Failed to send message');
@@ -1989,7 +2052,7 @@ class ApiService {
     if (competencyId != null) queryParams['competencyId'] = competencyId;
 
     final uri = Uri.parse(
-      '$_baseUrl/progress',
+      '$_baseUrl/competency-progress',
     ).replace(queryParameters: queryParams);
 
     final response = await _fetch(
@@ -2015,7 +2078,7 @@ class ApiService {
 
     final response = await _fetch(
       () => http.post(
-        Uri.parse('$_baseUrl/progress'),
+        Uri.parse('$_baseUrl/competency-progress'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',

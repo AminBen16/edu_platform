@@ -1,0 +1,26 @@
+{
+  "apiBaseUrl": "http://127.0.0.1:3002/api/v1",
+  "adminBaseUrl": "http://127.0.0.1:3000",
+  "ports": {
+    "api": 3002,
+    "admin": 3000
+  },
+  "credentials": {
+    "admin": {
+      "email": "admin@eduplatform.local",
+      "password": "Admin@123"
+    },
+    "teacher": {
+      "email": "teacher@eduplatform.local",
+      "password": "Teacher@123"
+    },
+    "student": {
+      "email": "student@eduplatform.local",
+      "password": "Student@123"
+    },
+    "parent": {
+      "email": "parent@eduplatform.local",
+      "password": "Parent@123"
+    }
+  }
+}

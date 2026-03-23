@@ -1,5 +1,4 @@
-// Email service for sending notifications
-import nodemailer from 'nodemailer';
+import * as nodemailer from 'nodemailer';
 
 interface EmailOptions {
   to: string;
@@ -9,52 +8,65 @@ interface EmailOptions {
 }
 
 class EmailService {
-  private static transporter: nodemailer.Transporter;
+  private static transporter: nodemailer.Transporter | null = null;
 
-  static async initialize() {
-    if (!this.transporter) {
-      // For development, use ethereal test account
+  private static initialize() {
+    if (EmailService.hasDeliveryConfig() && !this.transporter) {
       this.transporter = nodemailer.createTransport({
-        host: 'smtp.ethereal.email',
-        port: 587,
-        secure: false,
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT),
+        secure: Number(process.env.SMTP_PORT) === 465, // true for 465, false for other ports
         auth: {
-          user: process.env.EMAIL_USER || 'your-ethereal-email',
-          pass: process.env.EMAIL_PASS || 'your-ethereal-password',
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
         },
       });
-
-      // For production with SendGrid
-      // this.transporter = nodemailer.createTransport({
-      //   host: 'smtp.sendgrid.net',
-      //   port: 587,
-      //   secure: false,
-      //   auth: {
-      //     user: process.env.SENDGRID_API_KEY,
-      //     pass: process.env.SENDGRID_API_KEY,
-      //   },
-      // });
     }
   }
 
+  static hasDeliveryConfig(): boolean {
+    return Boolean(
+      process.env.SMTP_HOST &&
+      process.env.SMTP_PORT &&
+      process.env.SMTP_USER &&
+      process.env.SMTP_PASS &&
+      process.env.EMAIL_FROM
+    );
+  }
+
   static getPublicUrl(): string {
-    return process.env.PUBLIC_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const vercelUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : undefined;
+
+    return (
+      process.env.PUBLIC_URL ||
+      process.env.PUBLIC_APP_URL ||
+      process.env.NEXTAUTH_URL ||
+      vercelUrl ||
+      'http://localhost:3000'
+    );
   }
 
   static async sendEmail(options: EmailOptions): Promise<boolean> {
-    try {
-      await this.initialize();
-      
-      const mailOptions = {
-        from: process.env.EMAIL_FROM || 'noreply@eduplatform.ug',
+    EmailService.initialize();
+
+    if (!this.transporter) {
+      console.warn('Email delivery unavailable: SMTP provider not configured.', {
         to: options.to,
         subject: options.subject,
-        html: options.html,
-        text: options.text,
-      };
+      });
+      // In a real app, you might want to uncomment the line below to see email previews in development
+      // console.log(`Email preview URL: ${EmailService.getPublicUrl()}/previews/emails/${Buffer.from(JSON.stringify(options)).toString('base64')}`);
+      return false;
+    }
 
-      await this.transporter.sendMail(mailOptions);
-      console.log(`Email sent to ${options.to}: ${options.subject}`);
+    try {
+      await this.transporter.sendMail({
+        from: process.env.EMAIL_FROM,
+        ...options,
+      });
+      console.log(`Email sent to ${options.to} with subject "${options.subject}"`);
       return true;
     } catch (error) {
       console.error('Failed to send email:', error);
@@ -99,6 +111,40 @@ class EmailService {
       subject: `Invitation to join ${schoolName}`,
       html,
       text: `Hello ${name},\n\nYou've been invited to join ${schoolName} education platform.\n\nYour invitation code is: ${invitationCode}\n\nRegister at: ${EmailService.getPublicUrl()}/register/${invitationCode}\n\nThis invitation expires in 7 days.`
+    });
+  }
+
+  static async sendPasswordResetEmail(email: string, name: string, token: string): Promise<boolean> {
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
+        <div style="background-color: #ffc107; color: #212529; padding: 20px; border-radius: 8px; text-align: center;">
+          <h1>Password Reset Request</h1>
+        </div>
+        <div style="background-color: white; padding: 20px; border-radius: 8px; margin-top: 20px;">
+          <h2>Hello ${name},</h2>
+          <p>We received a request to reset your password. If you didn't make this request, please ignore this email.</p>
+          <p>To reset your password, click the link below:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${EmailService.getPublicUrl()}/reset-password/${token}" 
+               style="background-color: #ffc107; color: #212529; padding: 12px 30px; text-decoration: none; border-radius: 4px; display: inline-block;">
+              Reset Password
+            </a>
+          </div>
+          <p style="color: #6c757d; font-size: 14px; text-align: center; margin-top: 20px;">
+            This link will expire in 1 hour.
+          </p>
+        </div>
+        <div style="background-color: #343a40; color: white; padding: 20px; border-radius: 8px; margin-top: 20px; text-align: center;">
+          <p style="margin: 0;">© 2024 Education Platform. All rights reserved.</p>
+        </div>
+      </div>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: 'Password Reset Request',
+      html,
+      text: `Hello ${name},\n\nWe received a request to reset your password. If you didn't make this request, please ignore this email.\n\nTo reset your password, visit: ${EmailService.getPublicUrl()}/reset-password/${token}\n\nThis link will expire in 1 hour.`
     });
   }
 

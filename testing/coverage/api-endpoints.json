@@ -1,0 +1,1064 @@
+[
+  {
+    "method": "GET",
+    "path": "/analytics",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/analyticsRoutes.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/announcements",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/announcements.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/announcements",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/announcements.ts"
+  },
+  {
+    "method": "DELETE",
+    "path": "/announcements/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/announcements.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/announcements/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/announcements.ts"
+  },
+  {
+    "method": "PUT",
+    "path": "/announcements/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/announcements.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/assessments",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/assessments.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/assessments",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/assessments.ts"
+  },
+  {
+    "method": "DELETE",
+    "path": "/assessments/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/assessments.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/assessments/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/assessments.ts"
+  },
+  {
+    "method": "PUT",
+    "path": "/assessments/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/assessments.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/assessments/:id/results",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/assessments.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/assessments/:id/results",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/assessments.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/assessments/types",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/assessments.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/assignments",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/assignments.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/assignments",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/assignments.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/assignments/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/assignments.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/assignments/:id/submissions",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/assignments.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/assignments/:id/submit",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/assignments.ts"
+  },
+  {
+    "method": "PUT",
+    "path": "/assignments/submissions/:submissionId/grade",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/assignments.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/attendance",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/attendance.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/attendance",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/attendance.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/attendance/bulk",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/attendance.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/attendance/stats",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/attendance.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/auth/forgot-password",
+    "protected": false,
+    "routeFile": "apps/api/src/routes/auth.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/auth/invitations",
+    "protected": false,
+    "routeFile": "apps/api/src/routes/auth.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/auth/invite",
+    "protected": false,
+    "routeFile": "apps/api/src/routes/auth.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/auth/login",
+    "protected": false,
+    "routeFile": "apps/api/src/routes/auth.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/auth/register",
+    "protected": false,
+    "routeFile": "apps/api/src/routes/auth.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/auth/reset-password",
+    "protected": false,
+    "routeFile": "apps/api/src/routes/auth.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/auth/validate/:code",
+    "protected": false,
+    "routeFile": "apps/api/src/routes/auth.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/chat/message",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/chat.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/chat/messages/:classId",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/chat.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/classes",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/classes.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/classes",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/classes.ts"
+  },
+  {
+    "method": "DELETE",
+    "path": "/classes/:classId/enrollments/:enrollmentId",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/classes.ts"
+  },
+  {
+    "method": "DELETE",
+    "path": "/classes/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/classes.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/classes/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/classes.ts"
+  },
+  {
+    "method": "PUT",
+    "path": "/classes/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/classes.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/classes/:id/enroll",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/classes.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/competencies",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/competencies.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/competencies",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/competencies.ts"
+  },
+  {
+    "method": "DELETE",
+    "path": "/competencies/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/competencies.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/competencies/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/competencies.ts"
+  },
+  {
+    "method": "PUT",
+    "path": "/competencies/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/competencies.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/competencies/:id/progress",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/competencies.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/competency-progress",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/competencyProgress.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/competency-progress",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/competencyProgress.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/competency-progress/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/competencyProgress.ts"
+  },
+  {
+    "method": "PUT",
+    "path": "/competency-progress/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/competencyProgress.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/competency-progress/competency/:competencyId",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/competencyProgress.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/competency-progress/mastery-levels",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/competencyProgress.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/competency-progress/student/:studentId",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/competencyProgress.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/content/drafts",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/content.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/content/publish",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/content.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/content/recent",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/content.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/content/schedule",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/content.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/content/scheduled",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/content.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/content/unpublish",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/content.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/dashboard",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/dashboard.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/download/assignment/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/download.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/download/file/:path(*)",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/download.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/download/lesson/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/download.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/download/quiz/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/download.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/download/submissions/:assignmentId",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/download.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/files",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/files.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/files",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/files.ts"
+  },
+  {
+    "method": "DELETE",
+    "path": "/files/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/files.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/files/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/files.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/lessons",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/lessons.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/lessons",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/lessons.ts"
+  },
+  {
+    "method": "DELETE",
+    "path": "/lessons/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/lessons.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/lessons/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/lessons.ts"
+  },
+  {
+    "method": "PUT",
+    "path": "/lessons/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/lessons.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/levels",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/levels.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/levels",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/levels.ts"
+  },
+  {
+    "method": "DELETE",
+    "path": "/levels/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/levels.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/levels/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/levels.ts"
+  },
+  {
+    "method": "PUT",
+    "path": "/levels/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/levels.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/levels/:id/subjects",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/levels.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/levels/:id/subjects",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/levels.ts"
+  },
+  {
+    "method": "DELETE",
+    "path": "/levels/:id/subjects/:subjectId",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/levels.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/levels/initialize-uganda",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/levels.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/levels/uganda-defaults",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/levels.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/live-sessions",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/live-sessions.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/live-sessions",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/live-sessions.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/live-sessions/:roomCode",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/live-sessions.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/live-sessions/:roomCode/end",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/live-sessions.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/live-sessions/:roomCode/join",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/live-sessions.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/live-sessions/:roomCode/leave",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/live-sessions.ts"
+  },
+  {
+    "method": "DELETE",
+    "path": "/live-sessions/:sessionId",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/live-sessions.ts"
+  },
+  {
+    "method": "PUT",
+    "path": "/live-sessions/:sessionId",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/live-sessions.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/messages",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/messages.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/messages",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/messages.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/messages/:chatId",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/messages.ts"
+  },
+  {
+    "method": "DELETE",
+    "path": "/messages/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/messages.ts"
+  },
+  {
+    "method": "PATCH",
+    "path": "/messages/:id/read",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/messages.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/messages/chat/message",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/messages.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/messages/conversations",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/messages.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/notifications",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/notifications.ts"
+  },
+  {
+    "method": "PATCH",
+    "path": "/notifications/:id/read",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/notifications.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/notifications/new",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/notifications.ts"
+  },
+  {
+    "method": "PATCH",
+    "path": "/notifications/read-all",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/notifications.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/notifications/send",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/notifications.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/quizzes",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/quizzes.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/quizzes",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/quizzes.ts"
+  },
+  {
+    "method": "DELETE",
+    "path": "/quizzes/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/quizzes.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/quizzes/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/quizzes.ts"
+  },
+  {
+    "method": "PUT",
+    "path": "/quizzes/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/quizzes.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/quizzes/:id/submit",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/quizzes.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/realtime/emit/:event",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/realtime.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/realtime/events",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/realtime.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/report-cards",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/reportCards.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/report-cards",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/reportCards.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/report-cards/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/reportCards.ts"
+  },
+  {
+    "method": "PUT",
+    "path": "/report-cards/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/reportCards.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/report-cards/:id/publish",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/reportCards.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/report-cards/student/:studentId",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/reportCards.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/reports",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/reports.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/reports/export",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/reports.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/reports/schedule",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/reports.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/reports/scheduled",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/reports.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/schedule",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/schedule.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/schedule",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/schedule.ts"
+  },
+  {
+    "method": "DELETE",
+    "path": "/schedule/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/schedule.ts"
+  },
+  {
+    "method": "PUT",
+    "path": "/schedule/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/schedule.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/school-settings",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/school-settings.ts"
+  },
+  {
+    "method": "PUT",
+    "path": "/school-settings",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/school-settings.ts"
+  },
+  {
+    "method": "PATCH",
+    "path": "/school-settings/academic-year",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/school-settings.ts"
+  },
+  {
+    "method": "PATCH",
+    "path": "/school-settings/contact",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/school-settings.ts"
+  },
+  {
+    "method": "PATCH",
+    "path": "/school-settings/features",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/school-settings.ts"
+  },
+  {
+    "method": "PATCH",
+    "path": "/school-settings/grading-scale",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/school-settings.ts"
+  },
+  {
+    "method": "PATCH",
+    "path": "/school-settings/semester",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/school-settings.ts"
+  },
+  {
+    "method": "PATCH",
+    "path": "/school-settings/timezone",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/school-settings.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/schools",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/schools.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/schools",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/schools.ts"
+  },
+  {
+    "method": "DELETE",
+    "path": "/schools/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/schools.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/schools/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/schools.ts"
+  },
+  {
+    "method": "PUT",
+    "path": "/schools/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/schools.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/subjects",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/subjects.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/subjects",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/subjects.ts"
+  },
+  {
+    "method": "DELETE",
+    "path": "/subjects/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/subjects.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/subjects/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/subjects.ts"
+  },
+  {
+    "method": "PUT",
+    "path": "/subjects/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/subjects.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/subjects/bulk",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/subjects.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/subjects/uganda-defaults",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/subjects.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/terms",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/terms.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/terms",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/terms.ts"
+  },
+  {
+    "method": "DELETE",
+    "path": "/terms/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/terms.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/terms/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/terms.ts"
+  },
+  {
+    "method": "PUT",
+    "path": "/terms/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/terms.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/terms/current",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/terms.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/tickets",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/tickets.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/tickets",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/tickets.ts"
+  },
+  {
+    "method": "DELETE",
+    "path": "/tickets/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/tickets.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/tickets/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/tickets.ts"
+  },
+  {
+    "method": "PUT",
+    "path": "/tickets/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/tickets.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/tickets/:id/comments",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/tickets.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/topics",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/topics.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/topics",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/topics.ts"
+  },
+  {
+    "method": "DELETE",
+    "path": "/topics/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/topics.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/topics/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/topics.ts"
+  },
+  {
+    "method": "PUT",
+    "path": "/topics/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/topics.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/upload/file",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/upload.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/users",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/users.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/users",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/users.ts"
+  },
+  {
+    "method": "DELETE",
+    "path": "/users/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/users.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/users/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/users.ts"
+  },
+  {
+    "method": "PUT",
+    "path": "/users/:id",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/users.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/users/profile",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/users.ts"
+  },
+  {
+    "method": "PUT",
+    "path": "/users/profile",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/users.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/webrtc/room/:roomCode/join",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/webrtc.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/webrtc/room/:roomCode/leave",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/webrtc.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/webrtc/room/:roomCode/participants",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/webrtc.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/webrtc/room/:roomCode/ping",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/webrtc.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/webrtc/signal",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/webrtc.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/webrtc/signal/:roomCode/:peerId",
+    "protected": true,
+    "routeFile": "apps/api/src/routes/webrtc.ts"
+  }
+]

@@ -1,12 +1,7 @@
-import { Server, Socket } from "socket.io";
-import { Server as HTTPServer } from "http";
-
-export function initSocket(server: HTTPServer) {
-  const io = new Server(server);
-
-  io.on("connection", (socket: Socket) => {
-    socket.on("message", (data: any) => {
-      io.emit("message", data);
-    });
-  });
+// PATCH 1 CRIT-001: DISABLED WebSocket init
+// Use SSE: apps/api/src/routes/realtime.ts instead
+// Mobile: socket_service.dart → SSE polling
+export function initSocket() {
+  console.log('WebSockets disabled - use /api/realtime/events');
 }
+

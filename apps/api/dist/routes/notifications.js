@@ -15,11 +15,9 @@ const emitToUser = async (userId, event, data) => {
     console.log(`[WebSocket] Emitting ${event} to user ${userId}:`, data);
 };
 const router = (0, express_1.Router)();
+const serializeNotificationData = (payload) => JSON.stringify(Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined && value !== null)));
 // Validation helper
 const validateDatabaseConnection = () => {
-    if (!process.env.DATABASE_URL) {
-        throw new Error('DATABASE_URL environment variable is required for production');
-    }
     return true;
 };
 // GET /notifications - Get user notifications
@@ -80,26 +78,31 @@ router.post('/send', auth_1.protect, async (req, res) => {
     }
     try {
         validateDatabaseConnection();
+        const recipientGroups = Array.isArray(recipients) ? recipients : [];
         const notificationData = {
             title,
             message,
             type,
-            contentId,
-            contentType,
-            priority: priority || 'normal',
-            data: data || {},
             schoolId: req.user.schoolId,
-            senderId: req.user.id,
+            data: serializeNotificationData({
+                contentId,
+                contentType,
+                priority: priority || 'normal',
+                channels,
+                sendImmediately,
+                senderId: req.user.id,
+                metadata: data ?? null,
+            }),
             createdAt: new Date(),
         };
         // Get target users based on recipients
         let targetUsers = [];
-        if (recipients.includes('all')) {
+        if (recipientGroups.includes('all')) {
             targetUsers = await database_1.prisma.user.findMany({
                 where: { schoolId: req.user.schoolId },
             });
         }
-        else if (recipients.includes('students')) {
+        else if (recipientGroups.includes('students')) {
             targetUsers = await database_1.prisma.user.findMany({
                 where: {
                     schoolId: req.user.schoolId,
@@ -107,7 +110,7 @@ router.post('/send', auth_1.protect, async (req, res) => {
                 },
             });
         }
-        else if (recipients.includes('parents')) {
+        else if (recipientGroups.includes('parents')) {
             targetUsers = await database_1.prisma.user.findMany({
                 where: {
                     schoolId: req.user.schoolId,
@@ -115,12 +118,17 @@ router.post('/send', auth_1.protect, async (req, res) => {
                 },
             });
         }
-        else if (recipients.includes('admin')) {
+        else if (recipientGroups.includes('admin')) {
             targetUsers = await database_1.prisma.user.findMany({
                 where: {
                     schoolId: req.user.schoolId,
                     role: { in: ['ADMIN', 'SUPER_ADMIN'] },
                 },
+            });
+        }
+        else {
+            targetUsers = await database_1.prisma.user.findMany({
+                where: { schoolId: req.user.schoolId, id: req.user.id },
             });
         }
         // Create notifications for each target user
@@ -193,8 +201,11 @@ async function _sendSingleUserNotification(req, res, toUserId, title, message, t
             type,
             userId: toUserId,
             schoolId: req.user.schoolId,
-            senderId: req.user.id,
             isRead: false,
+            data: serializeNotificationData({
+                senderId: req.user.id,
+                channel: 'direct',
+            }),
             createdAt: new Date(),
         };
         const created = await database_1.prisma.notification.create({

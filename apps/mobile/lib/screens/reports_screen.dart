@@ -31,7 +31,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       final token = await ApiService.getToken();
       if (token != null) {
         final response = await http.get(
-          Uri.parse('${ApiService.baseUrl}/api/v1/reports'),
+          Uri.parse('${ApiService.baseUrl}/reports'),
           headers: <String, String>{
             'Content-Type': 'application/json; charset=UTF-8',
             'Authorization': 'Bearer $token',

@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import { prisma } from '../config/database';
 import { protect } from '../middleware/auth';
 import { authRateLimit, invitationRateLimit, generalRateLimit } from '../middleware/rateLimit';
+import EmailService from '../services/emailService.js';
 
 const router = Router();
 
@@ -127,7 +128,7 @@ router.post('/register', async (req, res) => {
     }
 
     try {
-        const invitation = await prisma.invitation.findUnique({
+        const invitation = await prisma.invitation.findFirst({
             where: { code: invitationCode, email, used: false, expiresAt: { gt: new Date() } }
         });
 
@@ -205,11 +206,10 @@ router.post('/invite', protect, invitationRateLimit, async (req, res) => {
             data: { email, name, role, schoolId, code: invitationCode, expiresAt, createdBy: req.user!.id }
         });
 
-        // TODO: Re-enable EmailService
-        // const school = await prisma.school.findUnique({ where: { id: schoolId } });
-        // if (school) {
-        //     await EmailService.sendInvitationEmail(email, name, invitationCode, school.name);
-        // }
+        const school = await prisma.school.findUnique({ where: { id: schoolId } });
+        if (school) {
+            await EmailService.sendInvitationEmail(email, name, invitationCode, school.name);
+        }
 
         res.status(201).json({ message: 'Invitation sent successfully', invitationId: invitation.id });
 
@@ -246,8 +246,35 @@ router.post('/forgot-password', authRateLimit, async (req, res) => {
     }
 
     try {
-        // Password reset functionality - email verification not implemented yet
-        res.status(200).json({ message: 'If an account exists with this email, a password reset link has been sent.' });
+        if (!EmailService.hasDeliveryConfig()) {
+            return res.status(503).json({
+                error: 'Self-service password reset is not configured on this deployment. Please contact your school administrator.',
+            });
+        }
+
+        const user = await prisma.user.findUnique({ where: { email } });
+
+        if (!user) {
+            // We don't want to reveal if a user exists or not, so we send a generic success message.
+            return res.status(200).json({ message: 'If an account with this email exists, a password reset link has been sent.' });
+        }
+
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+        await prisma.passwordResetToken.create({
+            data: {
+                userId: user.id,
+                token,
+                expiresAt,
+                schoolId: user.schoolId,
+            }
+        });
+
+        await EmailService.sendPasswordResetEmail(email, user.name, token);
+
+        return res.status(200).json({ message: 'If an account with this email exists, a password reset link has been sent.' });
+
     } catch (error) {
         console.error('Forgot password error:', error);
         res.status(500).json({ error: 'Failed to process password reset request.' });
@@ -256,10 +283,10 @@ router.post('/forgot-password', authRateLimit, async (req, res) => {
 
 // POST /auth/reset-password - Reset password with token
 router.post('/reset-password', async (req, res) => {
-    const { email, token, newPassword } = req.body;
+    const { token, newPassword } = req.body;
 
-    if (!email || !token || !newPassword) {
-        return res.status(400).json({ error: 'Email, token, and new password are required.' });
+    if (!token || !newPassword) {
+        return res.status(400).json({ error: 'Token and new password are required.' });
     }
 
     if (newPassword.length < 6) {
@@ -267,8 +294,27 @@ router.post('/reset-password', async (req, res) => {
     }
 
     try {
-        // Password reset token verification - to be implemented with email service
+        const resetToken = await prisma.passwordResetToken.findUnique({
+            where: { token },
+        });
+
+        if (!resetToken || resetToken.expiresAt < new Date()) {
+            return res.status(400).json({ error: 'Invalid or expired password reset token.' });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+        await prisma.user.update({
+            where: { id: resetToken.userId },
+            data: { password: hashedPassword },
+        });
+
+        await prisma.passwordResetToken.delete({
+            where: { id: resetToken.id },
+        });
+
         res.status(200).json({ message: 'Password has been reset successfully.' });
+
     } catch (error) {
         console.error('Reset password error:', error);
         res.status(500).json({ error: 'Failed to reset password.' });

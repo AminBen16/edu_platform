@@ -6,7 +6,7 @@ const zod_1 = require("zod");
 exports.LoginSchema = zod_1.z.object({
     email: zod_1.z.string().email('Invalid email').min(1),
     password: zod_1.z.string().min(6, 'Password min 6 chars'),
-    schoolId: zod_1.z.string().min(1, 'School ID required'),
+    schoolId: zod_1.z.string().min(1, 'School ID required').optional(),
 });
 exports.RegisterSchema = zod_1.z.object({
     email: zod_1.z.string().email(),

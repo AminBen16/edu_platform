@@ -1,19 +1,13 @@
 // apps/api/src/routes/download.ts
 import { Router, Response } from 'express';
 import { protect, authorize } from '../middleware/auth';
-import { createClient } from '@supabase/supabase-js';
 import { prisma } from '../config/database';
 import { Role } from '../lib/database';
 import PDFDocument from 'pdfkit';
-import archiver from 'archiver';
-import { Readable } from 'stream';
+import { readFile } from 'fs/promises';
+import path from 'path';
 
 const router = Router();
-
-// Supabase Storage client setup
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 // Helper to check if user can access a school-scoped resource
 const canAccessSchoolResource = async (userId: string, resourceSchoolId: string) => {
@@ -22,38 +16,19 @@ const canAccessSchoolResource = async (userId: string, resourceSchoolId: string)
     return user.schoolId === resourceSchoolId;
 };
 
-// GET /download/file/:bucket/:path(*) - Download a file from Supabase Storage
-router.get('/file/:bucket/:path(*)', protect, async (req, res) => {
-    if (!supabase) {
-        return res.status(500).json({ error: 'Storage service not configured.' });
-    }
-
-    const { bucket, path } = req.params;
+// GET /download/file/:path(*) - Download a file from local storage fallback
+router.get('/file/:path(*)', protect, async (req, res) => {
+    const relativePath = req.params.path;
     const user = req.user!;
 
     try {
-        // Basic security check: ensure user has access to the school for this file
-        // This assumes that the bucket name or a prefix in the path corresponds to schoolId
-        // Further granular checks might be needed based on specific file access policies
-        if (!path.startsWith(`${user.schoolId}/`)) {
+        if (!relativePath.startsWith(`${user.schoolId}/`)) {
             return res.status(403).json({ error: 'Access denied: File does not belong to your school context.' });
         }
 
-        const { data, error } = await supabase.storage
-            .from(bucket)
-            .download(path);
-
-        if (error) {
-            console.error('Supabase download error:', error);
-            return res.status((error as any).statusCode || 500).json({ error: error.message });
-        }
-
-        if (!data) {
-            return res.status(404).json({ error: 'File data not found.' });
-        }
-
-        const filename = path.split('/').pop() || 'download';
-        const buffer = Buffer.from(await data.arrayBuffer());
+        const localPath = path.join(process.cwd(), 'uploads', relativePath);
+        const buffer = await readFile(localPath);
+        const filename = relativePath.split('/').pop() || 'download';
         const contentType = getContentType(filename);
         
         res.setHeader('Content-Type', contentType);
@@ -310,18 +285,11 @@ async function generateAssignmentPDF(assignment: any): Promise<Buffer> {
 }
 
 async function generateSubmissionsZIP(assignment: any): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-        const archive = archiver('zip', { zlib: { level: 9 } });
-        const buffers: Buffer[] = [];
-
-        archive.on('data', (data) => buffers.push(data));
-        archive.on('end', () => resolve(Buffer.concat(buffers)));
-        archive.on('error', (err) => reject(err));
-
-        archive.append(`Assignment: ${assignment.title}\nTotal Submissions: ${assignment.submissions.length}\n\n`, { name: 'summary.txt' });
-
-        assignment.submissions.forEach((sub: any, index: number) => {
-            const submissionContent = `
+    const manifest = [
+        `Assignment: ${assignment.title}`,
+        `Total Submissions: ${assignment.submissions.length}`,
+        '',
+        ...assignment.submissions.map((sub: any, index: number) => `
 SUBMISSION ${index + 1}:
 Student: ${sub.student?.user?.name || 'N/A'}
 Email: ${sub.student?.user?.email || 'N/A'}
@@ -330,13 +298,10 @@ Submitted: ${new Date(sub.submittedAt).toLocaleString()}
 Content:
 ${sub.content || 'No text content provided.'}
 File URL: ${sub.fileUrl || 'No file uploaded.'}
-            `.trim();
-            archive.append(submissionContent, { name: `submission_${sub.student?.user?.name || `student_${index + 1}`}.txt` });
-            // TODO: If sub.fileUrl points to a file in Supabase, fetch and append it to the zip
-        });
+        `.trim()),
+    ].join('\n\n');
 
-        archive.finalize();
-    });
+    return Buffer.from(manifest, 'utf-8');
 }
 
 export default router;

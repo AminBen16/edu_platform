@@ -1,51 +1,39 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-// Email service for sending notifications
-const nodemailer_1 = __importDefault(require("nodemailer"));
 class EmailService {
-    static async initialize() {
-        if (!this.transporter) {
-            // For development, use ethereal test account
-            this.transporter = nodemailer_1.default.createTransport({
-                host: 'smtp.ethereal.email',
-                port: 587,
-                secure: false,
-                auth: {
-                    user: process.env.EMAIL_USER || 'your-ethereal-email',
-                    pass: process.env.EMAIL_PASS || 'your-ethereal-password',
-                },
-            });
-            // For production with SendGrid
-            // this.transporter = nodemailer.createTransport({
-            //   host: 'smtp.sendgrid.net',
-            //   port: 587,
-            //   secure: false,
-            //   auth: {
-            //     user: process.env.SENDGRID_API_KEY,
-            //     pass: process.env.SENDGRID_API_KEY,
-            //   },
-            // });
-        }
+    static hasDeliveryConfig() {
+        return Boolean(process.env.SMTP_HOST &&
+            process.env.SMTP_PORT &&
+            process.env.SMTP_USER &&
+            process.env.SMTP_PASS &&
+            process.env.EMAIL_FROM);
     }
     static getPublicUrl() {
-        return process.env.PUBLIC_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+        const vercelUrl = process.env.VERCEL_URL
+            ? `https://${process.env.VERCEL_URL}`
+            : undefined;
+        return (process.env.PUBLIC_URL ||
+            process.env.PUBLIC_APP_URL ||
+            process.env.NEXTAUTH_URL ||
+            vercelUrl ||
+            'http://localhost:3000');
     }
     static async sendEmail(options) {
         try {
-            await this.initialize();
-            const mailOptions = {
-                from: process.env.EMAIL_FROM || 'noreply@eduplatform.ug',
+            if (!EmailService.hasDeliveryConfig()) {
+                console.warn('Email delivery unavailable: SMTP provider not configured.', {
+                    to: options.to,
+                    subject: options.subject,
+                    previewUrl: EmailService.getPublicUrl(),
+                });
+                return false;
+            }
+            console.log('Email delivery requested but no provider implementation is installed in this deployment.', {
                 to: options.to,
                 subject: options.subject,
-                html: options.html,
-                text: options.text,
-            };
-            await this.transporter.sendMail(mailOptions);
-            console.log(`Email sent to ${options.to}: ${options.subject}`);
-            return true;
+                previewUrl: EmailService.getPublicUrl(),
+            });
+            return false;
         }
         catch (error) {
             console.error('Failed to send email:', error);

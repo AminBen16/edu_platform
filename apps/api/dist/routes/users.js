@@ -16,8 +16,8 @@ router.get('/profile', auth_1.protect, async (req, res) => {
             where: { id: req.user.id },
             include: {
                 school: { select: { name: true, logoUrl: true } },
-                teacherProfile: true,
-                studentProfile: true,
+                Teacher: true,
+                Student: true,
             }
         });
         if (!user) {
@@ -89,7 +89,8 @@ router.get('/:id', auth_1.protect, async (req, res) => {
             where: { id, schoolId: req.user.schoolId },
             select: {
                 id: true, email: true, name: true, role: true, avatarUrl: true, isActive: true, createdAt: true,
-                teacherProfile: true, studentProfile: true
+                Teacher: true,
+                Student: true
             }
         });
         if (!user) {

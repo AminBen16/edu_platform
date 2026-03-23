@@ -60,7 +60,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              'Enter your email address to receive a password reset link.',
+              'Enter your email address to request a reset. If self-service reset is not enabled on this deployment, contact your school administrator.',
             ),
             const SizedBox(height: 16),
             TextField(
@@ -86,7 +86,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 await ApiService.requestPasswordReset(emailController.text);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Password reset link sent!')),
+                    const SnackBar(
+                      content: Text(
+                        'If reset is enabled for this deployment, your request has been submitted.',
+                      ),
+                    ),
                   );
                 }
               } catch (e) {
@@ -145,6 +149,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 // Email Field
                 TextFormField(
+                  key: const Key('login_email_field'),
                   controller: _emailController,
                   decoration: const InputDecoration(
                     labelText: 'Email Address',
@@ -166,6 +171,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 // Password Field
                 TextFormField(
+                  key: const Key('login_password_field'),
                   controller: _passwordController,
                   decoration: const InputDecoration(
                     labelText: 'Password',
@@ -216,6 +222,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 // Login Button
                 ElevatedButton(
+                  key: const Key('login_submit_button'),
                   onPressed: _isLoading ? null : _login,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.indigo,

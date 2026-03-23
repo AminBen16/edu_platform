@@ -12,6 +12,10 @@ declare module 'db' {
 // Extend PrismaClient with custom models
 declare module '@prisma/client' {
   interface PrismaClient {
+    [key: string]: any;
+    $connect: () => Promise<void>;
+    $disconnect: () => Promise<void>;
+    $transaction: any;
     $queryRaw<T = any>(query: TemplateStringsArray | string, ...values: any[]): Promise<T>;
   }
 }

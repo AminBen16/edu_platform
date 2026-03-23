@@ -1,26 +1,21 @@
 /** @type {import('next').NextConfig} */
+const apiProxyTarget = (process.env.API_PROXY_TARGET || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3002/api/v1').replace(/\/$/, '');
+
 const nextConfig = {
   reactStrictMode: true,
+  turbopack: {
+    root: __dirname,
+  },
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
   },
   async rewrites() {
-    // In production, proxy API requests to the same domain
-    if (process.env.NODE_ENV === 'production') {
-      return [
-        {
-          source: '/api/v1/:path*',
-          destination: '/api/v1/:path*',
-        },
-      ];
-    }
-    // In development, use localhost API
     return [
       {
         source: '/api/v1/:path*',
-        destination: 'http://localhost:3001/api/v1/:path*',
+        destination: `${apiProxyTarget}/:path*`,
       },
     ];
   },
@@ -36,9 +31,6 @@ const nextConfig = {
         ],
       },
     ];
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
   },
 };
 

@@ -4,7 +4,7 @@ import { prisma } from '../config/database';
 import { Role, AuditLogAction } from '../lib/database';
 const router = Router();
 
-router.get('/dashboard', protect, async (req, res) => {
+router.get('/', protect, async (req, res) => { // PATCH 3 HIGH-002: /api/analytics/ (not /dashboard)
   const schoolId = req.user?.schoolId;
 
   if (!schoolId) {
@@ -38,34 +38,22 @@ router.get('/dashboard', protect, async (req, res) => {
       prisma.user.findMany({
         where: {
           schoolId,
-          studentProfile: {
-            is: {
-              enrollments: {
-                some: {}
-              }
-            }
-          }
+          Student: { isNot: null }
         },
         select: {
           id: true,
           name: true,
           email: true,
-          studentProfile: {
+          Student: {
             include: {
               enrollments: {
                 select: {
-                  Lesson: {
-                    select: {
-                      id: true
-                    }
+                  lesson: {
+                    select: { id: true }
                   }
                 }
               },
-              quizAttempts: {
-                select: {
-                  score: true
-                }
-              }
+              quizAttempts: true
             }
           }
         }
@@ -78,11 +66,11 @@ router.get('/dashboard', protect, async (req, res) => {
       let quizzesTaken = 0;
       let averageQuizScore = 0;
 
-      if (user.studentProfile) {
-        lessonsCompleted = user.studentProfile.enrollments.reduce((sum: number, e: any) => sum + ((e.Lesson || []) as Array<{ id: string }>).length, 0);
-        quizzesTaken = user.studentProfile.quizAttempts.length;
+      if (user.Student) {
+        lessonsCompleted = (user.Student.enrollments || []).reduce((sum: number, e: any) => sum + (e.lesson ? 1 : 0), 0);
+        quizzesTaken = (user.Student.quizAttempts || []).length;
         if (quizzesTaken > 0) {
-          averageQuizScore = user.studentProfile.quizAttempts.reduce((sum: number, qa: any) => sum + (qa.score || 0), 0) / quizzesTaken;
+          averageQuizScore = user.Student.quizAttempts.reduce((sum: number, qa: any) => sum + (qa.score || 0), 0) / quizzesTaken;
         }
       }
 

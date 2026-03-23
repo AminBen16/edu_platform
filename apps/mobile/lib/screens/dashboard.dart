@@ -18,6 +18,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _isLoading = true;
   List<dynamic> courses = [];
   List<dynamic> upcomingClasses = [];
+  Map<String, dynamic>? smartInsights;
 
   @override
   void initState() {
@@ -53,6 +54,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             stats = data['stats'] ?? {};
             courses = data['courses'] ?? [];
             upcomingClasses = data['upcomingClasses'] ?? [];
+            smartInsights = data['smartInsights'];
           });
         } else {
           throw Exception('Failed to load dashboard data');
@@ -155,6 +157,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     _buildRoleSpecificContent(),
                     const SizedBox(height: 20),
                     if (userData?['role'] == 'STUDENT') ...[
+                      _buildSmartInsightsSection(),
+                      const SizedBox(height: 20),
                       _buildCoursesSection(),
                       const SizedBox(height: 20),
                       _buildUpcomingClasses(),
@@ -795,6 +799,109 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
               );
             },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSmartInsightsSection() {
+    if (userData?['role'] != 'STUDENT' || smartInsights == null) {
+      return const SizedBox.shrink();
+    }
+
+    final recommendations = List<String>.from(
+      smartInsights?['recommendations'] ?? const <String>[],
+    );
+    final focusAreas = List<Map<String, dynamic>>.from(
+      smartInsights?['focusAreas'] ?? const <Map<String, dynamic>>[],
+    );
+    final strengths = List<Map<String, dynamic>>.from(
+      smartInsights?['strengths'] ?? const <Map<String, dynamic>>[],
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Smart Insights',
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 12),
+        Card(
+          color: Colors.indigo.shade50,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.auto_awesome, color: Colors.indigo),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Momentum Score',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${smartInsights?['momentumScore'] ?? 0}/100',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.indigo,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ...recommendations.map(
+                  (recommendation) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.check_circle_outline,
+                          size: 18,
+                          color: Colors.indigo,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(recommendation)),
+                      ],
+                    ),
+                  ),
+                ),
+                if (focusAreas.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Focus Areas',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 8),
+                  ...focusAreas.map(
+                    (area) => Text(
+                      '${area['subject']}: ${area['averageScore']}%',
+                      style: TextStyle(color: Colors.grey[700]),
+                    ),
+                  ),
+                ],
+                if (strengths.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Strengths',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 8),
+                  ...strengths.map(
+                    (item) => Text(
+                      '${item['subject']}: ${item['averageScore']}%',
+                      style: TextStyle(color: Colors.grey[700]),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       ],

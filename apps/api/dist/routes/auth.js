@@ -11,6 +11,7 @@ const crypto_1 = __importDefault(require("crypto"));
 const database_1 = require("../config/database");
 const auth_1 = require("../middleware/auth");
 const rateLimit_1 = require("../middleware/rateLimit");
+const emailService_js_1 = __importDefault(require("../services/emailService.js"));
 const router = (0, express_1.Router)();
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'dev-secret-do-not-use-in-production';
 // TEMPORARILY DISABLED FOR DEBUGGING - Validation moved to middleware
@@ -110,7 +111,7 @@ router.post('/register', async (req, res) => {
         return res.status(400).json({ error: error.message });
     }
     try {
-        const invitation = await database_1.prisma.invitation.findUnique({
+        const invitation = await database_1.prisma.invitation.findFirst({
             where: { code: invitationCode, email, used: false, expiresAt: { gt: new Date() } }
         });
         if (!invitation) {
@@ -209,8 +210,14 @@ router.post('/forgot-password', rateLimit_1.authRateLimit, async (req, res) => {
         return res.status(400).json({ error: 'Email is required.' });
     }
     try {
-        // Password reset functionality - email verification not implemented yet
-        res.status(200).json({ message: 'If an account exists with this email, a password reset link has been sent.' });
+        if (!emailService_js_1.default.hasDeliveryConfig()) {
+            return res.status(503).json({
+                error: 'Self-service password reset is not configured on this deployment. Please contact your school administrator.',
+            });
+        }
+        return res.status(501).json({
+            error: 'Password reset delivery is configured but the reset workflow is not enabled yet.',
+        });
     }
     catch (error) {
         console.error('Forgot password error:', error);
@@ -227,8 +234,9 @@ router.post('/reset-password', async (req, res) => {
         return res.status(400).json({ error: 'Password must be at least 6 characters.' });
     }
     try {
-        // Password reset token verification - to be implemented with email service
-        res.status(200).json({ message: 'Password has been reset successfully.' });
+        return res.status(501).json({
+            error: 'Password reset is not enabled on this deployment yet. Please contact your school administrator.',
+        });
     }
     catch (error) {
         console.error('Reset password error:', error);

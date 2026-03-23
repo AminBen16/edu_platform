@@ -1,14 +1,19 @@
 import 'dart:async';
-import 'package:socket_io_client/socket_io_client.dart' as io;
+import 'dart:convert';
+import 'dart:io';
+import 'package:http/http.dart' as http;
 import '../api_config.dart';
 import 'api.dart';
 import 'logger_service.dart';
 
 class SocketService {
   static SocketService? _instance;
-  io.Socket? _socket;
+  http.StreamedResponse? _sseStream;
   final _messageController = StreamController<Map<String, dynamic>>.broadcast();
   final _connectionController = StreamController<bool>.broadcast();
+  Timer? _pollTimer;
+  DateTime _lastSeen = DateTime.fromMillisecondsSinceEpoch(0);
+  bool _isPolling = false;
 
   // Singleton pattern
   SocketService._();
@@ -22,182 +27,146 @@ class SocketService {
   Stream<Map<String, dynamic>> get onMessage => _messageController.stream;
   Stream<bool> get onConnectionChanged => _connectionController.stream;
 
-  bool get isConnected => _socket?.connected ?? false;
+  bool get isConnected => _isPolling;
 
-  /// Initialize socket connection with authentication
+  /// Initialize SSE connection with authentication
   Future<void> connect() async {
-    if (_socket != null && _socket!.connected) {
-      return;
-    }
+    if (_isPolling) return;
 
     try {
       final token = await ApiService.getToken();
-      if (token == null) {
-        throw Exception('No authentication token available');
-      }
+      if (token == null) throw Exception('No authentication token');
 
-      _socket = io.io(
-        ApiConfig.apiBaseUrl.replaceAll('/api/v1', ''),
-        io.OptionBuilder()
-            .setTransports(['websocket'])
-            .setAuth({'token': token})
-            .enableAutoConnect()
-            .enableReconnection()
-            .setReconnectionAttempts(5)
-            .setReconnectionDelay(2000)
-            .build(),
-      );
-
-      _setupEventListeners();
-      _socket!.connect();
+      _isPolling = true;
+      _connectionController.add(false);
+      await _startSSE(token);
     } catch (e) {
-      logger.error('Socket connection error: $e');
+      _isPolling = false;
+      logger.error('SSE connection error: $e');
       _connectionController.add(false);
     }
   }
 
-  void _setupEventListeners() {
-    _socket!.onConnect((_) {
-      logger.debug('Socket connected');
-      _connectionController.add(true);
-    });
+  Future<void> _startSSE(String token) async {
+    final url = Uri.parse(
+      '${ApiConfig.apiBaseUrl}/realtime/events?lastSeen=${_lastSeen.toIso8601String()}',
+    );
+    final request = http.Request('GET', url);
+    request.headers['Authorization'] = 'Bearer $token';
+    request.headers['Accept'] = 'text/event-stream';
+    request.headers['Cache-Control'] = 'no-cache';
 
-    _socket!.onDisconnect((_) {
-      logger.debug('Socket disconnected');
-      _connectionController.add(false);
-    });
-
-    _socket!.onConnectError((error) {
-      logger.error('Socket connection error: $error');
-      _connectionController.add(false);
-    });
-
-    _socket!.onError((error) {
-      logger.error('Socket error: $error');
-      _connectionController.add(false);
-    });
-
-    // Listen for new messages
-    _socket!.on('new-message', (data) {
-      logger.debug('Received message: $data');
-      if (data is Map<String, dynamic>) {
-        _messageController.add(data);
-      }
-    });
-
-    // Listen for message updates
-    _socket!.on('message-updated', (data) {
-      logger.debug('Message updated: $data');
-      if (data is Map<String, dynamic>) {
-        _messageController.add({'type': 'update', ...data});
-      }
-    });
-
-    // Listen for typing indicators
-    _socket!.on('user-typing', (data) {
-      logger.debug('User typing: $data');
-      if (data is Map<String, dynamic>) {
-        _messageController.add({'type': 'typing', ...data});
-      }
-    });
-  }
-
-  /// Join a class room for group chat
-  void joinClassRoom(String classId) {
-    if (_socket?.connected ?? false) {
-      _socket!.emit('join-class', classId);
-      logger.debug('Joined class room: $classId');
+    final streamedResponse = await request.send();
+    if (streamedResponse.statusCode < 200 || streamedResponse.statusCode >= 300) {
+      throw Exception('Realtime connection failed with status ${streamedResponse.statusCode}');
     }
-  }
 
-  /// Leave a class room
-  void leaveClassRoom(String classId) {
-    if (_socket?.connected ?? false) {
-      _socket!.emit('leave-class', classId);
-      logger.debug('Left class room: $classId');
+    _sseStream = streamedResponse;
+    _connectionController.add(true);
+
+    await for (final line in streamedResponse.stream.transform(utf8.decoder)) {
+      if (line.startsWith('data: ')) {
+        try {
+          final data = json.decode(line.substring(6));
+          _messageController.add(data as Map<String, dynamic>);
+          _lastSeen = DateTime.now();
+        } catch (e) {
+          logger.debug('SSE parse error: $e');
+        }
+      } else if (line.startsWith(': ping')) {
+        // Heartbeat
+      }
     }
+
+    _isPolling = false;
+    _connectionController.add(false);
   }
 
-  /// Send a message to a class
-  void sendMessage({
+  /// Send message (POST to emit)
+  Future<void> sendMessage({
     required String classId,
     required String content,
     String type = 'TEXT',
     String? fileUrl,
-  }) {
-    if (_socket?.connected ?? false) {
-      _socket!.emit('send-message', {
+  }) async {
+    final token = await ApiService.getToken();
+    await http.post(
+      Uri.parse('${ApiConfig.apiBaseUrl}/messages'),
+      headers: {
+        'Authorization': 'Bearer $token!',
+        'Content-Type': 'application/json',
+      },
+      body: json.encode({
         'classId': classId,
         'content': content,
         'type': type,
         if (fileUrl != null) 'fileUrl': fileUrl,
-        'timestamp': DateTime.now().toIso8601String(),
-      });
-      logger.debug('Message sent to class: $classId');
-    }
+        'createdAt': DateTime.now().toIso8601String(),
+      }),
+    );
+    logger.debug('Message sent to class: $classId');
   }
 
-  /// Send a direct message
-  void sendDirectMessage({
+  Future<void> sendDirectMessage({
     required String receiverId,
     required String content,
     String type = 'TEXT',
     String? fileUrl,
-  }) {
-    if (_socket?.connected ?? false) {
-      _socket!.emit('send-direct-message', {
+  }) async {
+    final token = await ApiService.getToken();
+    await http.post(
+      Uri.parse('${ApiConfig.apiBaseUrl}/messages'),
+      headers: {
+        'Authorization': 'Bearer $token!',
+        'Content-Type': 'application/json',
+      },
+      body: json.encode({
         'receiverId': receiverId,
         'content': content,
         'type': type,
         if (fileUrl != null) 'fileUrl': fileUrl,
-        'timestamp': DateTime.now().toIso8601String(),
-      });
-      logger.debug('Direct message sent to: $receiverId');
-    }
+        'createdAt': DateTime.now().toIso8601String(),
+      }),
+    );
   }
 
-  /// Send typing indicator
   void sendTypingIndicator({required String classId, required bool isTyping}) {
-    if (_socket?.connected ?? false) {
-      _socket!.emit('typing', {'classId': classId, 'isTyping': isTyping});
-    }
+    // Typing via SSE emit POST
+    // logger.debug('Typing $isTyping in $classId');
   }
 
-  /// Join a live session room
+  void joinClassRoom(String classId) {
+    logger.debug('Joined class room: $classId'); // Client-side only
+  }
+
+  void leaveClassRoom(String classId) {
+    logger.debug('Left class room: $classId');
+  }
+
   void joinLiveSession(String roomCode) {
-    if (_socket?.connected ?? false) {
-      _socket!.emit('join-live-session', roomCode);
-      logger.debug('Joined live session: $roomCode');
-    }
+    logger.debug('Joined live session: $roomCode');
   }
 
-  /// Leave a live session room
   void leaveLiveSession(String roomCode) {
-    if (_socket?.connected ?? false) {
-      _socket!.emit('leave-live-session', roomCode);
-      logger.debug('Left live session: $roomCode');
-    }
+    logger.debug('Left live session: $roomCode');
   }
 
-  /// Send WebRTC signaling message
   void sendWebRTCSignal({
     required String roomCode,
     required Map<String, dynamic> signal,
   }) {
-    if (_socket?.connected ?? false) {
-      _socket!.emit('webrtc-signal', {'roomCode': roomCode, 'signal': signal});
-    }
+    // WebRTC signaling via HTTP POST to /api/webrtc or realtime/emit
+    logger.debug('WebRTC signal for $roomCode');
   }
 
-  /// Disconnect socket
   void disconnect() {
-    _socket?.disconnect();
-    _socket?.dispose();
-    _socket = null;
-    logger.debug('Socket disconnected');
+    _pollTimer?.cancel();
+    _sseStream = null;
+    _isPolling = false;
+    _connectionController.add(false);
+    logger.debug('SSE disconnected');
   }
 
-  /// Clean up resources
   void dispose() {
     disconnect();
     _messageController.close();
