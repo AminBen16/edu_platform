@@ -1,26 +1,13 @@
 {
   "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "apps/api/src/index.ts",
-      "use": "@vercel/node"
+      "source": "/api/:match*",
+      "destination": "apps/api/src/index.ts"
     },
     {
-      "src": "apps/admin/package.json",
-      "use": "@vercel/next"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "apps/api/src/index.ts"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "apps/admin/$1"
+      "source": "/(.*)",
+      "destination": "apps/admin/$1"
     }
   ]
 }

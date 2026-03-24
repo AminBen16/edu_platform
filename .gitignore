@@ -3,6 +3,7 @@
 .vscode/
 *.swp
 *.swo
+tsconfig.tsbuildinfo
 
 # Dependencies / Build artifacts
 /node_modules/
@@ -10,24 +11,30 @@
 /packages/**/node_modules/
 /build/
 /dist/
+.next/
 *.log
+
+# DB / Secrets
+*.db
+*.sqlite
+.env*
+.env.*
+.env*.local
+upload-keystore.jks
+.audit*
+.neon
 
 # Dart & Flutter
 .dart_tool/
 .packages
 .pub-cache/
-pubspec.lock
+pubspec.lock  # Keep for reproducible builds
 
-# Operating System files
+# OS / Temp
 .DS_Store
 Thumbs.db
+.vercelignore  # Vercel-specific
 
-.vercel
-
-.env
-.env.*
-apps/**/.env
-apps/**/.env.*
-packages/**/.env
-packages/**/.env.*
-.env*.local
+# Uploads / Temp
+**/uploads/
+**/temp/

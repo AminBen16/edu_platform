@@ -96,7 +96,7 @@ export default function AdminDashboard() {
           />
           <StatsCard
             title="Classes"
-            value={0}
+            value={analytics?.totalClasses || 0}
             subtitle={`${teachers.length} teachers`}
             icon="🏫"
             color="#9b59b6"

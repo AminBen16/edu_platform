@@ -1,6 +1,53 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
+const nodemailer = __importStar(require("nodemailer"));
 class EmailService {
+    static initialize() {
+        if (EmailService.hasDeliveryConfig() && !this.transporter) {
+            this.transporter = nodemailer.createTransport({
+                host: process.env.SMTP_HOST,
+                port: Number(process.env.SMTP_PORT),
+                secure: Number(process.env.SMTP_PORT) === 465, // true for 465, false for other ports
+                auth: {
+                    user: process.env.SMTP_USER,
+                    pass: process.env.SMTP_PASS,
+                },
+            });
+        }
+    }
     static hasDeliveryConfig() {
         return Boolean(process.env.SMTP_HOST &&
             process.env.SMTP_PORT &&
@@ -19,21 +66,23 @@ class EmailService {
             'http://localhost:3000');
     }
     static async sendEmail(options) {
-        try {
-            if (!EmailService.hasDeliveryConfig()) {
-                console.warn('Email delivery unavailable: SMTP provider not configured.', {
-                    to: options.to,
-                    subject: options.subject,
-                    previewUrl: EmailService.getPublicUrl(),
-                });
-                return false;
-            }
-            console.log('Email delivery requested but no provider implementation is installed in this deployment.', {
+        EmailService.initialize();
+        if (!this.transporter) {
+            console.warn('Email delivery unavailable: SMTP provider not configured.', {
                 to: options.to,
                 subject: options.subject,
-                previewUrl: EmailService.getPublicUrl(),
             });
+            // In a real app, you might want to uncomment the line below to see email previews in development
+            // console.log(`Email preview URL: ${EmailService.getPublicUrl()}/previews/emails/${Buffer.from(JSON.stringify(options)).toString('base64')}`);
             return false;
+        }
+        try {
+            await this.transporter.sendMail({
+                from: process.env.EMAIL_FROM,
+                ...options,
+            });
+            console.log(`Email sent to ${options.to} with subject "${options.subject}"`);
+            return true;
         }
         catch (error) {
             console.error('Failed to send email:', error);
@@ -78,6 +127,38 @@ class EmailService {
             text: `Hello ${name},\n\nYou've been invited to join ${schoolName} education platform.\n\nYour invitation code is: ${invitationCode}\n\nRegister at: ${EmailService.getPublicUrl()}/register/${invitationCode}\n\nThis invitation expires in 7 days.`
         });
     }
+    static async sendPasswordResetEmail(email, name, token) {
+        const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
+        <div style="background-color: #ffc107; color: #212529; padding: 20px; border-radius: 8px; text-align: center;">
+          <h1>Password Reset Request</h1>
+        </div>
+        <div style="background-color: white; padding: 20px; border-radius: 8px; margin-top: 20px;">
+          <h2>Hello ${name},</h2>
+          <p>We received a request to reset your password. If you didn't make this request, please ignore this email.</p>
+          <p>To reset your password, click the link below:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${EmailService.getPublicUrl()}/reset-password/${token}" 
+               style="background-color: #ffc107; color: #212529; padding: 12px 30px; text-decoration: none; border-radius: 4px; display: inline-block;">
+              Reset Password
+            </a>
+          </div>
+          <p style="color: #6c757d; font-size: 14px; text-align: center; margin-top: 20px;">
+            This link will expire in 1 hour.
+          </p>
+        </div>
+        <div style="background-color: #343a40; color: white; padding: 20px; border-radius: 8px; margin-top: 20px; text-align: center;">
+          <p style="margin: 0;">© 2024 Education Platform. All rights reserved.</p>
+        </div>
+      </div>
+    `;
+        return this.sendEmail({
+            to: email,
+            subject: 'Password Reset Request',
+            html,
+            text: `Hello ${name},\n\nWe received a request to reset your password. If you didn't make this request, please ignore this email.\n\nTo reset your password, visit: ${EmailService.getPublicUrl()}/reset-password/${token}\n\nThis link will expire in 1 hour.`
+        });
+    }
     static async sendDeletionConfirmationEmail(email, name, deletionToken, schoolName) {
         const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
@@ -118,4 +199,5 @@ class EmailService {
         });
     }
 }
+EmailService.transporter = null;
 exports.default = EmailService;

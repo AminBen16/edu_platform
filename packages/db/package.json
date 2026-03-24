@@ -1,33 +1,23 @@
 {
   "name": "db",
-  "version": "1.0.0",
-  "description": "",
-  "main": "./dist/index.js",
-  "types": "dist/index.d.ts",
+  "version": "0.0.1",
+  "main": "./index.ts",
+  "types": "./index.ts",
   "scripts": {
-    "build": "npx tsc && npm run prisma:generate:safe",
-    "clean": "rm -rf dist",
-    "db:seed": "prisma db seed",
-    "prisma:generate": "prisma generate",
-    "prisma:generate:safe": "npx prisma generate",
-    "postinstall": "npm run prisma:generate:safe"
+    "build": "tsc",
+    "generate": "prisma generate",
+    "db:push": "prisma db push --accept-data-loss",
+    "migrate": "prisma migrate deploy",
+    "studio": "prisma studio",
+    "seed": "tsx prisma/seed.ts"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "@prisma/client": "^5.22.0",
-    "bcryptjs": "^2.4.3"
+    "@prisma/client": "^5.12.0"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/node": "^20.12.2",
-    "prisma": "^5.22.0",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
-  },
-  "prisma": {
-    "seed": "ts-node prisma/seed.ts",
-    "schema": "schema.prisma"
+    "@types/node": "^20.12.7",
+    "prisma": "^5.12.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.4.5"
   }
 }

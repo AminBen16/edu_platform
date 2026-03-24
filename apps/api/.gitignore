@@ -1,2 +1,20 @@
-.vercel
+# Build / Deps
+dist/
+node_modules/
+
+# Prisma
+/prisma/migrations
+/prisma/dev.db
+
+# Env / Secrets
+.env*
+.env.*
 .env*.local
+
+# Uploads / Temp
+uploads/
+temp/
+
+# Logs / OS
+*.log
+.DS_Store

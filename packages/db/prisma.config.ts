@@ -1,11 +1,8 @@
-import { defineConfig } from '@prisma/internals'
- 
+// @ts-ignore Cannot find module '@prisma/internals' (internal package, ignore)\nimport { defineConfig } from '@prisma/internals'
+
 export default defineConfig({
-  datasource: {
-    url: env('DATABASE_URL'),
-  },
-  __internal: {
-    schemaPath: './schema.prisma',
+  generator: {
+    previewFeatures: ['driverAdapters']
   },
 })
 

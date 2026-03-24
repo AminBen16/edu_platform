@@ -1,7 +1,7 @@
 // apps/api/src/routes/notifications.ts
 import { Router } from 'express';
-import { prisma } from '../config/database';
-import { protect } from '../middleware/auth';
+import { prisma } from '../config/database.js';
+import { protect } from '../middleware/auth.js';
 import axios from 'axios';
 
 // WebSocket event emitters - to be integrated with actual WebSocket server
@@ -20,16 +20,9 @@ const serializeNotificationData = (payload: Record<string, unknown>) =>
     )
   );
 
-// Validation helper
-const validateDatabaseConnection = () => {
-  return true;
-};
-
 // GET /notifications - Get user notifications
 router.get('/', protect, async (req, res) => {
   try {
-    validateDatabaseConnection();
-    
     const notifications = await prisma.notification.findMany({
       where: { 
         userId: req.user!.id,
@@ -40,9 +33,6 @@ router.get('/', protect, async (req, res) => {
     res.json(notifications);
   } catch (error: any) {
     console.error('Failed to fetch notifications:', error);
-    if (error.message.includes('DATABASE_URL')) {
-      return res.status(503).json({ error: 'Database not configured. Please set DATABASE_URL.' });
-    }
     res.status(500).json({ error: 'Failed to fetch notifications.' });
   }
 });
@@ -50,8 +40,6 @@ router.get('/', protect, async (req, res) => {
 // GET /notifications/new - Get new notifications (for real-time polling)
 router.get('/new', protect, async (req, res) => {
   try {
-    validateDatabaseConnection();
-    
     const lastCheck = req.query.lastCheck as string;
     const lastCheckDate = lastCheck ? new Date(lastCheck) : new Date(Date.now() - 5000);
 
@@ -65,9 +53,6 @@ router.get('/new', protect, async (req, res) => {
     res.json(newNotifications);
   } catch (error: any) {
     console.error('Failed to fetch new notifications:', error);
-    if (error.message.includes('DATABASE_URL')) {
-      return res.status(503).json({ error: 'Database not configured.' });
-    }
     res.status(500).json({ error: 'Failed to fetch new notifications.' });
   }
 });
@@ -81,10 +66,7 @@ router.post('/send', protect, async (req, res) => {
     contentId, 
     contentType, 
     recipients, 
-    channels, 
-    priority, 
     sendImmediately,
-    data,
     toUserId 
   } = req.body;
   
@@ -100,26 +82,8 @@ router.post('/send', protect, async (req, res) => {
   }
   
   try {
-    validateDatabaseConnection();
     const recipientGroups = Array.isArray(recipients) ? recipients : [];
     
-    const notificationData = {
-      title,
-      message,
-      type,
-      schoolId: req.user!.schoolId,
-      data: serializeNotificationData({
-        contentId,
-        contentType,
-        priority: priority || 'normal',
-        channels,
-        sendImmediately,
-        senderId: req.user!.id,
-        metadata: data ?? null,
-      }),
-      createdAt: new Date(),
-    };
-
     // Get target users based on recipients
     let targetUsers: any[] = [];
     
@@ -127,25 +91,25 @@ router.post('/send', protect, async (req, res) => {
       targetUsers = await prisma.user.findMany({
         where: { schoolId: req.user!.schoolId },
       });
-    } else if (recipientGroups.includes('students')) {
+    } else if (recipientGroups.includes('STUDENT')) {
       targetUsers = await prisma.user.findMany({
         where: { 
           schoolId: req.user!.schoolId,
           role: 'STUDENT',
         },
       });
-    } else if (recipientGroups.includes('parents')) {
+    } else if (recipientGroups.includes('TEACHER')) {
       targetUsers = await prisma.user.findMany({
         where: { 
           schoolId: req.user!.schoolId,
-          role: 'PARENT',
+          role: 'TEACHER',
         },
       });
-    } else if (recipientGroups.includes('admin')) {
+    } else if (recipientGroups.includes('ADMIN')) {
       targetUsers = await prisma.user.findMany({
         where: { 
           schoolId: req.user!.schoolId,
-          role: { in: ['ADMIN', 'SUPER_ADMIN'] },
+          role: { in: ['SCHOOL_ADMIN', 'SUPER_ADMIN'] },
         },
       });
     } else {
@@ -158,14 +122,14 @@ router.post('/send', protect, async (req, res) => {
     const createdNotifications = [];
     
     for (const user of targetUsers) {
-      const notification = {
-        ...notificationData,
-        userId: user.id,
-        isRead: false,
-      };
-
       const created = await prisma.notification.create({
-        data: notification,
+        data: {
+          title,
+          content: message,
+          type,
+          userId: user.id,
+          read: false,
+        },
       });
       createdNotifications.push(created);
 
@@ -184,9 +148,7 @@ router.post('/send', protect, async (req, res) => {
     }
 
     // Send push notifications if configured
-    if (channels && channels.includes('push')) {
-      await _sendPushNotifications(title, message, targetUsers);
-    }
+    await _sendPushNotifications(title, message, targetUsers);
 
     res.status(201).json({ 
       success: true, 
@@ -195,9 +157,6 @@ router.post('/send', protect, async (req, res) => {
     });
   } catch (error: any) {
     console.error('Notification sending error:', error);
-    if (error.message.includes('DATABASE_URL')) {
-      return res.status(503).json({ error: 'Database not configured.' });
-    }
     res.status(500).json({ error: 'Failed to send notifications.' });
   }
 });
@@ -205,44 +164,19 @@ router.post('/send', protect, async (req, res) => {
 // Helper function for single user notifications
 async function _sendSingleUserNotification(req: any, res: any, toUserId: string, title: string, message: string, type: string = 'system') {
   try {
-    validateDatabaseConnection();
-    
-    // OneSignal push notification if configured
-    const onesignalAppId = process.env.ONESIGNAL_APP_ID;
-    const onesignalApiKey = process.env.ONESIGNAL_API_KEY;
-    
-    if (onesignalAppId && onesignalApiKey) {
-      await axios.post('https://onesignal.com/api/v1/notifications', {
-        app_id: onesignalAppId,
-        headings: { en: title },
-        contents: { en: message },
-        include_player_ids: [toUserId],
-      }, {
-        headers: {
-          'Authorization': `Basic ${onesignalApiKey}`,
-          'Content-Type': 'application/json',
-        },
-      });
-    }
-    
     // Create in-app notification
-    const notificationData = {
-      title,
-      message,
-      type,
-      userId: toUserId,
-      schoolId: req.user!.schoolId,
-      isRead: false,
-      data: serializeNotificationData({
-        senderId: req.user!.id,
-        channel: 'direct',
-      }),
-      createdAt: new Date(),
-    };
-
     const created = await prisma.notification.create({
-      data: notificationData,
+      data: {
+        title,
+        content: message,
+        type,
+        userId: toUserId,
+        read: false,
+      },
     });
+
+    // Send OneSignal push if configured
+    await _sendPushNotifications(title, message, [{ id: toUserId }]);
 
     // Send real-time notification
     await emitToUser(toUserId, 'notification', {
@@ -256,9 +190,6 @@ async function _sendSingleUserNotification(req: any, res: any, toUserId: string,
     res.status(200).json({ status: 'Notification sent', notification: created });
   } catch (error: any) {
     console.error('Failed to send notification:', error);
-    if (error.message.includes('DATABASE_URL')) {
-      return res.status(503).json({ error: 'Database not configured.' });
-    }
     res.status(500).json({ error: 'Failed to send notification.' });
   }
 }
@@ -270,7 +201,6 @@ async function _sendPushNotifications(title: string, message: string, targetUser
     const onesignalApiKey = process.env.ONESIGNAL_API_KEY;
     
     if (!onesignalAppId || !onesignalApiKey) {
-      console.log('OneSignal not configured, skipping push notification');
       return;
     }
 
@@ -278,7 +208,8 @@ async function _sendPushNotifications(title: string, message: string, targetUser
       app_id: onesignalAppId,
       headings: { en: title },
       contents: { en: message },
-      included_segments: ['All'],
+      // In production, mapping user IDs to OneSignal Player IDs/External IDs
+      include_external_user_ids: targetUsers.map(u => u.id),
     }, {
       headers: {
         'Authorization': `Basic ${onesignalApiKey}`,
@@ -293,21 +224,16 @@ async function _sendPushNotifications(title: string, message: string, targetUser
 // PATCH /notifications/:id/read - Mark notification as read
 router.patch('/:id/read', protect, async (req, res) => {
   try {
-    validateDatabaseConnection();
-    
     const { id } = req.params;
 
     await prisma.notification.update({
       where: { id },
-      data: { isRead: true },
+      data: { read: true },
     });
 
     res.status(200).json({ success: true });
   } catch (error: any) {
     console.error('Failed to mark notification as read:', error);
-    if (error.message.includes('DATABASE_URL')) {
-      return res.status(503).json({ error: 'Database not configured.' });
-    }
     res.status(500).json({ error: 'Failed to mark notification as read.' });
   }
 });
@@ -315,21 +241,16 @@ router.patch('/:id/read', protect, async (req, res) => {
 // PATCH /notifications/read-all - Mark all notifications as read
 router.patch('/read-all', protect, async (req, res) => {
   try {
-    validateDatabaseConnection();
-    
     await prisma.notification.updateMany({
       where: { 
         userId: req.user!.id,
       },
-      data: { isRead: true },
+      data: { read: true },
     });
 
     res.status(200).json({ success: true });
   } catch (error: any) {
     console.error('Failed to mark all notifications as read:', error);
-    if (error.message.includes('DATABASE_URL')) {
-      return res.status(503).json({ error: 'Database not configured.' });
-    }
     res.status(500).json({ error: 'Failed to mark all notifications as read.' });
   }
 });

@@ -82,8 +82,8 @@ export const rateLimit = (options: RateLimitOptions) => {
       next();
     } catch (error) {
       console.error('Rate limiting error:', error);
-      // Fail open - allow request if rate limiting fails
-      next();
+      // Fail CLOSED - block request if rate limiting DB fails (security)
+      return res.status(503).json({ error: 'Service temporarily unavailable. Please try again later.' });
     }
   };
 };

@@ -1,1 +1,7 @@
 include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    avoid_print: error
+    prefer_const_constructors: error
+    use_key_in_widget_constructors: error

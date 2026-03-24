@@ -36,6 +36,7 @@ dependencies:
 
   # Image Picker for uploads
   image_picker: ^1.0.4
+  file_picker: ^8.0.0
 
   # Screen Recording
   flutter_screen_recording: ^2.0.0

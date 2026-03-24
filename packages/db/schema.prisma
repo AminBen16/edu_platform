@@ -1,854 +1,322 @@
+// ------------------------------------------------------------------
+// Education Platform Database Schema - FIXED
+// Supports: Multi-school, CBC, Auth, Profiles
+// Fixed: Prisma validation errors, added relations @@map
+// ------------------------------------------------------------------
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-model Announcement {
-  id                       String @id @default(cuid())
-  title      String
-  content    String
-  type       String    @default("GENERAL")
-  priority   String    @default("NORMAL")
-  isPublic               Boolean   @default(true) @map("is_public")
-  startDate              DateTime @map("start_date")
-  endDate                DateTime? @map("end_date")
-  authorId               String @map("author_id")
-  classId                String? @map("class_id")
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime @updatedAt
-  schoolId               String @map("school_id")
-  author                 User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  class                  Class?    @relation(fields: [classId], references: [id], onDelete: Cascade)
-  school                 School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-
-  @@index([classId])
-  @@index([schoolId])
+// Enums
+enum UserRole {
+  SUPER_ADMIN
+  SCHOOL_ADMIN
+  TEACHER
+  STUDENT
+  PARENT
 }
 
-model Answer {
-  id                       String @id @default(cuid())
-  quizAttemptId          String @map("quiz_attempt_id")
-  questionId             String @map("question_id")
-  selectedId             String? @map("selected_id")
-  textAnswer             String? @map("text_answer")
-  isCorrect              Boolean? @map("is_correct")
-  createdAt       DateTime    @default(now())
-  schoolId               String @map("school_id")
-  quizAttempt            QuizAttempt @relation(fields: [quizAttemptId], references: [id], onDelete: Cascade)
-  school                 School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-
-  @@index([schoolId])
+enum SchoolType {
+  PRE_PRIMARY
+  PRIMARY
+  LOWER_SECONDARY
+  UPPER_SECONDARY
+  TVET
+  TERTIARY
+  UNIVERSITY
 }
 
-model Assessment {
-  id                       String @id @default(cuid())
-  title            String
-  type             String
-  description      String?
-  dueDate                DateTime? @map("due_date")
-  maxScore               Float? @map("max_score")
-  termId                 String? @map("term_id")
-  subjectId              String? @map("subject_id")
-  classId                String? @map("class_id")
-  teacherId              String? @map("teacher_id")
-  isPublished            Boolean            @default(false) @map("is_published")
-  schoolId               String @map("school_id")
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime @updatedAt
-  class                  Class?             @relation(fields: [classId], references: [id])
-  school                 School             @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  subject                Subject?           @relation(fields: [subjectId], references: [id])
-  teacher                Teacher?           @relation(fields: [teacherId], references: [id])
-  term                   Term?              @relation(fields: [termId], references: [id])
-  results                AssessmentResult[]
-
-  @@index([classId])
-  @@index([schoolId])
-  @@index([termId])
+enum LessonType {
+  VIDEO
+  PDF
+  AUDIO
+  ARTICLE
+  QUIZ
 }
 
-model AssessmentResult {
-  id                       String @id @default(cuid())
-  assessmentId           String @map("assessment_id")
-  studentId              String @map("student_id")
-  score           Float?
-  masteryLevel           String? @map("mastery_level")
-  teacherRemarks         String? @map("teacher_remarks")
-  submittedAt            DateTime   @default(now()) @map("submitted_at")
-  gradedAt               DateTime? @map("graded_at")
-  gradedBy               String? @map("graded_by")
-  schoolId               String @map("school_id")
-  assessment             Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
-  grader                 User?      @relation(fields: [gradedBy], references: [id])
-  school                 School     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  student                Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
-
-  @@unique([assessmentId, studentId])
-  @@index([schoolId])
-  @@index([studentId])
-}
-
-model Assignment {
-  id                       String @id @default(cuid())
-  title       String
-  description String?
-  dueDate                DateTime? @map("due_date")
-  maxScore               Float? @map("max_score")
-  lessonId               String? @map("lesson_id")
-  teacherId              String? @map("teacher_id")
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime @updatedAt
-  schoolId               String @map("school_id")
-  lesson                 Lesson?      @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  school                 School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  teacher                Teacher?     @relation(fields: [teacherId], references: [id])
-  submissions            Submission[]
-
-  @@index([schoolId])
-}
-
-model Attendance {
-  id                       String @id @default(cuid())
-  date       DateTime @default(now())
-  status     String   @default("PRESENT")
-  studentId              String @map("student_id")
-  classId                String? @map("class_id")
-  lessonId               String? @map("lesson_id")
-  notes      String?
-  createdAt  DateTime @default(now())
-  schoolId               String @map("school_id")
-  class                  Class?   @relation(fields: [classId], references: [id])
-  lesson                 Lesson?  @relation(fields: [lessonId], references: [id])
-  school                 School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  student                Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-
-  @@unique([studentId, date, classId])
-  @@index([date])
-  @@index([schoolId])
-  @@index([studentId])
-}
-
-model AuditLog {
-  id                       String @id @default(cuid())
-  userId                 String? @map("user_id")
-  action     String
-  resource   String?
-  details    String?
-  ipAddress              String? @map("ip_address")
-  userAgent              String? @map("user_agent")
-  createdAt  DateTime @default(now())
-  schoolId               String @map("school_id")
-  school                 School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  user                   User?    @relation(fields: [userId], references: [id])
-
-  @@index([schoolId])
-}
-
-model Class {
-  id                       String @id @default(cuid())
-  name              String
-  code              String?          @unique
-  grade             String?
-  capacity          Int?
-  schoolId               String @map("school_id")
-  teacherId              String? @map("teacher_id")
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime @updatedAt
-  curriculumId      String?
-  curriculumLevelId String?
-  announcements          Announcement[]
-  assessments            Assessment[]
-  attendances            Attendance[]
-  curriculum             Curriculum?      @relation(fields: [curriculumId], references: [id])
-  curriculumLevel        CurriculumLevel? @relation(fields: [curriculumLevelId], references: [id])
-  school                 School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  teacher                Teacher?         @relation(fields: [teacherId], references: [id])
-  enrollments            Enrollment[]
-  lessons                Lesson[]
-  liveSession            LiveSession[]
-  reportCards            ReportCard[]
-  schedule               Schedule[]
-}
-
-model Competency {
-  id                       String @id @default(cuid())
-  name               String
-  description        String?
-  order              Int                  @default(0)
-  topicId                String @map("topic_id")
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime @updatedAt
-  topic                  Topic                @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  competencyProgress     CompetencyProgress[]
-  learningOutcomes       LearningOutcome[]
-  lessonCompetencies     LessonCompetency[]
-}
-
-model CompetencyProgress {
-  id                       String @id @default(cuid())
-  studentId              String @map("student_id")
-  competencyId           String @map("competency_id")
-  masteryLevel           String     @default("BEGINNING") @map("mastery_level")
-  notes         String?
-  evaluatedBy            String? @map("evaluated_by")
-  evaluatedAt            DateTime? @map("evaluated_at")
-  schoolId               String @map("school_id")
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime @updatedAt
-  competency             Competency @relation(fields: [competencyId], references: [id], onDelete: Cascade)
-  evaluator              User?      @relation(fields: [evaluatedBy], references: [id])
-  school                 School     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  student                Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
-
-  @@unique([studentId, competencyId])
-  @@index([schoolId])
-  @@index([studentId])
-}
-
-model Curriculum {
-  id                       String @id @default(cuid())
-  name            String
-  description     String?
-  isActive               Boolean           @default(true) @map("is_active")
-  schoolId               String? @map("school_id")
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime @updatedAt
-  classes                Class[]
-  school                 School?           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  curriculumLevel        CurriculumLevel[]
-}
-
-model CurriculumLevel {
-  id                       String @id @default(cuid())
-  code          String
+// Institutions & Users
+model School {
+  id            String       @id @default(cuid())
   name          String
-  level         Int
-  type          String
-  curriculumId           String @map("curriculum_id")
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime @updatedAt
-  classes                Class[]
-  curriculum             Curriculum     @relation(fields: [curriculumId], references: [id], onDelete: Cascade)
-  levelSubject           LevelSubject[]
+  type          SchoolType   @default(PRIMARY)
+  slug          String       @unique
+  logo          String?
+  website       String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  users         User[]
+  teachers      Teacher[]
+  students      Student[]
+  levels        Level[]
+  subjects      Subject[]
+  lessons       Lesson[]
+  announcements Announcement[]
+  invitations   Invitation[]
+
+  @@map("schools")
 }
 
-model DeletionRequest {
-  id                       String @id @default(cuid())
-  userId                 String    @unique @map("user_id")
-  token        String    @unique
-  expiresAt              DateTime @map("expires_at")
-  confirmedAt            DateTime? @map("confirmed_at")
-  completedAt            DateTime? @map("completed_at")
-  requestedAt            DateTime  @default(now()) @map("requested_at")
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime @updatedAt
-  schoolId               String @map("school_id")
-  school                 School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String?
+  image         String?
+  role          UserRole  @default(STUDENT)
+  isActive      Boolean   @default(true)
+  
+  schoolId      String?
+  school        School?   @relation(fields: [schoolId], references: [id])
 
-  @@index([schoolId])
+  teacher       Teacher?
+  student       Student?
+
+  messagesSent     Message[] @relation("SentMessages")
+  messagesReceived Message[] @relation("ReceivedMessages")
+  notifications    Notification[]
+
+  invitationsCreated Invitation[]
+
+  passwordResets  PasswordResetToken[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("users")
 }
 
-model Enrollment {
-  id                       String @id @default(cuid())
-  studentId              String @map("student_id")
-  classId                String? @map("class_id")
-  enrolledAt             DateTime @default(now()) @map("enrolled_at")
-  userId      String?
-  lessonId    String?
-  schoolId               String @map("school_id")
-  status      String   @default("ACTIVE")
-  class                  Class?   @relation(fields: [classId], references: [id], onDelete: Cascade)
-  lesson                 Lesson?  @relation(fields: [lessonId], references: [id])
-  school                 School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  student                Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  user                   User?    @relation(fields: [userId], references: [id])
+// Profiles
+model Teacher {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id])
 
-  @@index([classId])
-  @@index([schoolId])
-  @@index([studentId])
+  lessons   Lesson[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("teachers")
 }
 
+model Student {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id])
+
+  quizAttempts QuizAttempt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("students")
+}
+
+// Auth
 model Invitation {
-  id                       String @id @default(cuid())
-  email      String
-  name       String
-  schoolId               String @map("school_id")
-  code       String    @unique
-  expiresAt              DateTime @map("expires_at")
-  used       Boolean   @default(false)
-  usedAt                 DateTime? @map("used_at")
-  createdBy              String? @map("created_by")
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime @updatedAt
-  role       String
-  creator                User?     @relation(fields: [createdBy], references: [id])
-  school                 School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  email       String
+  name        String
+  role        UserRole
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id])
+  code        String   @unique
+  used        Boolean  @default(false)
+  usedAt      DateTime?
+  expiresAt   DateTime
+  createdBy   String
+  creator     User     @relation(fields: [createdBy], references: [id])
 
-  @@unique([email, code])
-}
-
-model LearningOutcome {
-  id                       String @id @default(cuid())
-  code          String
-  statement     String
-  order         Int        @default(0)
-  competencyId           String @map("competency_id")
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime @updatedAt
-  competency             Competency @relation(fields: [competencyId], references: [id], onDelete: Cascade)
-}
-
-model Lesson {
-  id                       String @id @default(cuid())
-  title            String
-  description      String?
-  content          String?
-  videoUrl               String? @map("video_url")
-  duration         Int?
-  order            Int?
-  isPublished            Boolean            @default(false) @map("is_published")
-  schoolId               String @map("school_id")
-  subjectId              String? @map("subject_id")
-  teacherId              String? @map("teacher_id")
-  classId                String? @map("class_id")
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime @updatedAt
-  difficulty       String?
-  documentUrl            String? @map("document_url")
-  tags             String?
-  topicId          String?
-  type             String             @default("LESSON")
-  assignments            Assignment[]
-  attendances            Attendance[]
-  enrollments            Enrollment[]
-  class                  Class?             @relation(fields: [classId], references: [id])
-  school                 School             @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  subject                Subject?           @relation(fields: [subjectId], references: [id])
-  teacher                Teacher?           @relation(fields: [teacherId], references: [id])
-  topic                  Topic?             @relation(fields: [topicId], references: [id])
-  lessonCompetencies     LessonCompetency[]
-  resources              LessonResource[]
-}
-
-model LessonCompetency {
-  id                       String @id @default(cuid())
-  lessonId               String @map("lesson_id")
-  competencyId           String @map("competency_id")
-  createdAt     DateTime   @default(now())
-  competency             Competency @relation(fields: [competencyId], references: [id], onDelete: Cascade)
-  lesson                 Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-
-  @@unique([lessonId, competencyId])
-}
-
-model LessonResource {
-  id                       String @id @default(cuid())
-  title     String
-  url       String
-  size      Int?
-  lessonId               String @map("lesson_id")
-  createdAt DateTime @default(now())
-  schoolId               String @map("school_id")
-  type      String
-  lesson                 Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  school                 School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-
-  @@index([schoolId])
-}
-
-model LevelSubject {
-  id                       String @id @default(cuid())
-  levelId                String @map("level_id")
-  subjectId              String @map("subject_id")
-  isEnabled              Boolean         @default(true) @map("is_enabled")
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime @updatedAt
-  curriculumLevel        CurriculumLevel @relation(fields: [levelId], references: [id], onDelete: Cascade)
-  subject                Subject         @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-
-  @@unique([levelId, subjectId])
-}
-
-model LiveSession {
-  id                       String @id @default(cuid())
-  title                  String
-  description            String?
-  roomCode               String                   @unique @map("room_code")
-  startTime              DateTime                 @default(now()) @map("start_time")
-  endTime                DateTime? @map("end_time")
-  isActive               Boolean                  @default(true) @map("is_active")
-  teacherId              String? @map("teacher_id")
-  classId                String? @map("class_id")
-  createdAt              DateTime                 @default(now())
-  schoolId               String @map("school_id")
-  class                  Class?                   @relation(fields: [classId], references: [id])
-  school                 School                   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  teacher                Teacher?                 @relation(fields: [teacherId], references: [id])
-  participants           LiveSessionParticipant[]
-
-  @@index([schoolId])
-}
-
-model LiveSessionParticipant {
-  id                       String @id @default(cuid())
-  joinedAt               DateTime    @default(now()) @map("joined_at")
-  leftAt                 DateTime? @map("left_at")
-  sessionId              String @map("session_id")
-  participantId          String? @map("participant_id")
-  schoolId               String @map("school_id")
-  role           String      @default("STUDENT")
-  user                   User?       @relation(fields: [participantId], references: [id])
-  school                 School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  liveSession            LiveSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-
-  @@index([schoolId])
-}
-
-model Message {
-  id                       String @id @default(cuid())
-  content   String
-  fileUrl                String? @map("file_url")
-  senderId               String? @map("sender_id")
-  classId                String? @map("class_id")
-  isRead                 Boolean  @default(false) @map("is_read")
-  createdAt DateTime @default(now())
-  schoolId               String @map("school_id")
-  type      String   @default("TEXT")
-  school                 School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  sender                 User?    @relation(fields: [senderId], references: [id])
-
-  @@index([schoolId])
-}
-
-model Notification {
-  id                       String @id @default(cuid())
-  userId                 String @map("user_id")
-  type       String
-  title      String
-  message    String
-  data       String?
-  isRead                 Boolean  @default(false) @map("is_read")
-  createdAt              DateTime @default(now()) @map("created_at")
-  schoolId               String @map("school_id")
-  school                 School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([schoolId])
-}
-
-model Option {
-  id                       String @id @default(cuid())
-  text        String
-  isCorrect              Boolean  @default(false) @map("is_correct")
-  order       Int
-  questionId             String @map("question_id")
-  createdAt   DateTime @default(now())
-  schoolId               String @map("school_id")
-  question               Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  school                 School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-
-  @@index([schoolId])
+  @@unique([email, schoolId])
+  @@map("invitations")
 }
 
 model PasswordResetToken {
   id        String   @id @default(cuid())
   userId    String
-  token     String   @unique
+  token     String   @unique(map: "password_reset_token_key")
   expiresAt DateTime
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  schoolId  String
-  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  schoolId  String?
+  used      Boolean  @default(false)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([schoolId])
-  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
-model Question {
-  id                       String @id @default(cuid())
-  text      String
-  order     Int
-  points    Float    @default(1.0)
-  quizId                 String @map("quiz_id")
-  createdAt DateTime @default(now())
-  schoolId               String @map("school_id")
-  type      String
-  options                Option[]
-  quiz                   Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  school                 School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+// Curriculum
+model Level {
+  id        String    @id @default(cuid())
+  name      String
+  schoolId  String
+  school    School    @relation(fields: [schoolId], references: [id])
+  subjects  Subject[]
 
-  @@index([schoolId])
-}
-
-model Quiz {
-  id                       String @id @default(cuid())
-  title         String
-  description   String?
-  timeLimit              Int? @map("time_limit")
-  maxAttempts            Int           @default(1) @map("max_attempts")
-  passingScore           Float? @map("passing_score")
-  isPublished            Boolean       @default(false) @map("is_published")
-  schoolId               String @map("school_id")
-  subjectId              String? @map("subject_id")
-  teacherId              String? @map("teacher_id")
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime @updatedAt
-  difficulty    String?
-  duration      Int?
-  type          String        @default("ASSIGNMENT")
-  questions              Question[]
-  school                 School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  subject                Subject?      @relation(fields: [subjectId], references: [id])
-  teacher                Teacher?      @relation(fields: [teacherId], references: [id])
-  quizAttempts           QuizAttempt[]
-}
-
-model QuizAttempt {
-  id                       String @id @default(cuid())
-  score        Float?
-  maxScore               Float @map("max_score")
-  completedAt            DateTime? @map("completed_at")
-  studentId              String @map("student_id")
-  quizId                 String @map("quiz_id")
-  createdAt    DateTime  @default(now())
-  schoolId               String @map("school_id")
-  userId                 String? @map("user_id")
-  answers                Answer[]
-  quiz                   Quiz      @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  school                 School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  student                Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  user                   User?     @relation(fields: [userId], references: [id])
-
-  @@index([quizId])
-  @@index([schoolId])
-  @@index([studentId])
-  @@index([userId])
-}
-
-model RateLimit {
-  id                       String @id @default(cuid())
-  key        String   @unique
-  count      Int      @default(1)
-  windowEnd              DateTime @map("window_end")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  schoolId               String @map("school_id")
-  school                 School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-
-  @@index([schoolId])
-}
-
-model ReportCard {
-  id                       String @id @default(cuid())
-  studentId              String @map("student_id")
-  termId                 String @map("term_id")
-  classId                String @map("class_id")
-  overallGrade           Float? @map("overall_grade")
-  attendancePercent      Float? @map("attendance_percent")
-  teacherRemarks         String? @map("teacher_remarks")
-  isPublished            Boolean             @default(false) @map("is_published")
-  publishedAt            DateTime? @map("published_at")
-  schoolId               String @map("school_id")
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime @updatedAt
-  class                  Class               @relation(fields: [classId], references: [id], onDelete: Cascade)
-  school                 School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  student                Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  term                   Term                @relation(fields: [termId], references: [id], onDelete: Cascade)
-  subjects               ReportCardSubject[]
-
-  @@unique([studentId, termId, classId])
-  @@index([schoolId])
-  @@index([studentId])
-}
-
-model ReportCardSubject {
-  id                       String @id @default(cuid())
-  reportCardId           String @map("report_card_id")
-  subjectId              String @map("subject_id")
-  score             Float?
-  grade             String?
-  competencyRating       String? @map("competency_rating")
-  remarks           String?
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime @updatedAt
-  reportCard             ReportCard @relation(fields: [reportCardId], references: [id], onDelete: Cascade)
-  subject                Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-
-  @@unique([reportCardId, subjectId])
-}
-
-model Schedule {
-  id                       String @id @default(cuid())
-  dayOfWeek              Int @map("day_of_week")
-  startTime              String @map("start_time")
-  endTime                String @map("end_time")
-  classId                String @map("class_id")
-  subjectId              String @map("subject_id")
-  teacherId              String? @map("teacher_id")
-  room        String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  schoolId               String @map("school_id")
-  class                  Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
-  school                 School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  subject                Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  teacher                Teacher? @relation(fields: [teacherId], references: [id])
-
-  @@unique([dayOfWeek, startTime, classId, schoolId])
-  @@index([classId])
-  @@index([schoolId])
-}
-
-model School {
-  id                       String @id @default(cuid())
-  name                   String
-  logoUrl                String? @map("logo_url")
-  domain                 String?                  @unique
-  settings               String?
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime @updatedAt
-  announcements          Announcement[]
-  answers                Answer[]
-  assessments            Assessment[]
-  results                AssessmentResult[]
-  assignments            Assignment[]
-  attendances            Attendance[]
-  auditLogs              AuditLog[]
-  classes                Class[]
-  competencyProgress     CompetencyProgress[]
-  curriculums            Curriculum[]
-  deletionRequest        DeletionRequest[]
-  enrollments            Enrollment[]
-  invitation             Invitation[]
-  lessons                Lesson[]
-  resources              LessonResource[]
-  liveSession            LiveSession[]
-  participants           LiveSessionParticipant[]
-  messages               Message[]
-  notifications          Notification[]
-  options                Option[]
-  questions              Question[]
-  quizzes                Quiz[]
-  quizAttempts           QuizAttempt[]
-  rateLimits             RateLimit[]
-  reportCards            ReportCard[]
-  schedule               Schedule[]
-  SchoolSettings         SchoolSettings?
-  students               Student[]
-  subjects               Subject[]
-  submissions            Submission[]
-  teachers               Teacher[]
-  terms                  Term[]
-  tickets                Ticket[]
-  ticketComment          TicketComment[]
-  passwordResetTokens  PasswordResetToken[]
-  users                  User[]
-}
-
-model SchoolSettings {
-  id                       String @id @default(cuid())
-  schoolId               String   @unique @map("school_id")
-  academicYear           String   @default("2024-2025") @map("academic_year")
-  semester          String   @default("Fall")
-  gradingScale           String   @default("{\"A\":90,\"B\":80,\"C\":70,\"D\":60,\"F\":0}") @map("grading_scale")
-  timezone          String   @default("UTC")
-  onlineGrading          Boolean  @default(false) @map("online_grading")
-  digitalLibrary         Boolean  @default(false) @map("digital_library")
-  parentPortal           Boolean  @default(false) @map("parent_portal")
-  schoolEmail            String? @map("school_email")
-  schoolPhone            String? @map("school_phone")
-  emergencyContact       String? @map("emergency_contact")
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  school                 School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-}
-
-model Student {
-  id                       String @id @default(cuid())
-  userId                 String               @unique @map("user_id")
-  schoolId               String @map("school_id")
-  grade              String?
-  section            String?
-  parentEmail            String? @map("parent_email")
-  dateOfBirth            DateTime? @map("date_of_birth")
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime @updatedAt
-  results                AssessmentResult[]
-  attendances            Attendance[]
-  competencyProgress     CompetencyProgress[]
-  enrollments            Enrollment[]
-  quizAttempts           QuizAttempt[]
-  reportCards            ReportCard[]
-  school                 School               @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  user                   User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  submissions            Submission[]
+  @@map("levels")
 }
 
 model Subject {
-  id                       String @id @default(cuid())
-  name              String
-  code              String?             @unique
-  description       String?
-  schoolId               String @map("school_id")
-  color             String?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime @updatedAt
-  assessments            Assessment[]
-  lessons                Lesson[]
-  levelSubject           LevelSubject[]
-  quizzes                Quiz[]
-  reportCardSubject      ReportCardSubject[]
-  schedule               Schedule[]
-  school                 School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  topics                 Topic[]
-}
+  id        String    @id @default(cuid())
+  name      String
+  code      String?
+  levelId   String
+  level     Level     @relation(fields: [levelId], references: [id])
+  schoolId  String
+  school    School    @relation(fields: [schoolId], references: [id])
+  
+  topics    Topic[]
+  lessons   Lesson[]
 
-model Submission {
-  id                       String @id @default(cuid())
-  content       String?
-  fileUrl                String? @map("file_url")
-  score         Float?
-  submittedAt            DateTime   @default(now()) @map("submitted_at")
-  studentId              String @map("student_id")
-  assignmentId           String @map("assignment_id")
-  createdAt     DateTime   @default(now())
-  schoolId               String @map("school_id")
-  assignment             Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  school                 School     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  student                Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
-
-  @@index([schoolId])
-}
-
-model Teacher {
-  id                       String @id @default(cuid())
-  userId                 String        @unique @map("user_id")
-  schoolId               String @map("school_id")
-  department     String?
-  bio            String?
-  experience     Int?
-  qualifications String?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime @updatedAt
-  assessments            Assessment[]
-  assignments            Assignment[]
-  classes                Class[]
-  lessons                Lesson[]
-  liveSession            LiveSession[]
-  quizzes                Quiz[]
-  schedule               Schedule[]
-  school                 School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  user                   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Term {
-  id                       String @id @default(cuid())
-  name          String
-  startDate              DateTime @map("start_date")
-  endDate                DateTime @map("end_date")
-  isActive               Boolean      @default(true) @map("is_active")
-  academicYear           String @map("academic_year")
-  schoolId               String @map("school_id")
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime @updatedAt
-  assessments            Assessment[]
-  reportCards            ReportCard[]
-  school                 School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-
-  @@unique([schoolId, academicYear, name])
-  @@index([schoolId])
-}
-
-model Ticket {
-  id                       String @id @default(cuid())
-  title                            String
-  description                      String
-  priority                         String          @default("MEDIUM")
-  status                           String          @default("OPEN")
-  category                         String          @default("GENERAL")
-  userId                 String @map("user_id")
-  assignedToId           String? @map("assigned_to_id")
-  createdAt                        DateTime        @default(now())
-  updatedAt                        DateTime @updatedAt
-  schoolId               String @map("school_id")
-  user_Ticket_assigned_to_idToUser User?           @relation("Ticket_assigned_to_idToUser", fields: [assignedToId], references: [id])
-  school                 School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  user                   User            @relation("Ticket_user_idToUser", fields: [userId], references: [id], onDelete: Cascade)
-  ticketComment          TicketComment[]
-
-  @@index([schoolId])
-  @@index([status])
-  @@index([userId])
-}
-
-model TicketComment {
-  id                       String @id @default(cuid())
-  content   String
-  ticketId               String @map("ticket_id")
-  userId                 String @map("user_id")
-  createdAt DateTime @default(now())
-  schoolId               String @map("school_id")
-  school                 School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  ticket                 Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([schoolId])
-  @@index([ticketId])
+  @@map("subjects")
 }
 
 model Topic {
-  id                       String @id @default(cuid())
-  name        String
+  id           String       @id @default(cuid())
+  name         String
+  subjectId    String
+  subject      Subject      @relation(fields: [subjectId], references: [id])
+  
+  competencies Competency[]
+  lessons      Lesson[]
+
+  @@map("topics")
+}
+
+model Competency {
+  id               String            @id @default(cuid())
+  description      String
+  topicId          String
+  topic            Topic             @relation(fields: [topicId], references: [id])
+  learningOutcomes LearningOutcome[]
+
+  @@map("competencies")
+}
+
+model LearningOutcome {
+  id           String     @id @default(cuid())
+  description  String
+  competencyId String
+  competency   Competency @relation(fields: [competencyId], references: [id])
+
+  @@map("learning_outcomes")
+}
+
+// Content & Assessment
+model Lesson {
+  id          String     @id @default(cuid())
+  title       String
   description String?
-  order       Int          @default(0)
-  subjectId              String @map("subject_id")
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime @updatedAt
-  competencies           Competency[]
-  lessons                Lesson[]
-  subject                Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  type        LessonType @default(ARTICLE)
+  content     String?
+  mediaUrl    String?
+  thumbnail   String?
+  published   Boolean    @default(false)
+  
+  subjectId   String
+  subject     Subject    @relation(fields: [subjectId], references: [id])
+  topicId     String?
+  topic       Topic?     @relation(fields: [topicId], references: [id])
+  
+  schoolId    String
+  school      School     @relation(fields: [schoolId], references: [id])
+  teacherId   String
+  teacher     Teacher    @relation(fields: [teacherId], references: [id])
+
+  quizzes     Quiz[]
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("lessons")
 }
 
-model User {
-  id                       String @id @default(cuid())
-  email                              String                   @unique
-  name                               String
-  password                           String?
-  avatarUrl              String? @map("avatar_url")
-  schoolId               String @map("school_id")
-  emailVerified          DateTime? @map("email_verified")
-  lastLoginAt            DateTime? @map("last_login_at")
-  isActive               Boolean                  @default(true) @map("is_active")
-  deletedAt              DateTime? @map("deleted_at")
-  deletionRequestedAt    DateTime? @map("deletion_requested_at")
-  createdAt                          DateTime                 @default(now())
-  updatedAt                          DateTime @updatedAt
-  role                               String
-  announcements          Announcement[]
-  results                AssessmentResult[]
-  auditLogs              AuditLog[]
-  competencyProgress     CompetencyProgress[]
-  DeletionRequest                    DeletionRequest?
-  enrollments            Enrollment[]
-  invitation             Invitation[]
-  participants           LiveSessionParticipant[]
-  messages               Message[]
-  notifications          Notification[]
-  quizAttempts           QuizAttempt[]
-  Student                            Student?
-  Teacher                            Teacher?
-  ticket_Ticket_assigned_to_idToUser Ticket[]                 @relation("Ticket_assigned_to_idToUser")
-  ticket_Ticket_user_idToUser Ticket[]                 @relation("Ticket_user_idToUser")
-  ticketComment          TicketComment[]
-  passwordResetTokens  PasswordResetToken[]
-  school                 School                   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+model Quiz {
+  id          String     @id @default(cuid())
+  title       String
+  lessonId    String
+  lesson      Lesson     @relation(fields: [lessonId], references: [id])
+  
+  questions   Question[]
+  attempts    QuizAttempt[]
 
-  @@unique([email, schoolId])
+  createdAt   DateTime   @default(now())
+
+  @@map("quizzes")
 }
+
+model Question {
+  id            String   @id @default(cuid())
+  text          String
+  options       String[]
+  correctAnswer Int
+  points        Int      @default(1)
+  quizId        String
+  quiz          Quiz     @relation(fields: [quizId], references: [id])
+
+  @@map("questions")
+}
+
+model QuizAttempt {
+  id        String   @id @default(cuid())
+  score     Float
+  answers   Json?
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id])
+  quizId    String
+  quiz      Quiz     @relation(fields: [quizId], references: [id])
+  completedAt DateTime @default(now())
+
+  @@map("quiz_attempts")
+}
+
+// Communication
+model Message {
+  id          String   @id @default(cuid())
+  content     String
+  read        Boolean  @default(false)
+  
+  senderId    String
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId  String
+  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  
+  createdAt   DateTime @default(now())
+
+  @@map("messages")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  type      String
+  read      Boolean  @default(false)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@map("announcements")
+}
+

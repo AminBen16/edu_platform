@@ -1,6 +1,6 @@
 {
-  "checkedAt": "2026-03-22T11:24:31.113Z",
-  "schemaModels": 43,
+  "checkedAt": "2026-03-23T18:48:40.219Z",
+  "schemaModels": 14,
   "tables": [
     "Announcement",
     "Answer",
@@ -27,6 +27,7 @@
     "Message",
     "Notification",
     "Option",
+    "PasswordResetToken",
     "Question",
     "Quiz",
     "QuizAttempt",
@@ -44,7 +45,8 @@
     "Ticket",
     "TicketComment",
     "Topic",
-    "User"
+    "User",
+    "_prisma_migrations"
   ],
   "sampleCounts": {
     "schools": 1,

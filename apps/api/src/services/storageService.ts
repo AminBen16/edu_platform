@@ -71,10 +71,14 @@ class StorageService {
         : null;
 
     if (!body) {
-      throw new Error('Local storage only supports buffer uploads.');
+      throw new Error('Storage only supports buffer uploads.');
     }
 
     if (!StorageService.hasR2Config()) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('R2 storage is required in production but not configured.');
+      }
+      
       const relativeKey = `${Date.now()}-${sanitizedFileName}`.replace(/^\/+/, '');
       const localPath = path.join(StorageService.getLocalUploadRoot(), relativeKey);
       await mkdir(path.dirname(localPath), { recursive: true });

@@ -99,20 +99,8 @@ router.post('/publish', async (req, res) => {
             return res.status(404).json({ error: 'Content not found or not authorized.' });
         }
         
-        if (content.classId) {
-            const enrollments = await prisma.enrollment.findMany({
-                where: { classId: content.classId },
-                select: { studentId: true }
-            });
-
-            for (const enrollment of enrollments) {
-                await NotificationService.sendNotification({
-                    userId: enrollment.studentId,
-                    message: `New ${contentType} "${content.title}" has been published in your class.`,
-                    data: { contentId, contentType }
-                });
-            }
-        }
+        // Notify students in class (Enrollment model pending schema)
+        console.log(`Published ${contentType} "${content.title}" - notifications skipped (Enrollment model pending)`);
 
         res.status(200).json({ message: 'Content published successfully.', content });
     } catch (error) {

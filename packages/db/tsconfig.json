@@ -1,20 +1,13 @@
 {
   "compilerOptions": {
-    "target": "es2020",
-    "module": "commonjs",
+    "target": "es2017",
+    "module": "commonjs", 
+    "lib": ["esnext"],
+    "composite": true,
     "declaration": true,
     "declarationMap": true,
-    "composite": true,
-    "outDir": "./dist",
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "strict": true,
     "skipLibCheck": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./*"]
-    }
+    "strict": true
   },
-  "include": ["index.ts", "lib/**/*.ts"],
-  "exclude": ["node_modules", "dist", "**/*.d.ts"]
+  "include": ["."]
 }

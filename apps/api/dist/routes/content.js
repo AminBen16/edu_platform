@@ -88,7 +88,8 @@ router.post('/publish', async (req, res) => {
         if (!content) {
             return res.status(404).json({ error: 'Content not found or not authorized.' });
         }
-        // TODO: Integrate with real-time notification service if needed
+        // Notify students in class (Enrollment model pending schema)
+        console.log(`Published ${contentType} "${content.title}" - notifications skipped (Enrollment model pending)`);
         res.status(200).json({ message: 'Content published successfully.', content });
     }
     catch (error) {

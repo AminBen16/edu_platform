@@ -1,5 +1,16 @@
 {
+  "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
-  "devCommand": "npm run dev"
+  "devCommand": "npm run dev",
+  "framework": "nextjs",
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "env": {
+    "NODE_ENV": "production"
+  }
 }
+

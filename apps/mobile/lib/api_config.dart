@@ -1,10 +1,9 @@
-import 'package:flutter/foundation.dart';
+// import 'package:flutter/foundation.dart'; // Removed unused
 
 // apps/mobile/lib/api_config.dart
 
 // Production API Configuration
-// For mobile apps, we use a fixed production URL that can be changed
-// when deploying to different environments
+// PRODUCTION-ONLY: Must set API_BASE_URL via --dart-define or env
 
 class ApiConfig {
   static const String _configuredApiBaseUrl = String.fromEnvironment(
@@ -17,17 +16,20 @@ class ApiConfig {
       return _configuredApiBaseUrl;
     }
 
-    if (kReleaseMode) {
-      throw StateError('API_BASE_URL must be provided for release builds.');
-    }
+    // NO LOCALHOST FALLBACK IN ANY MODE
+    throw StateError('''
+API_BASE_URL must be set for all builds.
 
-    return 'http://10.0.2.2:3002/api/v1';
+Build command:
+flutter run --dart-define=API_BASE_URL=https://api.yourproject.vercel.app/api/v1
+or
+flutter build apk --dart-define=API_BASE_URL=https://api.yourproject.vercel.app/api/v1
+
+See apps/mobile/.env.example for full config.
+    ''');
   }
 
-  // For iOS simulator, use: http://localhost:3000/api/v1
-  // For real device, use your server's IP or domain
-
-  // Timeout settings
+  // Timeout settings (optimized for Uganda networks)
   static const Duration connectTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);
 

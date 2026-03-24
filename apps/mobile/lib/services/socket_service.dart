@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+// import 'dart:io'; // Removed unused
 import 'package:http/http.dart' as http;
 import '../api_config.dart';
 import 'api.dart';
@@ -8,7 +8,7 @@ import 'logger_service.dart';
 
 class SocketService {
   static SocketService? _instance;
-  http.StreamedResponse? _sseStream;
+  // http.StreamedResponse? _sseStream; // Unused SSE field kept for future
   final _messageController = StreamController<Map<String, dynamic>>.broadcast();
   final _connectionController = StreamController<bool>.broadcast();
   Timer? _pollTimer;

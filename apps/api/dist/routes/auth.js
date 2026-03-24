@@ -13,11 +13,10 @@ const auth_1 = require("../middleware/auth");
 const rateLimit_1 = require("../middleware/rateLimit");
 const emailService_js_1 = __importDefault(require("../services/emailService.js"));
 const router = (0, express_1.Router)();
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'dev-secret-do-not-use-in-production';
-// TEMPORARILY DISABLED FOR DEBUGGING - Validation moved to middleware
-// if (!JWT_SECRET || JWT_SECRET.length < 32) {
-//   throw new Error('NEXTAUTH_SECRET is required and must be at least 32 characters. Set in Vercel dashboard.');
-// }
+const JWT_SECRET = process.env.NEXTAUTH_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+    throw new Error('NEXTAUTH_SECRET is required and must be at least 32 characters. Set in Vercel dashboard.');
+}
 // GET /auth/validate/:code - Validate invitation code (rate limited)
 router.get('/validate/:code', rateLimit_1.generalRateLimit, async (req, res) => {
     const { code } = req.params;
@@ -173,11 +172,10 @@ router.post('/invite', auth_1.protect, rateLimit_1.invitationRateLimit, async (r
         const invitation = await database_1.prisma.invitation.create({
             data: { email, name, role, schoolId, code: invitationCode, expiresAt, createdBy: req.user.id }
         });
-        // TODO: Re-enable EmailService
-        // const school = await prisma.school.findUnique({ where: { id: schoolId } });
-        // if (school) {
-        //     await EmailService.sendInvitationEmail(email, name, invitationCode, school.name);
-        // }
+        const school = await database_1.prisma.school.findUnique({ where: { id: schoolId } });
+        if (school) {
+            await emailService_js_1.default.sendInvitationEmail(email, name, invitationCode, school.name);
+        }
         res.status(201).json({ message: 'Invitation sent successfully', invitationId: invitation.id });
     }
     catch (error) {
@@ -215,9 +213,23 @@ router.post('/forgot-password', rateLimit_1.authRateLimit, async (req, res) => {
                 error: 'Self-service password reset is not configured on this deployment. Please contact your school administrator.',
             });
         }
-        return res.status(501).json({
-            error: 'Password reset delivery is configured but the reset workflow is not enabled yet.',
+        const user = await database_1.prisma.user.findUnique({ where: { email } });
+        if (!user) {
+            // We don't want to reveal if a user exists or not, so we send a generic success message.
+            return res.status(200).json({ message: 'If an account with this email exists, a password reset link has been sent.' });
+        }
+        const token = crypto_1.default.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+        await database_1.prisma.passwordResetToken.create({
+            data: {
+                userId: user.id,
+                token,
+                expiresAt,
+                schoolId: user.schoolId,
+            }
         });
+        await emailService_js_1.default.sendPasswordResetEmail(email, user.name, token);
+        return res.status(200).json({ message: 'If an account with this email exists, a password reset link has been sent.' });
     }
     catch (error) {
         console.error('Forgot password error:', error);
@@ -226,17 +238,29 @@ router.post('/forgot-password', rateLimit_1.authRateLimit, async (req, res) => {
 });
 // POST /auth/reset-password - Reset password with token
 router.post('/reset-password', async (req, res) => {
-    const { email, token, newPassword } = req.body;
-    if (!email || !token || !newPassword) {
-        return res.status(400).json({ error: 'Email, token, and new password are required.' });
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) {
+        return res.status(400).json({ error: 'Token and new password are required.' });
     }
     if (newPassword.length < 6) {
         return res.status(400).json({ error: 'Password must be at least 6 characters.' });
     }
     try {
-        return res.status(501).json({
-            error: 'Password reset is not enabled on this deployment yet. Please contact your school administrator.',
+        const resetToken = await database_1.prisma.passwordResetToken.findUnique({
+            where: { token },
         });
+        if (!resetToken || resetToken.expiresAt < new Date()) {
+            return res.status(400).json({ error: 'Invalid or expired password reset token.' });
+        }
+        const hashedPassword = await bcryptjs_1.default.hash(newPassword, 12);
+        await database_1.prisma.user.update({
+            where: { id: resetToken.userId },
+            data: { password: hashedPassword },
+        });
+        await database_1.prisma.passwordResetToken.delete({
+            where: { id: resetToken.id },
+        });
+        res.status(200).json({ message: 'Password has been reset successfully.' });
     }
     catch (error) {
         console.error('Reset password error:', error);

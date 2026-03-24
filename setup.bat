@@ -69,7 +69,16 @@ echo.
 
 REM Generate Prisma Client
 echo Generating Prisma Client...
+cd packages\db
+call npm install
+if errorlevel 1 (
+    echo [ERROR] Failed to install DB dependencies
+    cd ..\..\
+    pause
+    exit /b 1
+)
 call npx prisma generate
+cd ..\..\
 echo [OK] Prisma Client generated
 echo.
 

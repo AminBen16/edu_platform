@@ -1,1 +1,22 @@
+# Build / Deps
+.next/
+out/
+node_modules/
+dist/
+
+# Env / Secrets
+.env*
+.env.*
+.env*.local
+
+# DB / Temp
+*.db
+*.sqlite
+
+# OS / Logs
+.DS_Store
+Thumbs.db
+*.log
+
+# Vercel
 .vercel

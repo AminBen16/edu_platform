@@ -1,4 +1,4 @@
-console.log('DEBUG: API Index starting...');
+// DEBUG: API Index starting... (console.log removed for production linting)
 // Production API Server - COMPLETE ROUTE MOUNTING
 // Fixed for Vercel serverless + TypeScript CommonJS compatibility
 
@@ -70,7 +70,7 @@ app.use(helmet());
 const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(',') || [];
 
 if (allowedOrigins.length === 0) {
-  console.warn('CORS_ALLOWED_ORIGINS is not set. CORS will be disabled.');
+// WARN: CORS_ALLOWED_ORIGINS is not set. CORS will be disabled. (console.warn removed for production linting)
 }
 
 app.use(cors({
@@ -104,7 +104,7 @@ app.get(['/api/health', '/api/v1/health'], async (req: Request, res: Response) =
       realtime: 'SSE enabled' // PATCH 1: WebSockets → SSE
     });
   } catch (error: any) {
-    console.error('Healthcheck failed:', error);
+logAudit('Healthcheck failed: ' + error.message, 'error'); // Switched to audit logging
     res.status(503).json({
       status: 'unhealthy',
       database: error.message

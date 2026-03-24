@@ -1,17 +1,16 @@
 import axios from 'axios';
 
+// PRODUCTION API CONFIG - No localhost fallbacks
 const browserBaseUrl = '/api/v1';
-const serverBaseUrl =
-  process.env.INTERNAL_API_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  'http://127.0.0.1:3002/api/v1';
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  (typeof window === 'undefined' ? serverBaseUrl : browserBaseUrl);
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+
+if (!API_BASE_URL) {
+  throw new Error('NEXT_PUBLIC_API_URL must be set in Vercel dashboard');
+}
 
 export const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: typeof window === 'undefined' ? API_BASE_URL : browserBaseUrl,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -42,7 +41,7 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   avatarUrl?: string;
-  teacherProfile?: { // Add this
+  teacherProfile?: { 
     id: string;
   };
 }
@@ -115,3 +114,4 @@ export interface Analytics {
     userName?: string;
   }>;
 }
+

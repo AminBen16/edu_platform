@@ -10,11 +10,10 @@ import EmailService from '../services/emailService.js';
 
 const router = Router();
 
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'dev-secret-do-not-use-in-production';
-// TEMPORARILY DISABLED FOR DEBUGGING - Validation moved to middleware
-// if (!JWT_SECRET || JWT_SECRET.length < 32) {
-//   throw new Error('NEXTAUTH_SECRET is required and must be at least 32 characters. Set in Vercel dashboard.');
-// }
+const JWT_SECRET = process.env.NEXTAUTH_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  throw new Error('NEXTAUTH_SECRET is required and must be at least 32 characters. Set in Vercel dashboard.');
+}
 
 // GET /auth/validate/:code - Validate invitation code (rate limited)
 router.get('/validate/:code', generalRateLimit, async (req, res) => {
