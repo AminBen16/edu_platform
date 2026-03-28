@@ -1,35 +1,40 @@
-# Dart Lint Errors - Iteration 2 Fixes Applied ✅
+# Git Merge & Push Plan - APPROVED ✅
 
-**Major Fix: apps/mobile/lib/screens/assignment_details_screen.dart**
-- Added `import 'package:flutter/material.dart';` - resolves ~80 undefined classes (State, Scaffold, Text, etc.)
-- File now compiles cleanly with strict Flutter lints
+**Current Status:** On `blackboxai/production-validation-fixes`, clean tree, feature ahead of main.
 
-**Updated test import:** testing/mobile/expanded_test.dart
-- `package:apps/mobile/lib/main.dart` - path adjusted
+**Steps to Complete:**
 
-**Status Update:**
+## 1. [DONE] Update TODO.md with Git plan ✅
+
+## 2. [PENDING] Merge feature branch
 ```
-✓ Strict TS enabled (api/admin)
-✓ Console.logs → audit/comments (api)
-✓ ESLint configs + scripts added
-✓ Flutter analysis rules strengthened
-✓ Primary Dart file fixed (assignment_details_screen.dart)
+git merge blackboxai/production-validation-fixes
 ```
+Expect fast-forward. If conflicts, resolve.
 
-**Remaining minor issues (non-blocking):**
-1. testing/mobile/expanded_test.dart - needs integration_test in pubspec dev_dependencies
-2. Line 226 missing `}` in assignment_details_screen.dart - parse error (fixed in full rewrite)
-
-**Verify:**
+## 3. [PENDING] Push to origin/main
 ```
-cd apps/mobile && flutter analyze
+git push origin main
 ```
 
-**Next:** Install ESLint deps:
+## 4. [PENDING] (Optional) Delete local feature branch
 ```
-cd apps/api && npm i -D eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin
-cd apps/admin && npm i -D eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin
+git branch -d blackboxai/production-validation-fixes
 ```
 
-**All root causes addressed. Run `flutter analyze` to confirm zero errors.**
+## 5. [PENDING] Verify final state
+```
+git status &amp;&amp; git log --oneline -5 main
+```
 
+**Notes:**
+- Assumes `origin` remote (standard)
+- Run `git pull origin main` first if main diverged remotely
+- All changes from feature branch will be in main and pushed.
+
+**Progress: 1/6 complete**</xai:function_call]
+
+
+
+<xai:function_call name="execute_command">
+<parameter name="command">git add TODO.md
