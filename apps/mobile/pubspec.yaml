@@ -42,7 +42,7 @@ dependencies:
   flutter_screen_recording: ^2.0.0
 
   # Video/Recording audio
-  record: ^5.0.0
+  record: 4.4.4
 
   # Socket.IO for chat
   socket_io_client: ^3.0.2

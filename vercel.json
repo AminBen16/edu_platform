@@ -1,13 +1,3 @@
 {
-  "version": 2,
-  "rewrites": [
-    {
-      "source": "/api/:match*",
-      "destination": "apps/api/src/index.ts"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "apps/admin/$1"
-    }
-  ]
+  "version": 2
 }

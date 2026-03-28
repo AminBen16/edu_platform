@@ -215,6 +215,10 @@ router.post('/chat/message', async (req: RequestWithUser, res: Response) => {
       return res.status(400).json({ error: 'Missing content or classId' });
     }
 
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized: User not found' });
+    }
+
     const db = (await import('../config/database')).prisma as any;
 
     const message = await db.message.create({

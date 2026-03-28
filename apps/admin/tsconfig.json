@@ -7,22 +7,23 @@
     ],
     "allowJs": true,
     "skipLibCheck": true,
-"strict":true,
-    "noEmit": true,
-    "incremental": true,
-    "module": "esnext",
+    "strict": true,
+    "noEmit": false,
+    "outDir": "dist",
+    "module": "commonjs",
     "esModuleInterop": true,
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "react-jsx",
+    "jsx": "preserve",
     "baseUrl": ".",
     "paths": {
       "@auth/core": [
         "../../packages/auth"
       ]
     },
-    "target": "ES2017"
+    "target": "ES2017",
+    "incremental": true
   },
   "include": [
     "next-env.d.ts",

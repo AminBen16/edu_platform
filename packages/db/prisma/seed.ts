@@ -6,105 +6,98 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Start seeding...');
 
-  // Create School
-  const school = await prisma.school.upsert({
-    where: { domain: 'eduplatform.local' },
-    update: {},
-    create: {
-      name: 'Education Platform',
-      domain: 'eduplatform.local',
-      logoUrl: '',
-    },
-  });
-  console.log(`Created school: ${school.name}`);
+  try {
+    // Create School
+    const school = await prisma.school.upsert({
+      where: { slug: 'education-platform' },
+      update: {},
+      create: {
+        name: 'Education Platform',
+        slug: 'education-platform',
+        type: 'PRIMARY',
+      },
+    });
+    console.log(`Created school: ${school.name}`);
 
-  // Create Admin User
-  const adminPassword = await bcrypt.hash('Admin@123', 10);
-  const admin = await prisma.user.upsert({
-    where: { email_schoolId: { email: 'admin@eduplatform.local', schoolId: school.id } },
-    update: {},
-    create: {
-      email: 'admin@eduplatform.local',
-      name: 'Super Admin',
-      password: adminPassword,
-      role: 'ADMIN',
-      schoolId: school.id,
-      emailVerified: new Date(),
-      lastLoginAt: new Date(),
-    },
-  });
-  console.log(`Created admin: ${admin.email} | Password: Admin@123`);
+    // Create Admin User
+    const adminPassword = await bcrypt.hash('Admin@123', 10);
+    const admin = await prisma.user.upsert({
+      where: { email: 'admin@eduplatform.local' },
+      update: {},
+      create: {
+        email: 'admin@eduplatform.local',
+        name: 'Super Admin',
+        password: adminPassword,
+        role: 'SUPER_ADMIN',
+        schoolId: school.id,
+        isActive: true,
+      },
+    });
+    console.log(`✓ Created admin: ${admin.email} | Password: Admin@123`);
 
-  // Create Teacher User and Profile
-  const teacherPassword = await bcrypt.hash('Teacher@123', 10);
-  const teacherUser = await prisma.user.upsert({
-    where: { email_schoolId: { email: 'teacher@eduplatform.local', schoolId: school.id } },
-    update: {},
-    create: {
-      email: 'teacher@eduplatform.local',
-      name: 'John Doe',
-      password: teacherPassword,
-      role: 'TEACHER',
-      schoolId: school.id,
-      emailVerified: new Date(),
-      lastLoginAt: new Date(),
-    },
-  });
-  const teacher = await prisma.teacher.upsert({
-    where: { userId: teacherUser.id },
-    update: {},
-    create: {
-      userId: teacherUser.id,
-      schoolId: school.id,
-    },
-  });
-  console.log(`Created teacher: ${teacherUser.email} | Password: Teacher@123`);
+    // Create Teacher User and Profile
+    const teacherPassword = await bcrypt.hash('Teacher@123', 10);
+    const teacherUser = await prisma.user.upsert({
+      where: { email: 'teacher@eduplatform.local' },
+      update: {},
+      create: {
+        email: 'teacher@eduplatform.local',
+        name: 'John Doe',
+        password: teacherPassword,
+        role: 'TEACHER',
+        schoolId: school.id,
+        isActive: true,
+      },
+    });
+    const teacher = await prisma.teacher.upsert({
+      where: { userId: teacherUser.id },
+      update: {},
+      create: {
+        userId: teacherUser.id,
+        schoolId: school.id,
+      },
+    });
+    console.log(`✓ Created teacher: ${teacherUser.email} | Password: Teacher@123`);
 
-  // Create Student User and Profile
-  const studentPassword = await bcrypt.hash('Student@123', 10);
-  const studentUser = await prisma.user.upsert({
-    where: { email_schoolId: { email: 'student@eduplatform.local', schoolId: school.id } },
-    update: {},
-    create: {
-      email: 'student@eduplatform.local',
-      name: 'Jane Smith',
-      password: studentPassword,
-      role: 'STUDENT',
-      schoolId: school.id,
-      emailVerified: new Date(),
-      lastLoginAt: new Date(),
-    },
-  });
-  const student = await prisma.student.upsert({
-    where: { userId: studentUser.id },
-    update: {},
-    create: {
-      userId: studentUser.id,
-      schoolId: school.id,
-      grade: 'P5',
-      section: 'A',
-      parentEmail: 'parent@eduplatform.local', // Link to parent
-    },
-  });
-  console.log(`Created student: ${studentUser.email} | Password: Student@123`);
+    // Create Student User and Profile
+    const studentPassword = await bcrypt.hash('Student@123', 10);
+    const studentUser = await prisma.user.upsert({
+      where: { email: 'student@eduplatform.local' },
+      update: {},
+      create: {
+        email: 'student@eduplatform.local',
+        name: 'Jane Smith',
+        password: studentPassword,
+        role: 'STUDENT',
+        schoolId: school.id,
+        isActive: true,
+      },
+    });
+    const student = await prisma.student.upsert({
+      where: { userId: studentUser.id },
+      update: {},
+      create: {
+        userId: studentUser.id,
+        schoolId: school.id,
+      },
+    });
+    console.log(`✓ Created student: ${studentUser.email} | Password: Student@123`);
 
-  // Create Parent User and Profile
-  const parentPassword = await bcrypt.hash('Parent@123', 10);
-  const parentUser = await prisma.user.upsert({
-    where: { email_schoolId: { email: 'parent@eduplatform.local', schoolId: school.id } },
-    update: {},
-    create: {
-      email: 'parent@eduplatform.local',
-      name: 'Parent Guardian',
-      password: parentPassword,
-      role: 'PARENT',
-      schoolId: school.id,
-      emailVerified: new Date(),
-      lastLoginAt: new Date(),
-    },
-  });
-  // Parent doesn't need a separate profile, uses parentEmail to link to students
-  console.log(`Created parent: ${parentUser.email} | Password: Parent@123`);
+    // Create Parent User
+    const parentPassword = await bcrypt.hash('Parent@123', 10);
+    const parentUser = await prisma.user.upsert({
+      where: { email: 'parent@eduplatform.local' },
+      update: {},
+      create: {
+        email: 'parent@eduplatform.local',
+        name: 'Parent Guardian',
+        password: parentPassword,
+        role: 'PARENT',
+        schoolId: school.id,
+        isActive: true,
+      },
+    });
+    console.log(`✓ Created parent: ${parentUser.email} | Password: Parent@123`);
 
   // Create Subject
   let subject = await prisma.subject.findFirst({

@@ -1,7 +1,0 @@
-{
-  "/": "pages/index.js",
-  "/_app": "pages/_app.js",
-  "/_document": "pages/_document.js",
-  "/api/auth/[...nextauth]": "pages/api/auth/[...nextauth].js",
-  "/auth/login": "pages/auth/login.js"
-}

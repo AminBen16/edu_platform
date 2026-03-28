@@ -3,11 +3,8 @@ import axios from 'axios';
 // PRODUCTION API CONFIG - No localhost fallbacks
 const browserBaseUrl = '/api/v1';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
-
-if (!API_BASE_URL) {
-  throw new Error('NEXT_PUBLIC_API_URL must be set in Vercel dashboard');
-}
+// Default to /api/v1 for same-origin requests, allow override via env var
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
 export const api = axios.create({
   baseURL: typeof window === 'undefined' ? API_BASE_URL : browserBaseUrl,

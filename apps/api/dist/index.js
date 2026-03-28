@@ -1,11 +1,11 @@
 "use strict";
+// DEBUG: API Index starting... (console.log removed for production linting)
+// Production API Server - COMPLETE ROUTE MOUNTING
+// Fixed for Vercel serverless + TypeScript CommonJS compatibility
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-console.log('DEBUG: API Index starting...');
-// Production API Server - COMPLETE ROUTE MOUNTING
-// Fixed for Vercel serverless + TypeScript CommonJS compatibility
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
@@ -14,6 +14,8 @@ const path_1 = __importDefault(require("path"));
 // Local middleware
 const errorHandler_js_1 = require("./middleware/errorHandler.js");
 const auth_js_1 = require("./middleware/auth.js");
+// Functions from middleware files
+const auditLog_js_1 = require("./middleware/auditLog.js");
 const rateLimit_js_1 = require("./middleware/rateLimit.js");
 // Route routers (only confirmed existing files)
 const users_js_1 = __importDefault(require("./routes/users.js"));
@@ -61,7 +63,7 @@ dotenv_1.default.config();
 app.use((0, helmet_1.default)());
 const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(',') || [];
 if (allowedOrigins.length === 0) {
-    console.warn('CORS_ALLOWED_ORIGINS is not set. CORS will be disabled.');
+    // WARN: CORS_ALLOWED_ORIGINS is not set. CORS will be disabled. (console.warn removed for production linting)
 }
 app.use((0, cors_1.default)({
     origin: (origin, callback) => {
@@ -94,7 +96,7 @@ app.get(['/api/health', '/api/v1/health'], async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Healthcheck failed:', error);
+        (0, auditLog_js_1.logAudit)('Healthcheck failed: ' + error.message, 'error'); // Switched to audit logging
         res.status(503).json({
             status: 'unhealthy',
             database: error.message

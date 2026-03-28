@@ -102,6 +102,11 @@ export default function DocumentViewer({ url, type, title, onClose }: DocumentVi
 
   const loadTextDocument = async () => {
     try {
+      if (!url) {
+        setDocumentContent('No document URL provided');
+        setIsLoading(false);
+        return;
+      }
       const response = await fetch(url);
       const content = await response.text();
       

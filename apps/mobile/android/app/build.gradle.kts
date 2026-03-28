@@ -5,15 +5,18 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+import java.util.Properties
+import java.io.FileInputStream
+
 val keyPropertiesFile = rootProject.file("key.properties")
-val keyProperties = java.util.Properties()
+val keyProperties = Properties()
 if (keyPropertiesFile.exists()) {
-    keyProperties.load(java.io.FileInputStream(keyPropertiesFile))
+    keyProperties.load(FileInputStream(keyPropertiesFile))
 }
 
 android {
     namespace = "com.eduplatform.mobile"
-    compileSdk = 34
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

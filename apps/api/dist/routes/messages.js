@@ -223,6 +223,9 @@ router.post('/chat/message', async (req, res) => {
         if (!content || !classId) {
             return res.status(400).json({ error: 'Missing content or classId' });
         }
+        if (!req.user) {
+            return res.status(401).json({ error: 'Unauthorized: User not found' });
+        }
         const db = (await Promise.resolve().then(() => __importStar(require('../config/database')))).prisma;
         const message = await db.message.create({
             data: {

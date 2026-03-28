@@ -119,7 +119,7 @@ router.post('/send', protect, async (req, res) => {
     }
 
     // Create notifications for each target user
-    const createdNotifications = [];
+    const createdNotifications: any[] = [];
     
     for (const user of targetUsers) {
       const created = await prisma.notification.create({

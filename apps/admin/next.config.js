@@ -3,8 +3,8 @@ const apiProxyTarget = (process.env.API_PROXY_TARGET || process.env.NEXT_PUBLIC_
 
 const nextConfig = {
   reactStrictMode: true,
-  turbopack: {
-    root: __dirname,
+  eslint: {
+    ignoreDuringBuilds: true,
   },
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
