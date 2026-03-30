@@ -1,6 +1,14 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { api } from "../../../lib/api";
+import bcrypt from "bcryptjs";
+import { Pool } from "pg";
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL?.includes("sslmode=require")
+    ? { rejectUnauthorized: false }
+    : undefined,
+});
 
 export default NextAuth({
   providers: [
@@ -16,12 +24,23 @@ export default NextAuth({
         }
 
         try {
-          const response = await api.post('/auth/login', {
-            email: credentials.email,
-            password: credentials.password,
-          });
+          const result = await pool.query(
+            `SELECT id, email, name, role, "schoolId", "isActive", password
+             FROM users
+             WHERE lower(email) = lower($1)
+             LIMIT 1`,
+            [credentials.email]
+          );
 
-          const { user, token } = response.data;
+          const user = result.rows[0];
+          if (!user || !user.isActive || !user.password) {
+            return null;
+          }
+
+          const validPassword = await bcrypt.compare(credentials.password, user.password);
+          if (!validPassword) {
+            return null;
+          }
           
           return {
             id: user.id,
@@ -29,7 +48,7 @@ export default NextAuth({
             name: user.name,
             role: user.role,
             schoolId: user.schoolId,
-            accessToken: token,
+            accessToken: `local-admin-session:${user.id}`,
           };
         } catch (error) {
           console.error('Auth error:', error);
