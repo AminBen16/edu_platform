@@ -1,10 +1,10 @@
 import axios from 'axios';
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || '/api/v1').replace(/\/$/, '');
 const BROWSER_BASE_URL = '/api/v1';
+const SERVER_BASE_URL = `${(process.env.NEXTAUTH_URL || 'http://localhost:3000').replace(/\/$/, '')}/api/v1`;
 
 export const api = axios.create({
-  baseURL: typeof window === 'undefined' ? API_BASE_URL : BROWSER_BASE_URL,
+  baseURL: typeof window === 'undefined' ? SERVER_BASE_URL : BROWSER_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
