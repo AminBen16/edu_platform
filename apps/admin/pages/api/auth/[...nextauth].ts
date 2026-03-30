@@ -2,16 +2,10 @@ import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { Pool } from "pg";
+import type { NextAuthOptions } from "next-auth";
+import { pool } from "../../../lib/db";
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes("sslmode=require")
-    ? { rejectUnauthorized: false }
-    : undefined,
-});
-
-export default NextAuth({
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -81,12 +75,16 @@ export default NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        token.id = user.id;
         token.accessToken = user.accessToken;
         token.role = user.role;
+        token.schoolId = user.schoolId;
       }
       return token;
     },
     async session({ session, token }) {
+      session.user.id = token.id as string;
+      session.user.schoolId = token.schoolId as string;
       session.accessToken = token.accessToken as string;
       session.user.role = token.role as string;
       return session;
@@ -95,4 +93,6 @@ export default NextAuth({
   pages: {
     signIn: '/auth/login',
   },
-});
+};
+
+export default NextAuth(authOptions);

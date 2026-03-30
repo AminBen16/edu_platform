@@ -12,12 +12,14 @@ const nextConfig = {
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
   },
   async rewrites() {
-    return [
-      {
-        source: '/api/v1/:path*',
-        destination: `${apiProxyTarget}/:path*`,
-      },
-    ];
+    return {
+      fallback: [
+        {
+          source: '/api/v1/:path*',
+          destination: `${apiProxyTarget}/:path*`,
+        },
+      ],
+    };
   },
   async headers() {
     return [
