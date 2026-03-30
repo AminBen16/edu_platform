@@ -7,6 +7,7 @@ import { prisma } from '../config/database';
 import { protect } from '../middleware/auth';
 import { authRateLimit, invitationRateLimit, generalRateLimit } from '../middleware/rateLimit';
 import EmailService from '../services/emailService.js';
+import { isAdminRole, normalizeRole } from '../lib/roles';
 
 const router = Router();
 
@@ -14,6 +15,103 @@ const JWT_SECRET = process.env.NEXTAUTH_SECRET;
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
   throw new Error('NEXTAUTH_SECRET is required and must be at least 32 characters. Set in Vercel dashboard.');
 }
+
+const slugifySchoolName = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 50);
+
+// GET /auth/bootstrap-status - Check whether first-run setup is still available
+router.get('/bootstrap-status', async (_req, res) => {
+    try {
+        const userCount = await prisma.user.count();
+        return res.json({
+            canBootstrap: userCount === 0,
+            reason: userCount === 0 ? undefined : 'This deployment already has users. Sign in with an existing account.',
+        });
+    } catch (error) {
+        console.error('Bootstrap status error:', error);
+        return res.status(500).json({ error: 'Failed to determine bootstrap status.' });
+    }
+});
+
+// POST /auth/bootstrap - Create the very first school and admin account
+router.post('/bootstrap', async (req, res) => {
+    const { schoolName, schoolSlug, name, email, password } = req.body;
+
+    if (!schoolName || !name || !email || !password) {
+        return res.status(400).json({ error: 'School name, admin name, email, and password are required.' });
+    }
+
+    if (password.length < 8) {
+        return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+    }
+
+    try {
+        const existingUsers = await prisma.user.count();
+        if (existingUsers > 0) {
+            return res.status(409).json({ error: 'Bootstrap is only available before the first user is created.' });
+        }
+
+        const desiredSlug = slugifySchoolName(schoolSlug || schoolName);
+        const hashedPassword = await bcrypt.hash(password, 12);
+
+        const result = await prisma.$transaction(async (tx) => {
+            let finalSlug = desiredSlug || `school-${Date.now()}`;
+            let suffix = 1;
+
+            while (await tx.school.findUnique({ where: { slug: finalSlug } })) {
+                finalSlug = `${desiredSlug}-${suffix++}`;
+            }
+
+            const school = await tx.school.create({
+                data: {
+                    name: schoolName.trim(),
+                    slug: finalSlug,
+                    type: 'PRIMARY',
+                }
+            });
+
+            const user = await tx.user.create({
+                data: {
+                    email: email.trim().toLowerCase(),
+                    name: name.trim(),
+                    password: hashedPassword,
+                    role: 'SCHOOL_ADMIN',
+                    schoolId: school.id,
+                    emailVerified: new Date(),
+                    isActive: true,
+                }
+            });
+
+            return { school, user };
+        });
+
+        const token = jwt.sign(
+            { userId: result.user.id, email: result.user.email, role: result.user.role, schoolId: result.user.schoolId },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        const { password: _, ...userWithoutPassword } = result.user;
+        return res.status(201).json({
+            message: 'Initial setup completed successfully.',
+            token,
+            school: result.school,
+            user: userWithoutPassword,
+        });
+    } catch (error) {
+        console.error('Bootstrap error:', error);
+        // @ts-ignore
+        if (error.code === 'P2002') {
+            return res.status(409).json({ error: 'That email or school slug is already in use.' });
+        }
+        return res.status(500).json({ error: 'Failed to create the initial admin account.' });
+    }
+});
 
 // GET /auth/validate/:code - Validate invitation code (rate limited)
 router.get('/validate/:code', generalRateLimit, async (req, res) => {
@@ -181,12 +279,13 @@ router.post('/register', async (req, res) => {
 
 // POST /auth/invite - Generate invitation (Admin only, rate limited)
 router.post('/invite', protect, invitationRateLimit, async (req, res) => {
-    if (req.user!.role !== "ADMIN") {
+    if (!isAdminRole(req.user!.role)) {
         return res.status(403).json({ error: 'You are not authorized to invite users.' });
     }
     const { email, name, role, schoolId } = req.body;
+    const normalizedRole = normalizeRole(role);
 
-    if (!email || !name || !role || !schoolId) {
+    if (!email || !name || !normalizedRole || !schoolId) {
         return res.status(400).json({ error: 'Email, name, role, and schoolId are required.' });
     }
 
@@ -202,7 +301,7 @@ router.post('/invite', protect, invitationRateLimit, async (req, res) => {
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
         const invitation = await prisma.invitation.create({
-            data: { email, name, role, schoolId, code: invitationCode, expiresAt, createdBy: req.user!.id }
+            data: { email, name, role: normalizedRole as any, schoolId, code: invitationCode, expiresAt, createdBy: req.user!.id }
         });
 
         const school = await prisma.school.findUnique({ where: { id: schoolId } });
@@ -220,7 +319,7 @@ router.post('/invite', protect, invitationRateLimit, async (req, res) => {
 
 // GET /auth/invitations - List pending invitations for a school (Admin only)
 router.get('/invitations', protect, async (req, res) => {
-     if (req.user!.role !== "ADMIN") {
+     if (!isAdminRole(req.user!.role)) {
         return res.status(403).json({ error: 'You are not authorized to view invitations.' });
     }
     try {

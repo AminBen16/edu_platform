@@ -114,6 +114,21 @@ export default function LoginPage() {
             {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
+        <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+          <button
+            type="button"
+            onClick={() => router.push('/auth/setup')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#007bff',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+            }}
+          >
+            First time setup
+          </button>
+        </div>
       </div>
     </div>
   );

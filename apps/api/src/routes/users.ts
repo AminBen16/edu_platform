@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { prisma } from '../config/database';
 import { protect } from '../middleware/auth';
 import bcrypt from 'bcryptjs';
+import { isAdminRole, normalizeRole } from '../lib/roles';
 
 const router = Router();
 
@@ -53,7 +54,7 @@ router.put('/profile', protect, async (req, res) => {
 
 // GET /users - List all users in the school (Admin only)
 router.get('/', protect, async (req, res) => {
-    if (req.user!.role !== "ADMIN") {
+    if (!isAdminRole(req.user!.role)) {
         return res.status(403).json({ error: 'You are not authorized to view all users.' });
     }
     try {
@@ -79,7 +80,7 @@ router.get('/', protect, async (req, res) => {
 
 // GET /users/:id - Get a specific user's details (Admin only)
 router.get('/:id', protect, async (req, res) => {
-    if (req.user!.role !== "ADMIN") {
+    if (!isAdminRole(req.user!.role)) {
         return res.status(403).json({ error: 'You are not authorized to view this user.' });
     }
     const { id } = req.params;
@@ -104,11 +105,12 @@ router.get('/:id', protect, async (req, res) => {
 
 // POST /users - Create a new user (Admin only)
 router.post('/', protect, async (req, res) => {
-    if (req.user!.role !== 'ADMIN') {
+    if (!isAdminRole(req.user!.role)) {
         return res.status(403).json({ error: 'You are not authorized to create users.' });
     }
     const { email, name, role, password: plainPassword } = req.body;
-    if (!email || !name || !role || !plainPassword) {
+    const normalizedRole = normalizeRole(role);
+    if (!email || !name || !normalizedRole || !plainPassword) {
         return res.status(400).json({ error: 'Email, name, role, and password are required.' });
     }
 
@@ -118,7 +120,7 @@ router.post('/', protect, async (req, res) => {
             data: {
                 email,
                 name,
-                role,
+                role: normalizedRole as any,
                 password: hashedPassword,
                 schoolId: req.user!.schoolId,
                 emailVerified: new Date(), // Admins create verified users
@@ -126,9 +128,9 @@ router.post('/', protect, async (req, res) => {
         });
 
         // Create a corresponding student or teacher profile
-        if (role === "STUDENT") {
+        if (normalizedRole === "STUDENT") {
             await prisma.student.create({ data: { userId: newUser.id, schoolId: req.user!.schoolId } });
-        } else if (role === "TEACHER") {
+        } else if (normalizedRole === "TEACHER") {
             await prisma.teacher.create({ data: { userId: newUser.id, schoolId: req.user!.schoolId } });
         }
         
@@ -146,7 +148,7 @@ router.post('/', protect, async (req, res) => {
 
 // PUT /users/:id - Update a user's details (Admin only)
 router.put('/:id', protect, async (req, res) => {
-    if (req.user!.role !== 'ADMIN') {
+    if (!isAdminRole(req.user!.role)) {
         return res.status(403).json({ error: 'You are not authorized to update users.' });
     }
     const { id } = req.params;
@@ -167,7 +169,7 @@ router.put('/:id', protect, async (req, res) => {
 
 // DELETE /users/:id - Delete a user (Admin only)
 router.delete('/:id', protect, async (req, res) => {
-    if (req.user!.role !== 'ADMIN') {
+    if (!isAdminRole(req.user!.role)) {
         return res.status(403).json({ error: 'You are not authorized to delete users.' });
     }
     const { id } = req.params;

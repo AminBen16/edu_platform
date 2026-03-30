@@ -2,6 +2,7 @@
 import { Router } from 'express';
 import { protect } from '../middleware/auth';
 import { prisma } from '../config/database';
+import { isAdminRole } from '../lib/roles';
 
 const router = Router();
 
@@ -26,10 +27,10 @@ router.get('/', protect, async (req, res) => {
             dashboardData = await getStudentDashboard(userId, schoolId);
         } else if (role === 'TEACHER') {
             dashboardData = await getTeacherDashboard(userId, schoolId);
-        } else if (role === 'ADMIN') {
-            dashboardData = await getAdminDashboard(schoolId);
         } else if (role === 'SUPER_ADMIN') {
             dashboardData = await getSuperAdminDashboard();
+        } else if (isAdminRole(role)) {
+            dashboardData = await getAdminDashboard(schoolId);
         } else if (role === 'PARENT') {
             dashboardData = await getParentDashboard(userId, schoolId);
         } else {

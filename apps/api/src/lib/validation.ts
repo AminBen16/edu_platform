@@ -17,7 +17,7 @@ export const RegisterSchema = z.object({
 export const InviteSchema = z.object({
   email: z.string().email(),
   name: z.string().min(2),
-  role: z.enum(['ADMIN', 'TEACHER', 'STUDENT']),
+  role: z.enum(['ADMIN', 'SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT']),
   schoolId: z.string(),
 });
 

@@ -1,13 +1,9 @@
 import axios from 'axios';
 
-// PRODUCTION API CONFIG - No localhost fallbacks
-const browserBaseUrl = '/api/v1';
-
-// Default to /api/v1 for same-origin requests, allow override via env var
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || '/api/v1').replace(/\/$/, '');
 
 export const api = axios.create({
-  baseURL: typeof window === 'undefined' ? API_BASE_URL : browserBaseUrl,
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },

@@ -14,7 +14,7 @@ export default function UsersPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [inviting, setInviting] = useState(false);
 
-  const [newUser, setNewUser] = useState<{ name: string; email: string; role: 'STUDENT' | 'TEACHER' | 'ADMIN' | 'PARENT' }>({
+  const [newUser, setNewUser] = useState<{ name: string; email: string; role: 'STUDENT' | 'TEACHER' | 'SCHOOL_ADMIN' | 'PARENT' }>({
     name: '',
     email: '',
     role: 'STUDENT',
@@ -208,7 +208,7 @@ export default function UsersPage() {
                 <select
                   value={newUser.role}
                   aria-label="Role"
-                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value as 'STUDENT' | 'TEACHER' | 'ADMIN' | 'PARENT' })}
+                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value as 'STUDENT' | 'TEACHER' | 'SCHOOL_ADMIN' | 'PARENT' })}
                   style={{
                     width: '100%',
                     padding: '0.5rem',
@@ -218,7 +218,7 @@ export default function UsersPage() {
                 >
                   <option value="STUDENT">Student</option>
                   <option value="TEACHER">Teacher</option>
-                  <option value="ADMIN">Admin</option>
+                  <option value="SCHOOL_ADMIN">School Admin</option>
                   <option value="PARENT">Parent</option>
                 </select>
               </div>
