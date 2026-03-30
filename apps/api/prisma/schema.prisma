@@ -1,0 +1,319 @@
+// ------------------------------------------------------------------
+// Education Platform Database Schema - FIXED for Prisma 7+
+// Local SQLite, no url in schema, lists fixed for SQLite
+// Supports: Multi-school, CBC, Auth, Profiles
+// ------------------------------------------------------------------
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  SCHOOL_ADMIN
+  TEACHER
+  STUDENT
+  PARENT
+}
+
+enum SchoolType {
+  PRE_PRIMARY
+  PRIMARY
+  LOWER_SECONDARY
+  UPPER_SECONDARY
+  TVET
+  TERTIARY
+  UNIVERSITY
+}
+
+enum LessonType {
+  VIDEO
+  PDF
+  AUDIO
+  ARTICLE
+  QUIZ
+}
+
+// Institutions & Users
+model School {
+  id            String       @id @default(cuid())
+  name          String
+  type          SchoolType   @default(PRIMARY)
+  slug          String       @unique
+  logo          String?
+  website       String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  users         User[]
+  teachers      Teacher[]
+  students      Student[]
+  levels        Level[]
+  subjects      Subject[]
+  lessons       Lesson[]
+  announcements Announcement[]
+  invitations   Invitation[]
+
+  @@map("schools")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String?
+  image         String?
+  role          UserRole  @default(STUDENT)
+  isActive      Boolean   @default(true)
+  
+  schoolId      String?
+  school        School?   @relation(fields: [schoolId], references: [id])
+
+  teacher       Teacher?
+  student       Student?
+
+  messagesSent     Message[] @relation("SentMessages")
+  messagesReceived Message[] @relation("ReceivedMessages")
+  notifications    Notification[]
+
+  invitationsCreated Invitation[]
+
+  passwordResets  PasswordResetToken[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("users")
+}
+
+// Profiles
+model Teacher {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id])
+
+  lessons   Lesson[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("teachers")
+}
+
+model Student {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id])
+
+  quizAttempts QuizAttempt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("students")
+}
+
+// Auth
+model Invitation {
+  id          String   @id @default(cuid())
+  email       String
+  name        String
+  role        UserRole
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id])
+  code        String   @unique
+  used        Boolean  @default(false)
+  usedAt      DateTime?
+  expiresAt   DateTime
+  createdBy   String
+  creator     User     @relation(fields: [createdBy], references: [id])
+
+  @@unique([email, schoolId])
+  @@map("invitations")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  schoolId  String?
+  used      Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
+
+// Curriculum
+model Level {
+  id        String    @id @default(cuid())
+  name      String
+  schoolId  String
+  school    School    @relation(fields: [schoolId], references: [id])
+  subjects  Subject[]
+
+  @@map("levels")
+}
+
+model Subject {
+  id        String    @id @default(cuid())
+  name      String
+  code      String?
+  levelId   String
+  level     Level     @relation(fields: [levelId], references: [id])
+  schoolId  String
+  school    School    @relation(fields: [schoolId], references: [id])
+  
+  topics    Topic[]
+  lessons   Lesson[]
+
+  @@map("subjects")
+}
+
+model Topic {
+  id           String       @id @default(cuid())
+  name         String
+  subjectId    String
+  subject      Subject      @relation(fields: [subjectId], references: [id])
+  
+  competencies Competency[]
+  lessons      Lesson[]
+
+  @@map("topics")
+}
+
+model Competency {
+  id               String            @id @default(cuid())
+  description      String
+  topicId          String
+  topic            Topic             @relation(fields: [topicId], references: [id])
+  learningOutcomes LearningOutcome[]
+
+  @@map("competencies")
+}
+
+model LearningOutcome {
+  id           String     @id @default(cuid())
+  description  String
+  competencyId String
+  competency   Competency @relation(fields: [competencyId], references: [id])
+
+  @@map("learning_outcomes")
+}
+
+// Content & Assessment
+model Lesson {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  type        LessonType @default(ARTICLE)
+  content     String?
+  mediaUrl    String?
+  thumbnail   String?
+  published   Boolean    @default(false)
+  
+  subjectId   String
+  subject     Subject    @relation(fields: [subjectId], references: [id])
+  topicId     String?
+  topic       Topic?     @relation(fields: [topicId], references: [id])
+  
+  schoolId    String
+  school      School     @relation(fields: [schoolId], references: [id])
+  teacherId   String
+  teacher     Teacher    @relation(fields: [teacherId], references: [id])
+
+  quizzes     Quiz[]
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("lessons")
+}
+
+model Quiz {
+  id          String     @id @default(cuid())
+  title       String
+  lessonId    String
+  lesson      Lesson     @relation(fields: [lessonId], references: [id])
+  
+  questions   Question[]
+  attempts    QuizAttempt[]
+
+  createdAt   DateTime   @default(now())
+
+  @@map("quizzes")
+}
+
+model Question {
+  id            String   @id @default(cuid())
+  text          String
+  options       String   // Changed to String for SQLite (no primitive lists)
+  correctAnswer Int
+  points        Int      @default(1)
+  quizId        String
+  quiz          Quiz     @relation(fields: [quizId], references: [id])
+
+  @@map("questions")
+}
+
+model QuizAttempt {
+  id        String   @id @default(cuid())
+  score     Float
+  answers   Json?
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id])
+  quizId    String
+  quiz      Quiz     @relation(fields: [quizId], references: [id])
+  completedAt DateTime @default(now())
+
+  @@map("quiz_attempts")
+}
+
+// Communication
+model Message {
+  id          String   @id @default(cuid())
+  content     String
+  read        Boolean  @default(false)
+  
+  senderId    String
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId  String
+  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  
+  createdAt   DateTime @default(now())
+
+  @@map("messages")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  type      String
+  read      Boolean  @default(false)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@map("announcements")
+}

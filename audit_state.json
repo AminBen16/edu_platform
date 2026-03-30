@@ -1,49 +1,148 @@
 {
-    "scanned_files": [
-        "package.json",
-        "apps/admin/package.json",
-        "apps/api/package.json",
-        "apps/mobile/pubspec.yaml",
-        "packages/db/schema.prisma",
-        "packages/auth/package.json",
-        "README.md",
-        "INSTRUCTIONS.md",
-        "apps/api/src/index.ts",
-        "apps/api/src/routes/users.ts",
-        "apps/api/src/routes/auth.ts",
-        "apps/api/src/middleware/auth.ts",
-        "apps/admin/pages/index.tsx",
-        "apps/admin/hooks/useDashboard.ts",
-        "apps/mobile/lib/main.dart",
-        "apps/mobile/lib/api_config.dart",
-        "apps/api/src/services/websocket.ts",
-        "apps/api/src/services/storageService.ts",
-        "apps/api/src/lib/database.ts",
-        "apps/mobile/lib/services/socket_service.dart",
-        "apps/mobile/lib/widgets/media_player.dart",
-        "apps/api/src/config/database.ts",
-        "packages/db/index.ts",
-        "packages/db/lib/prisma.ts",
-        "apps/admin/pages/analytics.tsx",
-        "apps/api/src/routes/analyticsRoutes.ts",
-        "apps/api/src/routes/dashboard.ts",
-        "apps/api/src/routes/levels.ts"
-    ],
-    "pending_files": [],
-    "completed_modules": ["PHASE 1", "PHASE 2", "PHASE 3", "PHASE 4", "PHASE 5", "PHASE 6", "PHASE 7", "PHASE 8", "PHASE 9", "PHASE 10"],
-    "discovered_issues": [
-        { "id": "CRIT-001", "severity": "CRITICAL", "location": "apps/api/src/services/websocket.ts", "evidence": "WebSockets disabled in production/Vercel", "root_cause": "Vercel serverless constraints", "impact": "Real-time features broken in production", "fix_complexity": "HIGH" },
-        { "id": "CRIT-002", "severity": "CRITICAL", "location": "apps/api/src/services/storageService.ts", "evidence": "fs.writeFileSync used for local fallback", "root_cause": "Vercel read-only filesystem", "impact": "Uploads fail in production", "fix_complexity": "MEDIUM" },
-        { "id": "CRIT-003", "severity": "CRITICAL", "location": "apps/api/src/services/storageService.ts", "evidence": "Firebase implementation included", "root_cause": "Violation of 'NO Firebase' rule", "impact": "Architectural violation", "fix_complexity": "LOW" },
-        { "id": "CRIT-004", "severity": "CRITICAL", "location": "apps/api/src/index.ts", "evidence": "analyticsRoutes.ts not mounted", "root_cause": "Incomplete route mounting in entry point", "impact": "Admin analytics dashboard 404s", "fix_complexity": "LOW" },
-        { "id": "HIGH-001", "severity": "HIGH", "location": "apps/api/src/routes/users.ts", "evidence": "teacherProfile/studentProfile @ts-ignore usage", "root_cause": "Prisma relation field name mismatch", "impact": "Runtime errors / Broken relations", "fix_complexity": "LOW" },
-        { "id": "HIGH-002", "severity": "HIGH", "location": "apps/api/src/routes/analyticsRoutes.ts", "evidence": "Conflict between /analytics (frontend) and /dashboard (backend)", "root_cause": "Route naming inconsistency", "impact": "Analytics data fetching fails", "fix_complexity": "MEDIUM" },
-        { "id": "MED-001", "severity": "MEDIUM", "location": "apps/api/src/routes/dashboard.ts", "evidence": "Parent role used in logic but model missing in schema", "root_cause": "Inconsistent role implementation", "impact": "Parent features partially unimplemented", "fix_complexity": "MEDIUM" }
-    ],
-    "confidence_scores": {
-        "architecture": 0.9,
-        "ui_ux": 0.7,
-        "logic": 0.9,
-        "security": 0.8
+  "scanned_files": [
+    "package.json",
+    "apps/admin/package.json",
+    "apps/api/package.json",
+    "apps/mobile/pubspec.yaml",
+    "packages/db/schema.prisma",
+    "packages/auth/package.json",
+    "README.md",
+    "INSTRUCTIONS.md",
+    "apps/api/src/index.ts",
+    "apps/api/src/routes/users.ts",
+    "apps/api/src/routes/auth.ts",
+    "apps/api/src/middleware/auth.ts",
+    "apps/admin/pages/index.tsx",
+    "apps/admin/hooks/useDashboard.ts",
+    "apps/mobile/lib/main.dart",
+    "apps/mobile/lib/api_config.dart",
+    "apps/api/src/services/websocket.ts",
+    "apps/api/src/services/storageService.ts",
+    "apps/api/src/lib/database.ts",
+    "apps/mobile/lib/services/socket_service.dart",
+    "apps/mobile/lib/widgets/media_player.dart",
+    "apps/api/src/config/database.ts",
+    "packages/db/index.ts",
+    "packages/db/lib/prisma.ts",
+    "apps/admin/pages/analytics.tsx",
+    "apps/api/src/routes/analyticsRoutes.ts",
+    "apps/api/src/routes/dashboard.ts",
+    "apps/api/src/routes/levels.ts"
+  ],
+  "pending_files": [],
+  "completed_modules": [
+    "PHASE 1",
+    "PHASE 2",
+    "PHASE 3",
+    "PHASE 4",
+    "PHASE 5",
+    "PHASE 6",
+    "PHASE 7",
+    "PHASE 8",
+    "PHASE 9",
+    "PHASE 10"
+  ],
+  "discovered_issues": [
+    {
+      "id": "CRIT-001",
+      "severity": "CRITICAL",
+      "location": "apps/api/src/services/websocket.ts",
+      "evidence": "WebSockets disabled in production/Vercel",
+      "root_cause": "Vercel serverless constraints",
+      "impact": "Real-time features broken in production",
+      "fix_complexity": "HIGH"
+    },
+    {
+      "id": "CRIT-002",
+      "severity": "CRITICAL",
+      "location": "apps/api/src/services/storageService.ts",
+      "evidence": "fs.writeFileSync used for local fallback",
+      "root_cause": "Vercel read-only filesystem",
+      "impact": "Uploads fail in production",
+      "fix_complexity": "MEDIUM"
+    },
+    {
+      "id": "CRIT-003",
+      "severity": "CRITICAL",
+      "location": "apps/api/src/services/storageService.ts",
+      "evidence": "Firebase implementation included",
+      "root_cause": "Violation of 'NO Firebase' rule",
+      "impact": "Architectural violation",
+      "fix_complexity": "LOW"
+    },
+    {
+      "id": "CRIT-004",
+      "severity": "CRITICAL",
+      "location": "apps/api/src/index.ts",
+      "evidence": "analyticsRoutes.ts not mounted",
+      "root_cause": "Incomplete route mounting in entry point",
+      "impact": "Admin analytics dashboard 404s",
+      "fix_complexity": "LOW"
+    },
+    {
+      "id": "HIGH-001",
+      "severity": "HIGH",
+      "location": "apps/api/src/routes/users.ts",
+      "evidence": "teacherProfile/studentProfile @ts-ignore usage",
+      "root_cause": "Prisma relation field name mismatch",
+      "impact": "Runtime errors / Broken relations",
+      "fix_complexity": "LOW"
+    },
+    {
+      "id": "HIGH-002",
+      "severity": "HIGH",
+      "location": "apps/api/src/routes/analyticsRoutes.ts",
+      "evidence": "Conflict between /analytics (frontend) and /dashboard (backend)",
+      "root_cause": "Route naming inconsistency",
+      "impact": "Analytics data fetching fails",
+      "fix_complexity": "MEDIUM"
+    },
+    {
+      "id": "MED-001",
+      "severity": "MEDIUM",
+      "location": "apps/api/src/routes/dashboard.ts",
+      "evidence": "Parent role used in logic but model missing in schema",
+      "root_cause": "Inconsistent role implementation",
+      "impact": "Parent features partially unimplemented",
+      "fix_complexity": "MEDIUM"
     }
+  ],
+  "confidence_scores": {
+    "architecture": 0.9,
+    "ui_ux": 0.7,
+    "logic": 0.9,
+    "security": 0.8
+  },
+  "siteMetrics": [
+    {
+      "url": "http://localhost:3000",
+      "error": "fetch failed",
+      "timestamp": "2026-03-30T13:12:05.160Z"
+    },
+    {
+      "url": "http://localhost:3001/health",
+      "error": "fetch failed",
+      "timestamp": "2026-03-30T13:12:05.179Z"
+    },
+    {
+      "url": "https://www.example.com",
+      "error": "fetch failed",
+      "timestamp": "2026-03-30T13:12:05.362Z"
+    },
+    {
+      "url": "http://localhost:3000",
+      "error": "fetch failed",
+      "timestamp": "2026-03-30T13:12:18.289Z"
+    },
+    {
+      "url": "http://localhost:3001/health",
+      "error": "fetch failed",
+      "timestamp": "2026-03-30T13:12:18.300Z"
+    },
+    {
+      "url": "https://www.example.com",
+      "error": "fetch failed",
+      "timestamp": "2026-03-30T13:12:18.424Z"
+    }
+  ]
 }

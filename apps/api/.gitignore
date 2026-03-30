@@ -18,3 +18,4 @@ temp/
 # Logs / OS
 *.log
 .DS_Store
+.vercel
