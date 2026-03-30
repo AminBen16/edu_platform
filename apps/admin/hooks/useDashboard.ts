@@ -20,6 +20,9 @@ export function useDashboard(token: string | undefined) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const authHeaders = token
+    ? { Authorization: `Bearer ${token}` }
+    : undefined;
 
   const fetchDashboardData = async () => {
     if (!token) {
@@ -32,28 +35,30 @@ export function useDashboard(token: string | undefined) {
       setError(null);
 
       // Fetch dashboard overview
-      const dashboardRes = await api.get('/dashboard');
+      const dashboardRes = await api.get('/dashboard', { headers: authHeaders });
       setDashboardStats(dashboardRes.data.stats);
       
       // Fetch school details
-      const schoolDetailsRes = await api.get(`/schools/${dashboardRes.data.user.schoolId}`);
+      const schoolDetailsRes = await api.get(`/schools/${dashboardRes.data.user.schoolId}`, {
+        headers: authHeaders,
+      });
       setSchool(schoolDetailsRes.data);
 
       // Fetch recent users (adjusting for backend changes in /users endpoint)
       // Assuming /users endpoint now returns all users for the school
-      const usersRes = await api.get('/users');
+      const usersRes = await api.get('/users', { headers: authHeaders });
       // Filter for latest 5 users, sorting by createdAt from newest to oldest
       const sortedUsers = usersRes.data.sort((a: User, b: User) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setRecentUsers(sortedUsers.slice(0, 5));
 
       // Fetch recent lessons (adjusting for backend changes in /lessons endpoint)
-      const lessonsRes = await api.get('/lessons');
+      const lessonsRes = await api.get('/lessons', { headers: authHeaders });
       // Filter for latest 5 lessons, sorting by createdAt from newest to oldest
       const sortedLessons = lessonsRes.data.sort((a: Lesson, b: Lesson) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setRecentLessons(sortedLessons.slice(0, 5));
 
       // Fetch recent quizzes (adjusting for backend changes in /quizzes endpoint)
-      const quizzesRes = await api.get('/quizzes');
+      const quizzesRes = await api.get('/quizzes', { headers: authHeaders });
       // Filter for latest 5 quizzes, sorting by createdAt from newest to oldest
       const sortedQuizzes = quizzesRes.data.sort((a: Quiz, b: Quiz) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setRecentQuizzes(sortedQuizzes.slice(0, 5));

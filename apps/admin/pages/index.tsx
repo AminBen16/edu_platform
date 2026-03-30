@@ -20,7 +20,11 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (isAuthenticated && school && token) { // Ensure token is available
       // Load teachers for the stats card
-      api.get('/users').then(response => {
+      api.get('/users', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }).then(response => {
         const teacherData = response.data.filter((user: any) => user.role === 'TEACHER');
         setTeachers(teacherData);
       }).catch(err => {
