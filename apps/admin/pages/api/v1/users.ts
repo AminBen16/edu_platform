@@ -35,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          "isActive" AS "isActive",
          "createdAt" AS "createdAt",
          "updatedAt" AS "updatedAt",
-         "avatarUrl" AS "avatarUrl"
+         NULL::text AS "avatarUrl"
        FROM users
        WHERE "schoolId" = $1
        ORDER BY "createdAt" DESC`,

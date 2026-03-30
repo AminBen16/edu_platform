@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const userResult = await pool.query(
-      `SELECT id, name, email, role, "schoolId" AS "schoolId", "avatarUrl" AS "avatarUrl"
+      `SELECT id, name, email, role, "schoolId" AS "schoolId", NULL::text AS "avatarUrl"
        FROM users
        WHERE id = $1 AND "isActive" = true
        LIMIT 1`,
