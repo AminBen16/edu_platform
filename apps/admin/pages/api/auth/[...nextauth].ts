@@ -25,7 +25,10 @@ export default NextAuth({
 
         try {
           const result = await pool.query(
-            `SELECT id, email, name, role, "schoolId", "isActive", password
+            `SELECT id, email, name, role,
+                    "schoolId" AS school_id,
+                    "isActive" AS is_active,
+                    password
              FROM users
              WHERE lower(email) = lower($1)
              LIMIT 1`,
@@ -33,7 +36,7 @@ export default NextAuth({
           );
 
           const user = result.rows[0];
-          if (!user || !user.isActive || !user.password) {
+          if (!user || !user.is_active || !user.password) {
             return null;
           }
 
@@ -47,7 +50,7 @@ export default NextAuth({
             email: user.email,
             name: user.name,
             role: user.role,
-            schoolId: user.schoolId,
+            schoolId: user.school_id,
             accessToken: `local-admin-session:${user.id}`,
           };
         } catch (error) {
