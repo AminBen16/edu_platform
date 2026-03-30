@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { Pool } from "pg";
 
 const pool = new Pool({
@@ -44,6 +45,23 @@ export default NextAuth({
           if (!validPassword) {
             return null;
           }
+
+          const jwtSecret = process.env.NEXTAUTH_SECRET;
+          if (!jwtSecret || jwtSecret.length < 32) {
+            console.error("Missing or invalid NEXTAUTH_SECRET in admin app");
+            return null;
+          }
+
+          const accessToken = jwt.sign(
+            {
+              userId: user.id,
+              email: user.email,
+              role: user.role,
+              schoolId: user.school_id,
+            },
+            jwtSecret,
+            { expiresIn: "7d" }
+          );
           
           return {
             id: user.id,
@@ -51,7 +69,7 @@ export default NextAuth({
             name: user.name,
             role: user.role,
             schoolId: user.school_id,
-            accessToken: `local-admin-session:${user.id}`,
+            accessToken,
           };
         } catch (error) {
           console.error('Auth error:', error);
