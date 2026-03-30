@@ -43,13 +43,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       [schoolId]
     );
 
-    const classCountResult = await pool.query(
-      `SELECT COUNT(*)::int AS "totalClasses"
-       FROM classes
-       WHERE "schoolId" = $1`,
-      [schoolId]
-    );
-
     const lessonCountResult = await pool.query(
       `SELECT COUNT(*)::int AS "totalLessons"
        FROM lessons
@@ -67,9 +60,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const stats = {
       ...statsResult.rows[0],
-      ...classCountResult.rows[0],
       ...lessonCountResult.rows[0],
       ...quizCountResult.rows[0],
+      totalClasses: 0,
     };
 
     return res.status(200).json({ user, stats });

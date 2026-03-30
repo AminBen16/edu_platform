@@ -32,6 +32,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: "School not found." });
     }
 
+    const countsResult = await pool.query(
+      `SELECT
+         (SELECT COUNT(*)::int FROM students WHERE "schoolId" = $1) AS "totalStudents",
+         (SELECT COUNT(*)::int FROM teachers WHERE "schoolId" = $1) AS "totalTeachers",
+         (SELECT COUNT(*)::int FROM levels WHERE "schoolId" = $1) AS "totalClasses"`,
+      [id]
+    );
+
+    const counts = countsResult.rows[0] ?? {
+      totalStudents: 0,
+      totalTeachers: 0,
+      totalClasses: 0,
+    };
+
     return res.status(200).json({
       ...school,
       code: school.slug,
@@ -40,9 +54,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       email: "",
       principal: "",
       vicePrincipal: "",
-      totalStudents: 0,
-      totalTeachers: 0,
-      totalClasses: 0,
+      totalStudents: counts.totalStudents,
+      totalTeachers: counts.totalTeachers,
+      totalClasses: counts.totalClasses,
       academicYear: "",
       semester: "",
       timezone: "Africa/Kampala",
