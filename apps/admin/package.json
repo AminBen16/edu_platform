@@ -10,8 +10,10 @@
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "@types/formidable": "^3.5.0",
     "axios": "^1.6.8",
     "bcryptjs": "^2.4.3",
+    "formidable": "^3.5.4",
     "jsonwebtoken": "^9.0.2",
     "next": "^14.2.3",
     "next-auth": "^4.24.7",

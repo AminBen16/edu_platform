@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { pool } from "../../../lib/db";
 import { requireAuth } from "../../../lib/server-auth";
+import { ensureAdminSchema } from "../../../lib/admin-data";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") {
@@ -14,6 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    await ensureAdminSchema();
     const schoolId = auth.schoolId ?? (
       await pool.query(
         `SELECT "schoolId" FROM users WHERE id = $1 LIMIT 1`,
@@ -35,14 +37,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          "isActive" AS "isActive",
          "createdAt" AS "createdAt",
          "updatedAt" AS "updatedAt",
-         NULL::text AS "avatarUrl"
+         NULL::text AS "avatarUrl",
+         t.id AS "teacherProfileId"
        FROM users
+       LEFT JOIN teachers t ON t."userId" = users.id
        WHERE "schoolId" = $1
        ORDER BY "createdAt" DESC`,
       [schoolId]
     );
 
-    return res.status(200).json(result.rows);
+    return res.status(200).json(
+      result.rows.map((row) => ({
+        ...row,
+        teacherProfile: row.teacherProfileId ? { id: row.teacherProfileId } : undefined,
+      }))
+    );
   } catch (error) {
     console.error("[admin/api/v1/users] failed", error);
     return res.status(500).json({ error: "Failed to load users." });
