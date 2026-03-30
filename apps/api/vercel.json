@@ -1,31 +1,11 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "src/index.ts",
-      "use": "@vercel/node"
-    }
-  ],
+  "outputDirectory": "dist",
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "src/index.ts"
+      "dest": "dist/index.js"
     }
-  ],
-  "functions": {
-    "src/index.ts": {
-      "runtime": "nodejs18.x",
-      "maxDuration": 30,
-      "memory": 1024
-    }
-  },
-  "env": {
-    "NODE_ENV": "production"
-  },
-  "includes": [
-    "src/**/*",
-    "packages/db/dist/**/*",
-    "uploads/**/*"
   ]
 }
 

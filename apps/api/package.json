@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "npx tsx watch src/index.ts",
     "build": "npx tsc",
-    "prisma:generate": "call node_modules\\.bin\\prisma.cmd generate --schema=..\\..\\packages\\db\\schema.prisma",
+    "prisma:generate": "npx prisma generate --schema=./prisma/schema.prisma",
     "start": "node dist/index.js",
     "db:push": "prisma db push --accept-data-loss",
     "db:migrate": "prisma migrate deploy",

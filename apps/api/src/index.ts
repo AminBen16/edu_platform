@@ -77,7 +77,7 @@ app.use(cors({
   origin: (origin, callback) => {
     // allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
+    if (allowedOrigins.indexOf(origin) === -1 && allowedOrigins.length > 0) {
       const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
       return callback(new Error(msg), false);
     }
@@ -91,7 +91,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // PRODUCTION HEALTH CHECKS (Before Rate Limiting)
-app.get(['/api/health', '/api/v1/health'], async (req: Request, res: Response) => {
+app.get(['/api/health', '/api/v1/health', '/health'], async (req: Request, res: Response) => {
   try {
     await globalPrisma.$connect();
     await globalPrisma.$queryRaw`SELECT 1`; // Basic DB ping
@@ -104,7 +104,7 @@ app.get(['/api/health', '/api/v1/health'], async (req: Request, res: Response) =
       realtime: 'SSE enabled' // PATCH 1: WebSockets → SSE
     });
   } catch (error: any) {
-logAudit('Healthcheck failed: ' + error.message, 'error'); // Switched to audit logging
+    logAudit('Healthcheck failed: ' + error.message, 'error'); // Switched to audit logging
     res.status(503).json({
       status: 'unhealthy',
       database: error.message
@@ -168,15 +168,64 @@ mountProtectedRoute('/realtime', realtimeRouter);
 // Public routes
 mountPublicRoute('/auth', authRouter);
 
-// Error handler (must be last)
+// Root route - home page for API
+app.get('/', (req: Request, res: Response) => {
+  res.status(200).json({
+    message: 'Education Platform API - Production Ready',
+    version: '1.0.0',
+    status: 'operational',
+    timestamp: new Date().toISOString(),
+    documentation: 'https://api.edu-platform.example.com/docs'
+  });
+});
+
+// API version check
+app.get(['/api', '/api/v1'], (req: Request, res: Response) => {
+  res.status(200).json({
+    message: 'API v1 available',
+    version: '1.0.0',
+    endpoints: 'All mounted (25+ routes)',
+    documentation: 'https://api.edu-platform.example.com/docs'
+  });
+});
+
+// Error handler (must be before 404 handler)
 app.use(errorHandler);
 
-// 404 handler
+// 404 handler - comprehensive error response
 app.use('*', (req: Request, res: Response) => {
+  const path = req.path;
+  const method = req.method;
+  
+  // Check if it's an API call that failed
+  if (path.startsWith('/api') || path.startsWith('/api/v1')) {
+    return res.status(404).json({
+      error: 'API endpoint not found',
+      message: `${method} ${path} is not a valid API endpoint`,
+      status: 404,
+      available_endpoints: [
+        '/api/health',
+        '/api/v1/health',
+        '/api/auth/*',
+        '/api/v1/auth/*',
+        '/api/users/* (protected)',
+        '/api/v1/users/* (protected)',
+        '/api/classes/* (protected)',
+        '/api/v1/classes/* (protected)',
+        '/api/assignments/* (protected)',
+        '/api/v1/assignments/* (protected)',
+        'and 20+ more endpoints'
+      ],
+      documentation_url: '/docs'
+    });
+  }
+
+  // For non-API routes, return 404 with helpful message
   res.status(404).json({
-    error: 'API endpoint not found',
-    available: '/api/health, /api/test, /api/users, /api/classes etc.',
-    documentation: 'All production routes now mounted!'
+    error: 'Not found',
+    message: `${method} ${path} is not a valid endpoint`,
+    status: 404,
+    try: '/api/health for health check'
   });
 });
 
@@ -185,7 +234,7 @@ process.on('SIGINT', async () => {
   await globalPrisma.$disconnect();
 });
 
-// Start server locally
+// Start server locally (for development)
 if (process.env.NODE_ENV !== 'production' || process.env.IS_LOCAL === 'true') {
   const PORT = process.env.PORT || 3002;
   app.listen(PORT, () => {

@@ -1,8 +1,11 @@
-// @ts-ignore Cannot find module '@prisma/internals' (internal package, ignore)\nimport { defineConfig } from '@prisma/internals'
+import { defineConfig } from '@prisma/internals'
 
 export default defineConfig({
+  datasource: {
+    provider: "sqlite",
+    url: "file:./dev.db"
+  },
   generator: {
     previewFeatures: ['driverAdapters']
   },
 })
-

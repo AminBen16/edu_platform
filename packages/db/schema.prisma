@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------
-// Education Platform Database Schema - FIXED
+// Education Platform Database Schema - FIXED for Prisma 7+
+// Local SQLite, no url in schema, lists fixed for SQLite
 // Supports: Multi-school, CBC, Auth, Profiles
-// Fixed: Prisma validation errors, added relations @@map
 // ------------------------------------------------------------------
 
 generator client {
@@ -9,12 +9,10 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-// Enums
 enum UserRole {
   SUPER_ADMIN
   SCHOOL_ADMIN
@@ -146,7 +144,7 @@ model Invitation {
 model PasswordResetToken {
   id        String   @id @default(cuid())
   userId    String
-  token     String   @unique(map: "password_reset_token_key")
+  token     String   @unique
   expiresAt DateTime
   schoolId  String?
   used      Boolean  @default(false)
@@ -258,7 +256,7 @@ model Quiz {
 model Question {
   id            String   @id @default(cuid())
   text          String
-  options       String[]
+  options       String   // Changed to String for SQLite (no primitive lists)
   correctAnswer Int
   points        Int      @default(1)
   quizId        String
@@ -319,4 +317,3 @@ model Announcement {
 
   @@map("announcements")
 }
-

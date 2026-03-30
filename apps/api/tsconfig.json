@@ -7,19 +7,14 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
-"strict":true,
+    "strict": true,
     "noImplicitAny": false,
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "db": ["../../packages/db"],
-      "db/*": ["../../packages/db/*"]
+      "@/*": ["src/*"]
     }
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist"],
-  "references": [
-    { "path": "../../packages/db/tsconfig.json" }
-  ]
+  "exclude": ["node_modules", "dist"]
 }
