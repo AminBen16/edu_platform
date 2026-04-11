@@ -1,5 +1,9 @@
 {
+  "private": true,
   "scripts": {
+    "build": "cd apps/admin && npm install && npm run build",
+    "start": "cd apps/admin && npm start",
+    "dev": "cd apps/admin && npm run dev",
     "test:e2e": "cd testing && npm install && npm run test:all",
     "test:local": "testing\\run-all-tests.bat",
     "test:discover": "cd testing && npm run discover:api && npm run discover:admin",
